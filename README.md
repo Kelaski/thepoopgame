@@ -80,7 +80,7 @@ The map itself (ground, roads, grass and buildings) always uses its built-in col
 Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu and sky colours change instantly. Team colours apply when the next match loads. Colours are personal and don't affect other players.
 
 Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch,
-FOV (90–120, horizontal), brightness, fullscreen, V-Sync, FPS cap, render scale, MSAA, shadows,
+FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows,
 view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, and an FPS counter.
 
 ## Rules
@@ -112,7 +112,7 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 | Assault Rifle | 33 body / 45 head, 22 / 30 beyond 25 m | 9.5 rps | 1.5x holo | 30-round magazine |
 | SMG | 19 / 26, 12 / 19 beyond 18 m | 13 rps | 1.2x holo | 40-round magazine |
 | Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1 rps | 1.15x irons | 12° cone, 6 shells |
-| Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready. Its shot is 60% louder than before |
+| Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready. Its shot is 60% louder than before. The AR, SMG and Shotgun are 35% louder |
 | Spiked Bat | 35 per swing, ×1.1 for every m/s you're moving above your own sprint speed (compounding: +1 m/s 38.5, +2 42, +3 47, +5 56, +10 91, +14 133; capped at 300). Measured from your horizontal speed when you swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
 
 Every player holds a visible model of their weapon (the same model as your own first-person view), aimed up and down with where they're looking. When someone scopes in with the Sniper, their scope **glints**. The glint is brightest when they're aiming straight at you, shows only when they're looking within about 53° of you, and walls hide it.
@@ -135,7 +135,7 @@ Slide-jumping keeps your speed, and air strafing is limited while momentum is pr
 **Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
 Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
 **Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
-**Leaning** (Q / E) peeks around corners and slows you to a walk. Your head hitbox moves with the lean, and walls limit how far you can lean.
+**Leaning** (Q / E) peeks around corners and slows you to a walk. Switching straight from one side to the other is three times faster than leaning out (about 0.1 s). Your head hitbox moves with the lean, and walls limit how far you can lean.
 Doors fill their doorways exactly and swing open, away from you and at full speed, when you sprint or slide into them. **F** opens and closes them normally.
 
 ## Map sizes

@@ -62,8 +62,9 @@ func _exit_tree() -> void:
 
 
 ## Per-sound volume boosts, applied everywhere the sound plays (your own shots and
-## other players'). The sniper is 60% louder (x1.6 amplitude).
-const GAIN_DB := {"sniper": 4.08}
+## other players'). Gunshots are 35% louder (x1.35 amplitude = +2.61 dB); the
+## sniper has its own +60% (x1.6 = +4.08 dB).
+const GAIN_DB := {"ar": 2.61, "smg": 2.61, "shotgun": 2.61, "sniper": 4.08}
 
 
 func play(sound: String, vol_db := 0.0, pitch := 1.0, bus := "SFX") -> void:

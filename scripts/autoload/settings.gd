@@ -293,7 +293,9 @@ func apply_all() -> void:
 			_last_fullscreen = fs
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fs else DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if g("vsync") else DisplayServer.VSYNC_DISABLED)
-	Engine.max_fps = int(g("max_fps"))
+	# 30-500 (Settings > Video slider). Old saves with 0 (unlimited) get 500.
+	var fps := int(g("max_fps"))
+	Engine.max_fps = clampi(fps if fps > 0 else 500, 30, 500)
 	var vp := get_viewport()
 	if vp:
 		vp.scaling_3d_scale = clampf(float(g("render_scale")), 0.5, 1.0)

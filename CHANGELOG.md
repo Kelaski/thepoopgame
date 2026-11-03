@@ -7,6 +7,13 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.4.1
+
+### Changed
+- **Gunshots:** the AR, SMG and Shotgun are 35% louder. The sniper is unchanged.
+- **Leaning:** switching straight from one side to the other is about three times faster (roughly 0.1 s instead of 0.33 s). Leaning out from upright is unchanged.
+- **FPS cap:** Settings > Video now has a slider from 30 to 500 instead of a list. If you had it on Unlimited, it's now 500.
+
 ## 0.4.0
 
 ### New

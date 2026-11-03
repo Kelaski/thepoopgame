@@ -34,6 +34,8 @@ const FATIGUE_GRAVITY_STEP := 0.5  # ...and adds +50% gravity
 const FATIGUE_GRAVITY_MAX := 6.0   # up to 600%
 const LEAN_DIST := 0.45
 const LEAN_ROLL := 12.0
+const LEAN_SPEED := 6.0          # lean amount per second (0 -> full lean in ~0.17 s)
+const LEAN_SWITCH_SPEED := 18.0  # when switching sides: left -> right in ~0.11 s instead of ~0.33 s
 const SLIDE_START_MIN := 5.5
 const SLIDE_FRICTION := 4.6
 const SLIDE_END := 3.6
@@ -914,7 +916,12 @@ func _physics_process(delta: float) -> void:
 			lean_in -= 1.0
 		if Input.is_action_pressed("lean_right"):
 			lean_in += 1.0
-	lean = move_toward(lean, lean_in, delta * 6.0)
+	# Switching from one side straight to the other is snappier than leaning out
+	# from (or back to) the centre.
+	var lean_rate := LEAN_SPEED
+	if lean_in != 0.0 and lean != 0.0 and signf(lean_in) != signf(lean):
+		lean_rate = LEAN_SWITCH_SPEED
+	lean = move_toward(lean, lean_in, delta * lean_rate)
 	var want_off := lean * LEAN_DIST
 	if absf(want_off) > 0.01:
 		var right := Basis(Vector3.UP, yaw).x

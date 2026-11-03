@@ -131,9 +131,8 @@ func _video() -> VBoxContainer:
 	v.add_child(UiKit.slider_row("Brightness", 0.5, 1.8, 0.05, Settings.g("brightness"), func(x): Settings.s("brightness", x)))
 	v.add_child(UiKit.check_row("Fullscreen", Settings.g("fullscreen"), func(x): Settings.s("fullscreen", x)))
 	v.add_child(UiKit.check_row("V-Sync", Settings.g("vsync"), func(x): Settings.s("vsync", x)))
-	var caps := [30, 60, 120, 144, 165, 240, 0]
-	var cap_names := ["30", "60", "120", "144", "165", "240", "Unlimited"]
-	v.add_child(UiKit.option_row("Max FPS", cap_names, maxi(0, caps.find(int(Settings.g("max_fps")))), func(i): Settings.s("max_fps", caps[i])))
+	var fps := int(Settings.g("max_fps"))
+	v.add_child(UiKit.slider_row("Max FPS", 30, 500, 1, clampi(fps if fps > 0 else 500, 30, 500), func(x): Settings.s("max_fps", int(x)), "%.0f"))
 	v.add_child(UiKit.slider_row("Render scale (lower = faster)", 0.5, 1.0, 0.05, Settings.g("render_scale"), func(x): Settings.s("render_scale", x)))
 	v.add_child(UiKit.option_row("Anti-aliasing (MSAA)", ["Off", "2x", "4x"], int(Settings.g("msaa")), func(i): Settings.s("msaa", i)))
 	v.add_child(UiKit.check_row("Shadows", Settings.g("shadows"), func(x): Settings.s("shadows", x)))
