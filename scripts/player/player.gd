@@ -9,32 +9,32 @@ const CROUCH_H := 1.15
 const RADIUS := 0.38
 const EYE_STAND := 1.62
 const EYE_CROUCH := 1.02
-const WALK := 5.0
-const SPRINT := 7.4
-const CROUCH_SPEED := 2.8
+# GoldSrc (Half-Life 1) movement, converted from Quake units (1 unit = 1 inch).
+const HU := 0.0254
+const GS_MAXSPEED := 320.0 * HU      # sv_maxspeed
+const GS_ACCELERATE := 10.0          # sv_accelerate
+const GS_AIRACCELERATE := 10.0       # sv_airaccelerate
+const GS_FRICTION := 4.0             # sv_friction
+const GS_STOPSPEED := 100.0 * HU     # sv_stopspeed
+const GS_EDGEFRICTION := 2.0         # edgefriction: double friction near a drop
+const GS_AIR_WISHSPEED := 30.0 * HU  # air acceleration only builds speed up to this along wishdir
+const GS_DUCK_MULT := 0.333          # ducked move speed
+const GS_WALK_MULT := 0.52           # walking (lean held)
+const GS_BHOP_CAP := 1.7             # PM_PreventMegaBunnyJumping: cap = 1.7 x maxspeed...
+const GS_BHOP_PENALTY := 0.65        # ...and going over it scales you down to 65% of the cap
+const GRAVITY := 800.0 * HU          # sv_gravity
+const JUMP_V := 268.3 * HU           # sqrt(2 * 800 * 45): a 45-unit jump
 const ADS_MULT := 0.62
-const ACCEL := 60.0
-const DECEL := 45.0
-const AIR_ACCEL := 16.0
-const GRAVITY := 16.0
-const JUMP_V := 6.4
-const DJUMP_V := 7.0
+const DJUMP_V := 7.5
 const WALLJUMP_BOOST := 2.5
-const SLOPE_ACCEL_RAMP := 0.6  # extra downhill acceleration per second spent on the slope
-const MAX_SLIDE_SPEED := 22.0
 const SPAWN_PROTECTION := 3.0
 const WALLRUN_MIN_SPEED := 4.5
 const WALLRUN_TIME := 1.6
 const WALLRUN_GRAVITY := 3.0
 const WALLJUMP_OUT := 6.0
-const WALLJUMP_UP := 6.2
+const WALLJUMP_UP := 7.0
 const LEAN_DIST := 0.45
 const LEAN_ROLL := 12.0
-const SLIDE_START_MIN := 5.5
-const SLIDE_FRICTION := 4.6
-const SLIDE_END := 3.6
-const SLIDE_CD := 0.6
-const MAX_GROUND_SPEED := 14.0
 const NET_INTERVAL := 1.0 / 30.0
 const DOOR_SLAM_SPEED := 5.5
 
@@ -87,11 +87,8 @@ var vm_flash: MeshInstance3D
 var yaw := 0.0
 var pitch := 0.0
 var crouching := false
-var sliding := false
-var sprinting := false
-var slide_dir := Vector3.ZERO
-var slide_cd := 0.0
-var coyote := 0.0
+var sliding := false     # GoldSrc movement has no slide; always false (F_SLIDE kept in the protocol)
+var sprinting := false   # running forward on the ground (viewmodel / FOV only)
 var dj_ready := true
 var aiming := false
 var ads_t := 0.0
@@ -144,7 +141,6 @@ var _hook_mesh: MeshInstance3D
 # Spawn protection
 var prot_pending := false  # kept for compatibility; protection is now a plain timer
 var _vm_ads := VM_ADS
-var _slope_t := 0.0
 var prot_left := 0.0
 
 var _door_exceptions := {}
@@ -606,22 +602,17 @@ func _physics_process(delta: float) -> void:
 
 	var on_floor := is_on_floor()
 	if on_floor:
-		coyote = 0.1
 		_last_wall_normal = Vector3.ZERO
 		if wallrunning:
 			_end_wallrun()
 		dj_ready = true  # Skywalker double jump resets on landing
-	else:
-		coyote -= delta
 
 	var hvel := Vector3(velocity.x, 0.0, velocity.z)
 	var speed_now := hvel.length()
 	var forward_in := move_in.y < -0.3
-	# Sprint is the default pace: moving forward is always a sprint, except while
-	# aiming, crouching, sliding or holding a lean key (leaning slows you to a walk).
-	var sprint_in := can_input
+	# Full speed is the default pace (GoldSrc "run"). Holding a lean key walks.
 	var lean_held := can_input and (Input.is_action_pressed("lean_left") or Input.is_action_pressed("lean_right"))
-	sprinting = sprint_in and forward_in and not aiming and not sliding and not want_crouch and not lean_held
+	sprinting = forward_in and on_floor and not aiming and not want_crouch and not lean_held  # visuals only
 
 	# --- Wall contact coyote time (0.1 s)
 	_wall_touch_t -= delta
@@ -640,85 +631,55 @@ func _physics_process(delta: float) -> void:
 			wall_normal = Vector3(n.x, 0.0, n.z).normalized()
 			wallrun_t = WALLRUN_TIME
 			velocity.y = maxf(velocity.y, 2.0)
-			sliding = false
 			_on_moved()
 
-	# --- Slide start
-	if crouch_tap and not sliding and not wallrunning and slide_cd <= 0.0 and speed_now > SLIDE_START_MIN and (sprint_in or speed_now > SPRINT or not on_floor):
-		sliding = true
-		_slope_t = 0.0
-		slide_dir = hvel.normalized()
-		if on_floor:
-			var boosted := maxf(speed_now + 2.2, SPRINT * 1.35 * _speed_mult())
-			hvel = slide_dir * minf(boosted, MAX_GROUND_SPEED)
-		_on_moved()
-
+	var jump_tap := can_input and not frozen and Input.is_action_just_pressed("jump")
 	if wallrunning:
 		wallrun_t -= delta
 		var tangent := Vector3.UP.cross(wall_normal).normalized()
 		if tangent.dot(hvel) < 0.0:
 			tangent = -tangent
-		hvel = tangent * maxf(hvel.length(), SPRINT * _speed_mult() * 0.95) - wall_normal * 1.0
+		hvel = tangent * maxf(hvel.length(), GS_MAXSPEED * _speed_mult() * 0.95) - wall_normal * 1.0
 		velocity.y = maxf(velocity.y - WALLRUN_GRAVITY * delta, -1.5)
 		var still_on_wall := _ray_hits(global_position + Vector3(0, 1.0, 0), -wall_normal * (RADIUS + 0.4))
 		if wallrun_t <= 0.0 or not still_on_wall or not forward_in or crouch_tap:
 			_end_wallrun()
 		crouching = false
-	elif sliding:
-		var spd := hvel.length()
-		if on_floor:
-			var n := get_floor_normal()
-			var downhill := Vector3(n.x, 0.0, n.z).dot(slide_dir)
-			if downhill > 0.05:
-				# Sliding downhill: accelerate, and keep accelerating the longer you stay on the slope.
-				_slope_t += delta
-				spd += GRAVITY * downhill * (1.0 + _slope_t * SLOPE_ACCEL_RAMP) * delta
-			else:
-				_slope_t = 0.0
-				spd += GRAVITY * downhill * delta
-				spd -= SLIDE_FRICTION * delta
-		if wish != Vector3.ZERO:
-			slide_dir = (slide_dir + wish * delta * 1.2).normalized()
-		hvel = slide_dir * clampf(spd, 0.0, MAX_SLIDE_SPEED)
-		# Midair slides carry on until you land; on the ground they run until momentum is gone.
-		var end_slide: bool = (on_floor and spd < SLIDE_END) or (not bool(Settings.g("toggle_crouch")) and not want_crouch)
-		if end_slide:
-			sliding = false
-			slide_cd = SLIDE_CD
-		crouching = sliding or want_crouch
 	else:
+		# --- GoldSrc ground / air movement (PM_PlayerMove)
 		crouching = want_crouch or (crouching and not _can_stand())
-		var base := WALK
-		if crouching:
-			base = CROUCH_SPEED
-		elif sprinting:
-			base = SPRINT
+		var maxspeed := GS_MAXSPEED * _speed_mult()
+		if lean_held:
+			maxspeed *= GS_WALK_MULT
 		if aiming:
-			base *= lerpf(1.0, ADS_MULT, ads_t)
-		base *= _speed_mult()
-		var target := wish * base
-		if on_floor:
-			if wish != Vector3.ZERO and speed_now > base + 0.2 and hvel.normalized().dot(wish) > 0.5:
-				# Keep some slide-jump momentum when landing.
-				hvel = hvel.move_toward(target, 14.0 * delta)
-			else:
-				hvel = hvel.move_toward(target, (ACCEL if wish != Vector3.ZERO else DECEL) * delta)
+			maxspeed *= lerpf(1.0, ADS_MULT, ads_t)
+		var wishdir := wish.normalized() if wish != Vector3.ZERO else Vector3.ZERO
+		var wishspeed := maxspeed * minf(wish.length(), 1.0)
+		if crouching:
+			wishspeed *= GS_DUCK_MULT
+		# PM_Jump runs before PM_Friction, so jumping on the frame you land skips
+		# ground friction entirely: that is what makes bunny hopping work. Jump must be
+		# pressed again for every hop (holding it does nothing), as in Half-Life.
+		var ground_jump := jump_tap and on_floor
+		if ground_jump:
+			hvel = _gs_prevent_mega_bunny_jump(hvel, maxspeed)
+			velocity.y = JUMP_V
+			_on_moved()
+		if on_floor and not ground_jump:
+			hvel = _gs_friction(hvel, delta)
+			hvel = _gs_accelerate(hvel, wishdir, wishspeed, GS_ACCELERATE, delta)
 		else:
-			var cap := maxf(speed_now, base)
-			hvel += wish * AIR_ACCEL * delta
-			if hvel.length() > cap:
-				hvel = hvel.normalized() * cap
+			hvel = _gs_air_accelerate(hvel, wishdir, wishspeed, GS_AIRACCELERATE, delta)
 	_set_crouch_shape(crouching)
 
-	# --- Gravity & jumping
+	# --- Gravity & wall / double jumps
 	if not on_floor and not wallrunning:
 		velocity.y -= GRAVITY * delta
-	var jump_tap := can_input and not frozen and Input.is_action_just_pressed("jump")
-	if jump_tap:
+	if jump_tap and not on_floor:
 		if wallrunning or (_wall_jump_t > 0.0 and not on_floor):
 			# Kick off the wall, keeping (and adding to) the speed along it so it chains
-			# into the next wall run, a slide, or a slide-jump. Also works up to 0.1 s
-			# after leaving the wall.
+			# into the next wall run or a bunny hop. Also works up to 0.1 s after
+			# leaving the wall.
 			var n := wall_normal if wallrunning else _wall_jump_n
 			velocity.y = WALLJUMP_UP
 			var along_wall := hvel - n * hvel.dot(n)
@@ -729,27 +690,10 @@ func _physics_process(delta: float) -> void:
 			_wall_jump_t = 0.0
 			_wall_touch_t = 0.0
 			_on_moved()
-		elif coyote > 0.0:
-			if crouching and not sliding and _can_stand():
-				crouching = false
-				_crouch_toggle = false
-				_set_crouch_shape(false)
-			velocity.y = JUMP_V
-			coyote = 0.0
-			if sliding:
-				sliding = false
-				slide_cd = SLIDE_CD
-				crouching = false
-				_crouch_toggle = false
-				_set_crouch_shape(false)
-			_on_moved()
 		elif addon == "skywalker" and dj_ready:
 			# Extra height, current momentum kept as-is (no added speed).
 			dj_ready = false
 			velocity.y = DJUMP_V
-			if sliding:
-				sliding = false
-				slide_cd = SLIDE_CD
 			Sfx.play("jump", -4.0, 1.4)
 			_on_moved()
 	if grapple_state == Hook.FLYING:
@@ -761,13 +705,13 @@ func _physics_process(delta: float) -> void:
 	if move_in != Vector2.ZERO:
 		_on_moved()
 
-	# --- Doors fly open when sprinting / sliding into them
+	# --- Doors fly open when running into them at speed
 	if hvel.length() > DOOR_SLAM_SPEED:
 		_check_door_slam(hvel.normalized())
 
-	# --- Leaning (not while sprinting, sliding or wall running)
+	# --- Leaning (not while wall running)
 	var lean_in := 0.0
-	if can_input and not frozen and not sprinting and not sliding and not wallrunning:
+	if can_input and not frozen and not wallrunning:
 		if Input.is_action_pressed("lean_left"):
 			lean_in -= 1.0
 		if Input.is_action_pressed("lean_right"):
@@ -823,7 +767,6 @@ func _physics_process(delta: float) -> void:
 
 func _tick_timers(delta: float) -> void:
 	fire_cd = maxf(0.0, fire_cd - delta)
-	slide_cd = maxf(0.0, slide_cd - delta)
 	wallrun_cd = maxf(0.0, wallrun_cd - delta)
 	prot_left = maxf(0.0, prot_left - delta)
 	damage_flash = maxf(0.0, damage_flash - delta * 2.0)
@@ -848,6 +791,53 @@ func _speed_mult() -> float:
 	if addon == "trackstar":
 		m *= Addons.TRACK_ACTIVE if addon_active > 0.0 else Addons.TRACK_PASSIVE
 	return m
+
+
+# ---------------------------------------------------------------- GoldSrc movement
+# Ports of Half-Life's pm_shared.c (PM_Friction, PM_Accelerate, PM_AirAccelerate,
+# PM_PreventMegaBunnyJumping), working on horizontal velocity in metres.
+
+func _gs_friction(vel: Vector3, delta: float) -> Vector3:
+	var speed := vel.length()
+	if speed < 0.1 * HU:
+		return Vector3.ZERO
+	var friction := GS_FRICTION
+	# Edge friction: if there's no ground 16 units ahead, friction doubles so you
+	# don't slide off ledges.
+	var ahead := global_position + vel / speed * (16.0 * HU) + Vector3(0, 0.05, 0)
+	if not _ray_hits(ahead, Vector3(0, -34.0 * HU, 0)):
+		friction *= GS_EDGEFRICTION
+	var control := maxf(speed, GS_STOPSPEED)
+	var newspeed := maxf(speed - control * friction * delta, 0.0)
+	return vel * (newspeed / speed)
+
+
+func _gs_accelerate(vel: Vector3, wishdir: Vector3, wishspeed: float, accel: float, delta: float) -> Vector3:
+	var addspeed := wishspeed - vel.dot(wishdir)
+	if addspeed <= 0.0:
+		return vel
+	var accelspeed := minf(accel * delta * wishspeed, addspeed)
+	return vel + wishdir * accelspeed
+
+
+## Air acceleration only builds speed along wishdir up to 30 units/s, but turning
+## (strafing while moving the mouse) keeps adding speed sideways: air strafing.
+func _gs_air_accelerate(vel: Vector3, wishdir: Vector3, wishspeed: float, accel: float, delta: float) -> Vector3:
+	var wishspd := minf(wishspeed, GS_AIR_WISHSPEED)
+	var addspeed := wishspd - vel.dot(wishdir)
+	if addspeed <= 0.0:
+		return vel
+	var accelspeed := minf(accel * wishspeed * delta, addspeed)
+	return vel + wishdir * accelspeed
+
+
+## Jumping above 1.7x max speed scales you back down to 65% of that cap.
+func _gs_prevent_mega_bunny_jump(vel: Vector3, maxspeed: float) -> Vector3:
+	var cap := GS_BHOP_CAP * maxspeed
+	var spd := vel.length()
+	if cap <= 0.0 or spd <= cap:
+		return vel
+	return vel * (cap / spd * GS_BHOP_PENALTY)
 
 
 func _end_wallrun() -> void:
@@ -1006,7 +996,7 @@ func _local_visuals(delta: float) -> void:
 	var hspeed := Vector2(velocity.x, velocity.z).length()
 	if is_on_floor() and not sliding:
 		bob += delta * hspeed * 1.6
-	var bob_amt := (1.0 - ads_t) * clampf(hspeed / SPRINT, 0.0, 1.0)
+	var bob_amt := (1.0 - ads_t) * clampf(hspeed / GS_MAXSPEED, 0.0, 1.0)
 	var pos := VM_HIP.lerp(_vm_ads, ads_t)
 	pos += Vector3(sin(bob) * 0.014, absf(cos(bob)) * 0.014, 0.0) * bob_amt
 	pos.z += recoil * 0.035
