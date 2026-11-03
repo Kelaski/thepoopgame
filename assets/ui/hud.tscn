@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="7_w3v7v"]
 [ext_resource type="PackedScene" path="res://assets/ui/loadout_panel.tscn" id="8_k7jnj"]
 [ext_resource type="Script" path="res://scripts/ui/loadout_panel.gd" id="9_neqbl"]
+[ext_resource type="PackedScene" path="res://assets/ui/tag_indicator.tscn" id="10_tagin"]
 
 [node name="Hud" type="Control" unique_id=1473329737]
 layout_mode = 3
@@ -59,6 +60,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 script = ExtResource("5_utoo8")
+
+[node name="TagIndicator" parent="." unique_id=1902384761 instance=ExtResource("10_tagin")]
+layout_mode = 1
 
 [node name="TopCentre" type="VBoxContainer" parent="." unique_id=1775105867]
 layout_mode = 0

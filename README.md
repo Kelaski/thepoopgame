@@ -110,7 +110,7 @@ view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap 
 - **Runner self-defence:** every kill the Runner gets takes 5 s off their team's timer.
 - **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
 - **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s). Every kill gives you back 30 HP (up to your max).
-- **Minimap:** shows location names on the buildings and park. Its size is adjustable in Settings > HUD.
+- **Minimap:** shows location names on the buildings and park, each shrunk to fit inside its building so names never overlap. Its size is adjustable in Settings > HUD.
 - **Damage direction:** when you're shot, a red arc around the crosshair points at the shooter (up = in front of you, down = behind). It follows them as they move and fades after about 2 s.
 - **Respawn:** after a 6 s timer (7 s if your team is holding the Tag, the Runner included), press **Jump (Space)** to respawn. Use the wait to change loadouts. Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
   A spawn point is rejected if any living enemy has line of sight to it (or is within 12 m).
@@ -154,7 +154,7 @@ Press Jump to kick off the wall. The kick keeps your speed and adds a little, so
 - **While leaning** you walk (no sprint), and you can aim and shoot. Sliding or wall running stands you back up.
 - Your head hitbox and third-person body move with the lean, and walls limit how far you can lean.
 
-**Pings** (middle mouse) work like Fortnite's. Ping where you're aiming to put a small marker there for you and your team. It shows through walls and on the minimap, with a sound. Like teammate names, it fades while you aim right at it, so it never covers a fight.
+**Pings** (middle mouse) work like Fortnite's. Ping where you're aiming to put a small marker there for you and your team, with a dim beam of light rising from it. A single ping is yellow, and enemy and danger pings are red. It shows through walls and on the minimap, with a sound. It fades only while you look straight at it, so it never covers a fight.
 - **Aim at an enemy** to mark them (red **ENEMY** ping). **Aim at the Tag** to mark it.
 - **Double tap** for a red **DANGER** ping.
 - Pings last 4.5–6 s. Each player can have 3 at once, and older ones disappear. The server limits pings to 5 every 3 s.
@@ -214,11 +214,30 @@ Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartme
 Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**):
 - **Grid:** every building's footprint snaps to the grid around its centre, moving each wall by at most 0.5 m.
 - **Walls:** each storey's walls are a row of 2 m modules. A module is solid, has the building's window style (small, wide or tall), or is a door on the ground floor.
-- **Windows:** never at the ends of a wall or next to a door, and less likely right after another window, which leaves long solid stretches for wall running. Windows are open gaps you can shoot and jump through.
+- **Windows:** evenly spaced in the same columns on every storey, singly or in pairs. Each side has about the same number per floor as before. They're never at the ends of a wall or next to a door, which leaves solid stretches for wall running. Windows are framed open gaps you can shoot and jump through.
+- **Signs:** each building's name is centred over its street doors.
 - **Rooms:** residential and school floors have a corridor with 6 m rooms behind doors.
-- **Decor:** every storey has ceiling lights, and the walls get decor that fits the building: posters and clocks in the school, neon signs and a jukebox in the diner and bar, bottle shelves and a dartboard in the bar, picture frames and rugs in the bank, apartments, motel and library, pipes and safety signs in the warehouse and water treatment centre, and so on. Exit signs hang over the street doors. The lamps cast real light, and bulbs, screens and neon glow.**Streets** look like a busy city:
+- **Decor:** every storey has ceiling lights, and the walls get decor that fits the building: posters and clocks in the school, neon signs and a jukebox in the diner and bar, bottle shelves and a dartboard in the bar, picture frames and rugs in the bank, apartments, motel and library, pipes and safety signs in the warehouse and water treatment centre, and so on. Exit signs hang over the street doors. The lamps cast real light, and bulbs, screens and neon glow.
+- **Layouts:** each building type is furnished like the real thing, with walkways kept open:
+  - **Store (mall):** aisles of shelves and clothes rails with cross aisles, checkouts and a display table by the door.
+  - **Motel:** every room has a bed against the back wall, a bedside table, a TV dresser and a rug. There's a reception desk in the lobby.
+  - **Apartments:** a lobby with reception and sofas, then bedrooms, living rooms (sofa, TV, rug) and kitchens with dining tables.
+  - **School:** classrooms with a board, the teacher's desk and rows of desks facing them. Lockers line the corridor.
+  - **Office:** cubicle blocks with aisles, copiers, a meeting table and a reception desk.
+  - **Bank:** teller counters across the hall, the vault behind them, bankers' desks and a waiting bench.
+  - **Diner:** a counter with stools, booths along the windows and a few tables.
+  - **Bar:** the bar with stools, pool tables and tables.
+  - **Nightclub:** a dance floor, the bar and lounge sofas.
+  - **Arcade:** cabinets along the walls and back to back down the middle.
+  - **Casino:** rows of slot machines, card and craps tables, and the cashier.
+  - **Library:** book stacks at the back, reading tables in front and a front desk.
+  - **Cinema:** a screen on a stage, rows of seats with a centre aisle, and the concession stand.
+  - **Warehouse:** rack rows with forklift aisles, with offices upstairs.
+  - **Tenements:** sparse and messy.
+
+**Streets** look like a busy city:
 - **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses), with about half the spots taken. Every vehicle, on the road or in a car park, is at least 1.4 m from every other one (front, back and side to side), so you can always slide between two cars. The two lanes are staggered rather than side by side.
-- **Junctions:** kept clear, with zebra crossings.
+- **Junctions:** kept clear, with zebra crossings and no centre lines.
 - **Sidewalks:** along every curb, a lamp post and street trees alternate every 6 m. In between there are benches, bins, fire hydrants with newspaper boxes, mailboxes and the odd bus shelter.
 - **Open squares:** a few big tree planters, bench pairs, kiosks and dumpsters.
 - **Kept clear:** nothing is placed in front of a building door, on a spawn zone or on a Tag spot.
@@ -293,7 +312,7 @@ Every prop and piece of furniture on the map is a template scene:
   - `path`: 1 m long, stretched to each path.
   - `plaza`, `sandpit` and `pond`: the pond is scaled with the park.
 - `assets/props/crane/`: footing, mast, braces, the crane top, hook and loads, and `beam`, the stretched piece used for cables, jibs and bridge decks.
-- `assets/furniture/`: 40 items, from desks and beds to slot machines.
+- `assets/furniture/`: 43 items, from desks and beds to slot machines, including the store checkout, reception desk and cinema screen.
 - `assets/furniture/decor/`: 30 interior decor pieces: ceiling lights, wall decor, floor pieces, a rug and the exit sign.
 Edit them in the Godot editor. The next match uses your changes.
 
@@ -315,7 +334,7 @@ Edit them in the Godot editor. The next match uses your changes.
 - **Placement:**
   - Props are placed on the ground at their origin.
   - Street props face their local +Z away from the road.
-  - Furniture is sometimes turned 90°.
+  - **Furniture** is placed by each building's layout in `scripts/map/map_builder.gd` (`_lay_*`). Its footprint comes from the scene's meshes, so a bigger model automatically gets more room.
   - **Decor:** wall pieces have their origin on the wall face at floor level and stick out along +Z into the room. Floor pieces against a wall have their back at Z = 0. Ceiling lights hang down from their origin on the ceiling. The rug is centred on its origin.
   - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/map_builder.gd`.
   - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.

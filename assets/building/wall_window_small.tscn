@@ -48,6 +48,33 @@ size = Vector3(1.3, 0.06, 0.42)
 [sub_resource type="BoxMesh" id="BoxMesh_vrb8f"]
 size = Vector3(1.3, 0.08, 0.36)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8wym0"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5411765, 0.5411765, 0.5411765, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_3fpe5"]
+size = Vector3(0.1, 1.6, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ysd0h"]
+size = Vector3(0.1, 1.6, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_l7n24"]
+size = Vector3(1.4, 0.1, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_r6dio"]
+size = Vector3(0.1, 1.6, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_l3ifm"]
+size = Vector3(0.1, 1.6, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tq4mh"]
+size = Vector3(1.4, 0.1, 0.04)
+
 [node name="WallWindowSmall" type="Node3D" unique_id=359700423]
 
 [node name="Mesh0" type="MeshInstance3D" parent="." unique_id=845649356]
@@ -109,5 +136,47 @@ metadata/batch = "detail"
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.36, 0)
 material_override = SubResource("StandardMaterial3D_tyhdx")
 mesh = SubResource("BoxMesh_vrb8f")
+metadata/slot = "trim"
+metadata/batch = "detail"
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=2023704841]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 1.7, -0.17)
+material_override = SubResource("StandardMaterial3D_8wym0")
+mesh = SubResource("BoxMesh_3fpe5")
+metadata/slot = "trim"
+metadata/batch = "detail"
+
+[node name="Detail3" type="MeshInstance3D" parent="." unique_id=1908682512]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 1.7, -0.17)
+material_override = SubResource("StandardMaterial3D_8wym0")
+mesh = SubResource("BoxMesh_ysd0h")
+metadata/slot = "trim"
+metadata/batch = "detail"
+
+[node name="Detail4" type="MeshInstance3D" parent="." unique_id=1247804894]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.45, -0.17)
+material_override = SubResource("StandardMaterial3D_8wym0")
+mesh = SubResource("BoxMesh_l7n24")
+metadata/slot = "trim"
+metadata/batch = "detail"
+
+[node name="Detail5" type="MeshInstance3D" parent="." unique_id=991224453]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.65, 1.7, 0.17)
+material_override = SubResource("StandardMaterial3D_8wym0")
+mesh = SubResource("BoxMesh_r6dio")
+metadata/slot = "trim"
+metadata/batch = "detail"
+
+[node name="Detail6" type="MeshInstance3D" parent="." unique_id=1867326249]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.65, 1.7, 0.17)
+material_override = SubResource("StandardMaterial3D_8wym0")
+mesh = SubResource("BoxMesh_l3ifm")
+metadata/slot = "trim"
+metadata/batch = "detail"
+
+[node name="Detail7" type="MeshInstance3D" parent="." unique_id=1553062754]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.45, 0.17)
+material_override = SubResource("StandardMaterial3D_8wym0")
+mesh = SubResource("BoxMesh_tq4mh")
 metadata/slot = "trim"
 metadata/batch = "detail"

@@ -27,6 +27,7 @@ class_name Prefabs
 const ROOT := "res://assets/"
 
 static var _recipes := {}
+static var _feet := {}
 
 
 ## Recipe for "props/vehicles/car" etc. (path under assets/, without .tscn):
@@ -104,3 +105,22 @@ static func _add_shape(shape: Shape3D, xf: Transform3D, layer: int, r: Dictionar
 		r.shapes.append({"kind": "cyl", "layer": layer, "size": Vector3(shape.radius, shape.height, shape.radius), "xform": xf})
 	else:
 		push_warning("Prefab shape %s: only box and cylinder shapes are supported" % shape)
+
+
+## The floor area a scene's meshes cover, in its own space (x across, y = its z):
+## used to place furniture against walls and in rows without overlaps.
+static func footprint(name: String) -> Rect2:
+	if _feet.has(name):
+		return _feet[name]
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for p: Dictionary in recipe(name).parts:
+		var xf: Transform3D = p.xform
+		for sx: float in [-0.5, 0.5]:
+			for sz: float in [-0.5, 0.5]:
+				var q := xf * Vector3(sx, 0.0, sz)
+				lo = lo.min(Vector2(q.x, q.z))
+				hi = hi.max(Vector2(q.x, q.z))
+	var f := Rect2(lo, hi - lo) if lo.x < INF else Rect2(-0.5, -0.5, 1.0, 1.0)
+	_feet[name] = f
+	return f

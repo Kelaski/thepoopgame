@@ -27,12 +27,12 @@ size = Vector3(2.4, 0.02, 1.6)
 [node name="Rug" type="Node3D" unique_id=1866990314]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=1689405326]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.008, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.038, 0)
 material_override = SubResource("StandardMaterial3D_kaage")
 mesh = SubResource("BoxMesh_7reve")
 
 [node name="Part1" type="MeshInstance3D" parent="." unique_id=607381869]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
 material_override = SubResource("StandardMaterial3D_ui03r")
 mesh = SubResource("BoxMesh_6uhit")
 metadata/slot_choices = PackedColorArray(0.47843137, 0.12156863, 0.16470589, 1, 0.24705882, 0.37254903, 0.6039216, 1, 0.41568628, 0.3137255, 0.2509804, 1, 0.18431373, 0.41568628, 0.2901961, 1)

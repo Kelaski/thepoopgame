@@ -15,9 +15,56 @@ height = 1.7
 radial_segments = 10
 rings = 5
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nml4b"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.30980393, 0.5411765, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_4ik11"]
+radius = 0.62
+height = 0.95
+radial_segments = 12
+rings = 6
+
+[sub_resource type="SphereMesh" id="SphereMesh_w2jih"]
+radius = 0.58
+height = 0.9
+radial_segments = 12
+rings = 6
+
+[sub_resource type="SphereMesh" id="SphereMesh_53dia"]
+height = 0.8
+radial_segments = 12
+rings = 6
+
 [node name="TreeCrown" type="Node3D" unique_id=1566277785]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=220741521]
 material_override = SubResource("StandardMaterial3D_uy0d3")
 mesh = SubResource("SphereMesh_nml4b")
 metadata/slot = "leaf"
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=151484779]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, -0.15, 0.3)
+material_override = SubResource("StandardMaterial3D_nml4b")
+mesh = SubResource("SphereMesh_4ik11")
+metadata/slot = "leaf"
+metadata/slot_darken = 0.12
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=636461343]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, -0.05, -0.4)
+material_override = SubResource("StandardMaterial3D_nml4b")
+mesh = SubResource("SphereMesh_w2jih")
+metadata/slot = "leaf"
+metadata/slot_lighten = 0.08
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=865487300]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 0.45, 0.15)
+material_override = SubResource("StandardMaterial3D_nml4b")
+mesh = SubResource("SphereMesh_53dia")
+metadata/slot = "leaf"
+metadata/slot_lighten = 0.15

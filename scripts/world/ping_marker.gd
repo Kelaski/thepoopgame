@@ -7,6 +7,11 @@ extends Node3D
 
 const POP_TIME := 0.15
 const FADE_TIME := 0.6
+# Fades only when you look right at it (tighter than teammate names).
+const AIM_FADE_NEAR := 1.5   # degrees: fully faded inside this
+const AIM_FADE_FAR := 4.0    # back to full beyond this
+const AIM_MIN_ALPHA := 0.1
+const BEAM_ALPHA := 0.22     # the light beam is dim but visible
 
 var title := ""      # "ENEMY", "DANGER", "TAG" or "" (kept for the kind; not drawn)
 var color := Color.WHITE
@@ -16,6 +21,8 @@ var age := 0.0
 var _aim_fade := 1.0
 
 @onready var icon: Sprite3D = $Icon
+@onready var beam: MeshInstance3D = $Beam
+var _beam_mat: StandardMaterial3D
 
 
 func setup(col: Color, text: String, lifetime: float) -> void:
@@ -26,6 +33,8 @@ func setup(col: Color, text: String, lifetime: float) -> void:
 
 func _ready() -> void:
 	icon.modulate = color
+	_beam_mat = (beam.material_override as StandardMaterial3D).duplicate()
+	beam.material_override = _beam_mat
 	_update(0.0)
 
 
@@ -51,7 +60,9 @@ func _update(delta: float) -> void:
 	var target := 1.0
 	if cam:
 		var ang := rad_to_deg((-cam.global_basis.z).angle_to(icon.global_position - cam.global_position))
-		var k := clampf((ang - Player.NAMEPLATE_FADE_NEAR) / (Player.NAMEPLATE_FADE_FAR - Player.NAMEPLATE_FADE_NEAR), 0.0, 1.0)
-		target = lerpf(Player.NAMEPLATE_MIN_ALPHA, 1.0, k)
+		var k := clampf((ang - AIM_FADE_NEAR) / (AIM_FADE_FAR - AIM_FADE_NEAR), 0.0, 1.0)
+		target = lerpf(AIM_MIN_ALPHA, 1.0, k)
 	_aim_fade = target if delta <= 0.0 else lerpf(_aim_fade, target, clampf(delta * 12.0, 0.0, 1.0))
-	icon.modulate.a = alpha() * _aim_fade
+	var a := alpha() * _aim_fade
+	icon.modulate.a = a
+	_beam_mat.albedo_color = Color(color, BEAM_ALPHA * a)

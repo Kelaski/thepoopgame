@@ -20,6 +20,7 @@ const PING_KINDS := {
 	"tag": ["TAG", 6.0],
 }
 const PING_DANGER := Color("ff4a3a")
+const PING_SPOT := Color("ffe14a")   # a plain (single tap) ping is yellow
 const PINGS_PER_PLAYER := 3     # older pings from the same player disappear
 const PING_BURST := 5           # at most this many pings...
 const PING_BURST_TIME := 3.0    # ...per this many seconds (server-side spam limit)
@@ -800,7 +801,7 @@ func _show_ping(owner_id: int, pos: Vector3, kind: String) -> void:
 	while mine.size() >= PINGS_PER_PLAYER:
 		_remove_ping(mine.pop_front())
 	var info: Array = PING_KINDS.get(kind, PING_KINDS.spot)
-	var col := Mats.team_color(Net.team_of(owner_id)).lightened(0.35)
+	var col := PING_SPOT
 	if kind == "enemy" or kind == "danger":
 		col = PING_DANGER
 	elif kind == "tag":

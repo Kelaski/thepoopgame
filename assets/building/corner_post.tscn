@@ -10,10 +10,10 @@ rim = 0.35
 rim_tint = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_alg3t"]
-size = Vector3(0.3, 1, 0.3)
+size = Vector3(0.32, 1, 0.32)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1p5hv"]
-size = Vector3(0.3, 1, 0.3)
+size = Vector3(0.32, 1, 0.32)
 
 [node name="CornerPost" type="Node3D" unique_id=948106591]
 

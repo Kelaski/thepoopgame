@@ -7,6 +7,39 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.15.0
+
+### Added
+- **Real-life interior layouts:** every building is furnished like the real thing, without cluttering it:
+  - **Stores:** aisles of shelves and rails, with checkouts by the door.
+  - **Motels:** rooms have a bed, bedside table, TV dresser and rug.
+  - **Apartments:** bedrooms, living rooms and kitchens.
+  - **Schools:** classrooms with a board and rows of desks.
+  - **Banks:** teller counters and the vault.
+  - **Diners:** a counter and booths.
+  - **Cinemas:** a screen and rows of seats.
+  - **Libraries:** book stacks and reading tables.
+  - **Offices:** cubicles.
+  - **Casinos:** slot rows and card tables.
+  - **Arcades, bars, the nightclub and the warehouse** get their own layouts too.
+  - Walkways, doorways, stairs and the Tag spot stay clear.
+- **New furniture scenes:** a store checkout, a reception desk and a cinema screen.
+- **Tag arrow:** while the Tag lies on the ground after being dropped, an arrow on screen points to it. On screen, it bobs over the Tag with the distance; off screen, it sits at the edge pointing the way to turn.
+- **Ping light beams:** every ping sends up a dim beam of light in its colour.
+
+### Changed
+- **Building names** are centred over each street door instead of the middle of the wall.
+- **Windows** are evenly spaced in the same columns on every floor, singly or in pairs, with about the same number per floor as before. They also have frames now.
+- **Pings:** a single ping is now yellow (danger and enemy pings stay red). Pings only fade when you look straight at them.
+- **Bus shelters:** the glowing ad panel is now set in a solid side wall with collision.
+- **Road junctions** have no yellow centre lines.
+- **Minimap names** are smaller, and each shrinks to fit inside its building, so they never overlap.
+- **More detail:** fuller tree crowns, framed windows, and furniture and decor drawn up to 140 m away.
+
+### Fixed
+- **Flickering corners:** the corner posts of buildings sat exactly on the wall surfaces and flickered. They now stand slightly proud of the walls.
+- **Rugs** no longer flicker into the ground floor.
+
 ## 0.14.2
 
 ### Fixed (security)

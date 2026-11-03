@@ -23,6 +23,7 @@ const L_SKY := 64    # sky barrier: stops players, but grapples, shots and pings
 const SKY_CLEARANCE := 35.0  # the sky barrier is this far above the tallest structure
 const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
 const DOOR_SCENE := preload("res://assets/models/door.tscn")
+const SIGN_SCENE := preload("res://assets/models/building_sign.tscn")
 const DECOR := 0    # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them); foliage never collides
 
 const WALL_T := 0.3
@@ -448,18 +449,14 @@ static func _yaw_x(dir: Vector3) -> float:
 
 
 
+## A name sign (assets/models/building_sign.tscn: style it there).
 func _label(text: String, pos: Vector3, yaw: float, size := 96, col := Color.WHITE) -> void:
-	var l := Label3D.new()
+	var l: Label3D = SIGN_SCENE.instantiate()
 	l.text = text
 	l.font_size = size
-	l.pixel_size = 0.012
-	l.outline_size = 18
 	l.modulate = col
-	l.outline_modulate = Color(0.1, 0.1, 0.12)
 	l.position = pos
 	l.rotation.y = yaw
-	l.double_sided = false
-	l.visibility_range_end = 140.0
 	_chunk.add_child(l)
 
 
@@ -480,7 +477,8 @@ func _build_ground() -> void:
 	box(Vector3(bc.x, -0.5, bc.y), Vector3(bounds.size.x + 4.0, 1.0, bounds.size.y + 4.0), CONCRETE, L_SOLID)
 	# Scenery ground outside the fence
 	box(Vector3(0, -0.53, 0), Vector3(700, 1.0, 700), Color("7f9a5a"), DECOR)
-	# Roads with dashed centre lines
+	# Roads with dashed centre lines (none inside junctions: they stay clear)
+	_find_junctions()
 	for r: Rect2 in road_rects:
 		box(Vector3(r.get_center().x, 0.012, r.get_center().y), Vector3(r.size.x, 0.024, r.size.y), ASPHALT, DECOR)
 		var horizontal := r.size.x > r.size.y
@@ -488,10 +486,13 @@ func _build_ground() -> void:
 		var n := int(length / 6.0)
 		for i in n:
 			var t := (i + 0.5) * length / n
+			var dc := Vector2(r.position.x + t, r.get_center().y) if horizontal else Vector2(r.get_center().x, r.position.y + t)
+			if _hits_any(Rect2(dc - Vector2(1.2, 1.2), Vector2(2.4, 2.4)), _junctions, 0.5):
+				continue
 			if horizontal:
-				box(Vector3(r.position.x + t, 0.03, r.get_center().y), Vector3(2.2, 0.02, 0.18), Color("e8c84a"), DECOR)
+				box(Vector3(dc.x, 0.03, dc.y), Vector3(2.2, 0.02, 0.18), Color("e8c84a"), DECOR)
 			else:
-				box(Vector3(r.get_center().x, 0.03, r.position.y + t), Vector3(0.18, 0.02, 2.2), Color("e8c84a"), DECOR)
+				box(Vector3(dc.x, 0.03, dc.y), Vector3(0.18, 0.02, 2.2), Color("e8c84a"), DECOR)
 	# Boundary fence: visual chain-link panels + tall invisible collision walls.
 	var fence_col := Color("55625a")
 	var post_col := Color("8c949a")
@@ -1032,9 +1033,18 @@ func _build_building(b: Array) -> void:
 	_wall_slots = []
 	_build_exterior_walls(type, floors, fh, x0, z0, x1, z1, door_spots, st)
 
-	# --- Signs
-	_label(bname.to_upper(), Vector3((x0 + x1) * 0.5, minf(top, fh) - 0.9, z0 - 0.05), PI, 96)
-	_label(bname.to_upper(), Vector3((x0 + x1) * 0.5, minf(top, fh) - 0.9, z1 + 0.05), 0.0, 96)
+	# --- Signs: the name centred over every street door (or on the two long
+	# faces if a building has no door)
+	var sign_y := minf(DOOR_H + 0.75, minf(top, fh) - 0.45)
+	for ds in door_spots:
+		var dside: int = ds[0]
+		var dt: float = ds[1]
+		var outward: Vector3 = [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT][dside]
+		var face_c: Vector3 = [Vector3(dt, 0, z0), Vector3(dt, 0, z1), Vector3(x0, 0, dt), Vector3(x1, 0, dt)][dside]
+		_label(bname.to_upper(), face_c + outward * 0.08 + Vector3(0, sign_y, 0), _yaw_to(outward), 80)
+	if door_spots.is_empty():
+		_label(bname.to_upper(), Vector3((x0 + x1) * 0.5, minf(top, fh) - 0.9, z0 - 0.05), PI, 96)
+		_label(bname.to_upper(), Vector3((x0 + x1) * 0.5, minf(top, fh) - 0.9, z1 + 0.05), 0.0, 96)
 
 	# --- Furniture forbidden zones
 	_forbid = []
@@ -1082,6 +1092,20 @@ func _build_building(b: Array) -> void:
 				_prefab("building/wall_interior", _at(Vector3(p.x, y0, p.y), v_yaw, Vector3(vmax - ROOM_V, h, 1)), cross)
 
 	# --- Furnish every storey (and specials), then decorate
+	# Layout info for the furnishing (rooms, street doors, stairwells), in u/v.
+	var bounds_u := [0.0] + room_walls + [umax]
+	var lay_rooms := []
+	for i in room_doors.size():
+		lay_rooms.append([bounds_u[i], bounds_u[i + 1], (room_doors[i] + 0.5) * MODULE])
+	var lay_doors := []
+	for ds in door_spots:
+		var side: int = ds[0]
+		var tt: float = ds[1]
+		var wp: Vector2 = [Vector2(tt, inner.position.y), Vector2(tt, inner.end.y), Vector2(inner.position.x, tt), Vector2(inner.end.x, tt)][side]
+		var inward: Vector3 = [Vector3.BACK, Vector3.FORWARD, Vector3.RIGHT, Vector3.LEFT][side]
+		var duv := Vector2(wp.x - _o.x, wp.y - _o.y) if _ax else Vector2(wp.y - _o.y, wp.x - _o.x)
+		lay_doors.append([duv, inward])
+	_lay = {"umax": umax, "vmax": vmax, "rooms": lay_rooms, "doors": lay_doors, "stairs_far": flips.size() > 1, "S": S}
 	var floor_zones := []
 	var floor_cells := []
 	var floor_walls := []
@@ -1104,7 +1128,7 @@ func _build_building(b: Array) -> void:
 		elif type == "water":
 			_furnish_water(inner, zones)
 		else:
-			_furnish_floor(type, k, inner, y, fh, zones)
+			_furnish_floor(type, k, inner, y, fh, zones, k in room_floors and can_rooms)
 		floor_cells.append(_occupied)
 	_decorate_interior(type, floors, fh, inner, stairs, door_spots, floor_zones, floor_cells, floor_walls)
 
@@ -1191,9 +1215,9 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 		for ds in door_spots:
 			if ds[0] == side:
 				door_slots.append(ds[2])
+		var window_cols := _window_columns(n, p_win)
 		for k in floors:
 			var y0 := k * fh
-			var last_window := false
 			for i in n:
 				var t := a0 + (i + 0.5) * MODULE
 				var at := Vector3(t, y0, fixed) if horizontal else Vector3(fixed, y0, t)
@@ -1201,9 +1225,8 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 				var near_door := k == 0 and ((i - 1) in door_slots or (i + 1) in door_slots)
 				if k == 0 and i in door_slots:
 					piece = "building/wall_door"
-				elif i > 0 and i < n - 1 and not near_door and rng.randf() < p_win * (0.4 if last_window else 1.0):
+				elif i in window_cols and not near_door:
 					piece = window
-				last_window = piece == window
 				if piece == "building/wall_solid":
 					var inward: Vector3 = [Vector3.BACK, Vector3.FORWARD, Vector3.RIGHT, Vector3.LEFT][side]
 					_wall_slots.append([at + inward * WALL_T * 0.5, inward, k])
@@ -1219,6 +1242,28 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 		var cx := c.x + (WALL_T * 0.5 if c.x == x0 else -WALL_T * 0.5)
 		var cz := c.y + (WALL_T * 0.5 if c.y == z0 else -WALL_T * 0.5)
 		_prefab("building/corner_post", _at(Vector3(cx, 0, cz), 0.0, Vector3(1, top + 1.1, 1)), cols)
+
+
+## Which wall modules of an n-module side get windows: about the same share as
+## before (p of the inner modules), but evenly spaced and in the same columns on
+## every storey. A building picks either single windows or pairs. The end
+## modules always stay solid.
+func _window_columns(n: int, p: float) -> Array:
+	var inner_n := n - 2
+	if inner_n <= 0:
+		return []
+	var count := clampi(roundi(inner_n * p), 1 if inner_n >= 3 else 0, inner_n)
+	var cols := []
+	if rng.randf() < 0.4 and count >= 2 and inner_n >= 5:
+		var pairs := count / 2
+		for j in pairs:
+			var c := 1 + int((j + 0.5) * inner_n / float(pairs))
+			cols.append(clampi(c - 1, 1, n - 2))
+			cols.append(clampi(c, 1, n - 2))
+	else:
+		for j in count:
+			cols.append(1 + int((j + 0.5) * inner_n / float(count)))
+	return cols
 
 
 ## True if an exterior door at (side, t) would be blocked by interior room walls.
@@ -1390,175 +1435,456 @@ func _blocked(r: Rect2, zones: Array) -> bool:
 
 
 
-const CELL := {
-	"warehouse": 4.2, "school": 3.6, "theater": 3.2, "bank": 3.8, "diner": 3.4, "arcade": 3.0,
-	"club": 3.6, "bar": 3.2, "apartments": 3.8, "mall": 4.0, "motel": 3.6, "rundown": 3.4,
-	"rundown2": 3.4, "office": 4.0, "casino": 3.6, "library": 3.6,
-}
+## Interior layouts, laid out the way real places are (furniture scenes in
+## assets/furniture/): stores have aisles of shelves and checkouts by the door,
+## motel and apartment rooms are furnished rooms, classrooms face a board, and so
+## on, with walkways kept open. Everything works in the building's own u (long
+## axis) / v coordinates, and every piece is only placed where its footprint is
+## clear of the stairs, doorways, room walls, the Tag and other furniture.
+## _lay holds the building being furnished: {umax, vmax, rooms: [[u0, u1, door_u]],
+## doors: [Vector2 uv of each street door], stairs_far: bool, S}.
+var _lay := {}
+var _fzones: Array = []
+var _fy := 0.0
+var _finner := Rect2()
+var _last_xf := Transform3D()
+var _placed: Array = []   # transforms of everything placed by the last _run
 
 
-func _furnish_floor(type: String, k: int, inner: Rect2, y: float, fh: float, zones: Array) -> void:
-	var cs: float = CELL.get(type, 3.6)
-	var nx := int((inner.size.x - 1.0) / cs)
-	var nz := int((inner.size.y - 1.0) / cs)
-	if nx < 1 or nz < 1:
-		return
-	var ox := inner.position.x + (inner.size.x - nx * cs) * 0.5
-	var oz := inner.position.y + (inner.size.y - nz * cs) * 0.5
-	var vault_done := false
-	for i in nx:
-		for j in nz:
-			var cx := ox + (i + 0.5) * cs
-			var cz := oz + (j + 0.5) * cs
-			var cell := Rect2(cx - cs * 0.5 + 0.2, cz - cs * 0.5 + 0.2, cs - 0.4, cs - 0.4)
-			if _blocked(cell, zones):
-				continue
-			# Keep walkable aisles: skip every third column in most buildings.
-			if i % 4 == 3 and type not in ["theater"]:
-				continue
-			if rng.randf() > 0.92:
-				continue
-			var c := Vector3(cx, y, cz)
-			var rot := rng.randf() < 0.5
-			_occupied.append(cell)
-			if type == "bank" and k == 0 and not vault_done and i == nx - 1 and j == nz - 1:
-				_vault(c)
-				vault_done = true
-				continue
-			_furnish_cell(type, k, c, rot, fh)
-
-
-## One furniture cell. Each item is a scene in assets/furniture/ (random colours
-## such as arcade cabinets or bookshelf books are picked from the scene's
-## slot_choices); rot turns it 90 degrees.
-func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> void:
-	var roll := rng.randf()
-	var at := _at_rot(c, rot)
+func _furnish_floor(type: String, k: int, inner: Rect2, y: float, fh: float, zones: Array, rooms_here: bool) -> void:
+	_fzones = zones
+	_fy = y
+	_finner = inner
+	var rooms: Array = _lay.rooms if rooms_here else []
 	match type:
 		"warehouse":
-			if k > 0:
-				if roll < 0.5:
-					_desk_chair(c, rot)
-				else:
-					_crates(c)
-			elif roll < 0.55:
-				_rack(c, rot)
-			elif roll < 0.85:
-				_crates(c)
-			else:
-				_forklift(c, rot)
+			_lay_warehouse(k)
 		"school":
-			if roll < 0.7:
-				for dx: float in [-0.8, 0.8]:
-					for dz: float in [-0.8, 0.8]:
-						_school_desk(c + Vector3(dx, 0, dz), rot)
-			elif roll < 0.85:
-				_prefab("furniture/school_shelf", at)
-			else:
-				_desk_chair(c, rot)
-				_prefab("furniture/chalkboard", at)
-		"theater":
-			if k == 0 or roll < 0.75:
-				_prefab("furniture/theater_seats", at)
-			else:
-				_prefab("furniture/concession_stand", at)
-		"bank":
-			if k == 0 and roll < 0.45:
-				_prefab("furniture/teller_counter", at)
-			elif roll < 0.85:
-				_desk_chair(c, rot)
-			else:
-				_plant(c)
-		"diner":
-			if roll < 0.6:
-				_prefab("furniture/diner_booth", at)
-			else:
-				_prefab("furniture/diner_counter", at)
-		"arcade":
-			if roll < 0.6:
-				_prefab("furniture/arcade_cabinets", at)
-			elif roll < 0.8:
-				_prefab("furniture/air_hockey", at)
-			else:
-				_prefab("furniture/claw_machine", at)
-		"club":
-			if k == 0 and roll < 0.3:
-				_prefab("furniture/dance_floor", at)
-			elif roll < 0.6:
-				_prefab("furniture/club_bar", at)
-			else:
-				_sofa(c, rot, Color("6a2a5a"))
-		"bar":
-			if roll < 0.4:
-				_prefab("furniture/bar_counter", at)
-			elif roll < 0.7:
-				_prefab("furniture/pool_table", at)
-			else:
-				_table_chairs(c, rot, WOOD)
-		"apartments":
-			if roll < 0.3:
-				_bed(c, rot, BLUE)
-			elif roll < 0.55:
-				_sofa(c, rot, Color("7a8a6a"))
-				_prefab("furniture/tv_stand", at)
-			elif roll < 0.8:
-				_prefab("furniture/kitchen", at)
-			else:
-				_table_chairs(c, rot, LIGHTWOOD)
-		"mall":
-			if roll < 0.45:
-				_prefab("furniture/clothes_shelf", at)
-			elif roll < 0.7:
-				_prefab("furniture/clothes_rack", at)
-			elif roll < 0.85:
-				_prefab("furniture/display_stand", at)
-			else:
-				_prefab("furniture/mall_bench", at)
-				_plant(c + Vector3(0, 0, 1.2))
+			_lay_school(k, rooms)
 		"motel":
-			if roll < 0.55:
-				_bed(c, rot, Color("c0453a"))
-				_prefab("furniture/nightstand", at)
-			else:
-				_prefab("furniture/dresser_tv", at)
+			_lay_motel(k, rooms)
+		"apartments":
+			_lay_apartments(k, rooms)
 		"rundown", "rundown2":
-			if roll < 0.3:
-				_prefab("furniture/mattress", at)
-			elif roll < 0.55:
-				_sofa(c, rot, Color("6a5a3a"))
-			elif roll < 0.8:
-				for i in rng.randi_range(2, 5):
-					_prefab("furniture/trash_bag", _at(c + Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1))))
-				_crates(c)
-			else:
-				_prefab("furniture/rundown_tv", at)
+			_lay_rundown(k, rooms)
+		"mall":
+			_lay_store(k)
 		"office":
-			if roll < 0.75:
-				_prefab("furniture/office_cubicle", at)
-			elif roll < 0.88:
-				_prefab("furniture/copier", at)
-				_plant(c + Vector3(1.0, 0, 0))
-			else:
-				_table_chairs(c, rot, DARKWOOD)
+			_lay_office(k)
+		"bank":
+			_lay_bank(k)
+		"diner":
+			_lay_diner(k)
+		"bar":
+			_lay_bar(k)
+		"club":
+			_lay_club(k)
+		"arcade":
+			_lay_arcade(k)
 		"casino":
-			if roll < 0.45:
-				_prefab("furniture/slot_machines", at)
-			elif roll < 0.75:
-				_prefab("furniture/card_table", at)
-			elif roll < 0.9:
-				_prefab("furniture/craps_table", at)
-			else:
-				_prefab("furniture/casino_counter", at)
+			_lay_casino(k)
 		"library":
-			if roll < 0.6:
-				_bookshelf(c, rot)
-			elif roll < 0.85:
-				_table_chairs(c, rot, LIGHTWOOD)
-			else:
-				_desk_chair(c, rot)
-				_prefab("furniture/desk_monitor", at)
+			_lay_library(k)
+		"theater":
+			_lay_theater(k, fh)
 		_:
-			_crates(c)
+			_scatter(["crate"], 4)
+
+
+# ------------------------------------------------------------------ placement helpers
+
+func _ud() -> Vector3:
+	return Vector3(1, 0, 0) if _ax else Vector3(0, 0, 1)
+
+
+func _vd() -> Vector3:
+	return Vector3(0, 0, 1) if _ax else Vector3(1, 0, 0)
+
+
+## World footprint of furniture scene `name` placed at p (xz) with yaw.
+func _foot_at(name: String, p: Vector2, yaw: float) -> Rect2:
+	var f := Prefabs.footprint("furniture/" + name)
+	var b := Basis(Vector3.UP, yaw)
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for corner: Vector2 in [f.position, Vector2(f.end.x, f.position.y), Vector2(f.position.x, f.end.y), f.end]:
+		var w := b * Vector3(corner.x, 0, corner.y)
+		lo = lo.min(Vector2(w.x, w.z))
+		hi = hi.max(Vector2(w.x, w.z))
+	return Rect2(p + lo, hi - lo)
+
+
+## Places `name` at (u, v) with its local +Z along `face`, if its footprint (plus
+## `margin` of walking room) is clear. Returns true if it was placed.
+func _put(name: String, u: float, v: float, face: Vector3, slots := {}, margin := 0.15, solid := true, check_zones := true) -> bool:
+	var p := _uv(u, v)
+	var yaw := _yaw_to(face)
+	var foot := _foot_at(name, p, yaw)
+	if not _finner.grow(0.02).encloses(foot):
+		return false
+	var room := foot.grow(margin)
+	if (check_zones and _blocked(room, _fzones)) or _hits_any(foot, _occupied, margin):
+		return false
+	_last_xf = _at(Vector3(p.x, _fy, p.y), yaw)
+	_prefab("furniture/" + name, _last_xf, slots)
+	_placed.append(_last_xf)
+	if solid:
+		_occupied.append(foot)
+	return true
+
+
+## A run of `name` along u at v (or along v at u when along_u is false), spaced
+## by its width plus gap. Every `skip`th slot is left open as a cross aisle.
+func _run(name: String, along_u: bool, fixed: float, from: float, to: float, face: Vector3, gap := 0.1, skip := 0, slots := {}) -> int:
+	var w := Prefabs.footprint("furniture/" + name).size.x
+	_placed = []
+	var t := from + w * 0.5
+	var i := 0
+	var placed := 0
+	while t + w * 0.5 <= to + 0.01:
+		if skip <= 0 or i % skip != skip - 1:
+			var ok := _put(name, t, fixed, face, slots) if along_u else _put(name, fixed, t, face, slots)
+			if ok:
+				placed += 1
+		t += w + gap
+		i += 1
+	return placed
+
+
+## Rows of `name` along u, stepping across v, for shops, shelves and seating.
+func _rows(name: String, v0: float, v1: float, u0: float, u1: float, step_v: float, face: Vector3, gap := 0.1, skip := 0, slots := {}) -> void:
+	var v := v0
+	while v <= v1 + 0.01:
+		_run(name, true, v, u0, u1, face, gap, skip, slots)
+		v += step_v
+
+
+## A grid of `name` (cubicles, tables, booths in the open).
+func _grid(name: String, u0: float, u1: float, v0: float, v1: float, step_u: float, step_v: float, face: Vector3, slots := {}) -> void:
+	var u := u0
+	while u <= u1 + 0.01:
+		var v := v0
+		while v <= v1 + 0.01:
+			_put(name, u, v, face, slots)
+			v += step_v
+		u += step_u
+
+
+## Up to n of the given items dropped at random clear spots (for messy places).
+func _scatter(names: Array, n: int, slots := {}) -> void:
+	var placed := 0
+	for i in n * 8:
+		if placed >= n:
+			break
+		var u := rng.randf_range(1.0, float(_lay.umax) - 1.0)
+		var v := rng.randf_range(1.0, float(_lay.vmax) - 1.0)
+		var face := _vd() if rng.randf() < 0.5 else _ud()
+		if _put(names[rng.randi() % names.size()], u, v, face, slots):
+			placed += 1
+
+
+## The main street door in u/v (ground floor), and the way into the building from it.
+func _main_door() -> Array:
+	if _lay.doors.is_empty():
+		return []
+	return _lay.doors[0]  # [uv, inward direction (world)]
+
+
+## The u range layouts work in: the whole floor less a little wall clearance.
+## (The stairwells are keep-clear zones, so anything that would overlap them is
+## simply skipped.)
+func _clear_u0() -> float:
+	return 0.6
+
+
+func _clear_u1() -> float:
+	return float(_lay.umax) - 0.6
+
+
+## A desk or counter facing the main door, a few metres in (receptions, cashiers).
+func _by_door(name: String, inset: float, facing_door := true) -> bool:
+	var d := _main_door()
+	if d.is_empty():
+		return false
+	var uv: Vector2 = d[0]  # (u, v) of the door on the inside of the wall
+	var inward: Vector3 = d[1]
+	var face := -inward if facing_door else inward
+	var side := Vector3(inward.z, 0, -inward.x)
+	for off: float in [0.0, 2.0, -2.0, 4.0, -4.0]:
+		var u := uv.x + side.dot(_ud()) * off + inward.dot(_ud()) * inset
+		var v := uv.y + side.dot(_vd()) * off + inward.dot(_vd()) * inset
+		if _put(name, u, v, face):
+			return true
+	return false
+
+
+# ------------------------------------------------------------------ building types
+
+func _lay_warehouse(k: int) -> void:
+	var um: float = _lay.umax
+	var vm: float = _lay.vmax
+	if k > 0:
+		# Mezzanine offices: desks along the back wall, a meeting table.
+		_run("desk_chair", true, vm - 0.45, _clear_u0(), _clear_u1(), -_vd(), 0.6)
+		_put("table_chairs", um * 0.5, vm * 0.45, _vd(), {"main": DARKWOOD})
+		_scatter(["crate"], 2, {"color": CARDBOARD})
+		return
+	# Rack rows with forklift aisles; a cross aisle every 4th rack.
+	var v := 1.3
+	while v < vm - 1.0:
+		var n := _run("rack", true, v, 1.0, um - 1.0, _vd(), 0.0, 4)
+		if n > 0:
+			_fill_racks()
+		v += 4.6
+	_by_door("forklift", 4.0, false)
+	_scatter(["crate"], 4, {"color": CARDBOARD})
+
+
+## Cardboard boxes on the shelves of the racks the last _run placed.
+func _fill_racks() -> void:
+	for xf: Transform3D in _placed:
+		for h: float in [0.15, 1.3, 2.45]:
+			for s: float in [-1.0, 0.1, 1.1]:
+				if rng.randf() < 0.75:
+					var bh := rng.randf_range(0.5, 0.95)
+					_prefab("furniture/rack_box", xf * Transform3D(Basis.from_scale(Vector3(1.0, bh, 1.0)), Vector3(s, h + 0.04, 0)))
+
+
+func _lay_school(k: int, rooms: Array) -> void:
+	var vm: float = _lay.vmax
+	if rooms.is_empty():
+		_classroom(_clear_u0(), _clear_u1() - 0.3, STAIR_W + 1.0, vm - 0.3, _clear_u0() - 0.5)
+	else:
+		for r: Array in rooms:
+			_classroom(r[0] + 0.3, r[1] - 0.3, ROOM_V + 0.4, vm - 0.3, r[0] + (0.11 if r[0] > 0.0 else 0.02))
+	# Lockers along the front wall, by the corridor.
+	_run("school_shelf", true, 0.28, _clear_u0(), _clear_u1(), _vd(), 0.3)
+	if k == 0:
+		_by_door("front_desk", 3.0)
+
+
+## Board on the room's left wall, teacher's desk in front of it, rows of desks
+## facing it, and a bookshelf at the back.
+func _classroom(u0: float, u1: float, v0: float, v1: float, wall_u: float) -> void:
+	if u1 - u0 < 4.5 or v1 - v0 < 3.0:
+		return
+	var vm := (v0 + v1) * 0.5
+	_put("chalkboard", wall_u + 1.2, vm, -_ud(), {}, 0.0, false, false)  # its board sits 1.2 m behind its origin
+	_put("desk_chair", u0 + 1.6, vm, -_ud())
+	var u := u0 + 3.2
+	while u <= u1 - 0.6:
+		var v := v0 + 0.6
+		while v <= v1 - 0.6:
+			_put("school_desk", u, v, _ud(), {}, 0.05)
+			v += 1.15
+		u += 1.25
+	_put("school_shelf", u1 - 0.3, vm, _ud(), {}, 0.05)
+
+
+func _lay_motel(k: int, rooms: Array) -> void:
+	var vm: float = _lay.vmax
+	for r: Array in rooms:
+		var mid: float = (r[0] + r[1]) * 0.5
+		# Bed with its head on the back wall and a nightstand beside it, the TV
+		# dresser on the side wall facing it, a rug at the foot of the bed.
+		if _put("bed", mid + 0.3, vm - 1.1, -_vd(), {"blanket": Color("c0453a").lerp(Color("4a6a9a"), rng.randf())}):
+			_prefab("furniture/nightstand", _last_xf)
+			var rug := _uv(mid + 0.3, vm - 3.0)
+			if vm - 3.0 > ROOM_V + 1.6:
+				_prefab("furniture/decor/rug", _at(Vector3(rug.x, _fy, rug.y), _yaw_x(_ud())))
+		_put("dresser_tv", r[1] - 0.9, maxf(ROOM_V + 2.0, vm - 3.2), _ud(), {}, 0.05)
+	if k == 0:
+		_by_door("front_desk", 3.0)
+		_put("potted_plant", _clear_u0() + 0.6, 1.0, _vd())
+	if rooms.is_empty():
+		_grid("bed", _clear_u0() + 1.5, _clear_u1() - 1.5, 2.0, vm - 1.5, 4.0, 3.5, -_vd())
+
+
+func _lay_apartments(k: int, rooms: Array) -> void:
+	var vm: float = _lay.vmax
+	if k == 0 or rooms.is_empty():
+		# Lobby: reception, sofas along the wall, plants.
+		if k == 0:
+			_by_door("front_desk", 3.0)
+		_run("sofa", true, vm - 0.5, _clear_u0() + 1.0, _clear_u1() - 1.0, _vd(), 3.0, 0, {"main": Color("7a8a6a")})
+		_put("potted_plant", _clear_u0() + 0.6, vm - 0.6, _vd())
+		_put("potted_plant", _clear_u1() - 0.6, vm - 0.6, _vd())
+		return
+	var kind := 0
+	for r: Array in rooms:
+		var mid: float = (r[0] + r[1]) * 0.5
+		match kind % 3:
+			0:  # bedroom
+				if _put("bed", mid + 0.3, vm - 1.1, -_vd(), {"blanket": BLUE.lerp(Color("c27aa0"), rng.randf())}):
+					_prefab("furniture/nightstand", _last_xf)
+				_put("dresser_tv", r[1] - 0.9, maxf(ROOM_V + 2.0, vm - 3.2), _ud(), {}, 0.05)
+			1:  # living room: sofa on the back wall facing a TV, a rug in between
+				if _put("sofa", mid, vm - 0.55, _vd(), {"main": Color("7a8a6a").lerp(Color("8a5a3c"), rng.randf())}):
+					_prefab("furniture/tv_stand", _last_xf)
+					var rug := _uv(mid, vm - 1.9)
+					_prefab("furniture/decor/rug", _at(Vector3(rug.x, _fy, rug.y), _yaw_x(_ud())))
+				_put("potted_plant", r[0] + 0.7, vm - 0.7, _vd())
+			2:  # kitchen + dining table
+				_put("kitchen", mid - 0.3, vm - 0.4, _vd(), {}, 0.05)
+				_put("table_chairs", mid, (ROOM_V + vm) * 0.5 - 0.3, _vd(), {"main": LIGHTWOOD})
+		kind += 1
+
+
+func _lay_rundown(k: int, rooms: Array) -> void:
+	var vm: float = _lay.vmax
+	if rooms.is_empty():
+		_scatter(["mattress", "sofa", "rundown_tv", "crate"], 5, {"main": Color("6a5a3a"), "color": CARDBOARD})
+		_scatter(["trash_bag"], 5)
+		return
+	for r: Array in rooms:
+		var mid: float = (r[0] + r[1]) * 0.5
+		if rng.randf() < 0.75:
+			_put("mattress", mid + rng.randf_range(-1.0, 1.0), vm - 1.1, _vd())
+		if rng.randf() < 0.35:
+			_put("rundown_tv", r[0] + 1.5, (ROOM_V + vm) * 0.5, _ud())
+		elif rng.randf() < 0.4:
+			_put("sofa", mid, ROOM_V + 1.6, -_vd(), {"main": Color("6a5a3a")})
+		for i in rng.randi_range(0, 3):
+			_put("trash_bag", rng.randf_range(r[0] + 0.6, r[1] - 0.6), rng.randf_range(ROOM_V + 0.6, vm - 0.6), _vd(), {}, 0.0)
+	_scatter(["trash_bag"], 3)
+
+
+## A real shop floor: aisles of shelves and clothes rails with cross aisles,
+## display tables near the front, and checkouts by the door.
+func _lay_store(k: int) -> void:
+	var vm: float = _lay.vmax
+	var u0 := _clear_u0() + 1.0
+	var u1 := _clear_u1() - 1.0
+	if k == 0:
+		for i in 3:
+			if not _by_door("checkout_counter", 3.2 + i * 0.01, true):
+				break
+		_by_door("display_stand", 6.5, true)
+	var v := 2.4
+	var row := 0
+	while v < vm - 1.5:
+		if row % 2 == 0:
+			_run("clothes_shelf", true, v, u0, u1, _vd(), 0.0, 3)
+		else:
+			_run("clothes_rack", true, v, u0, u1, _vd(), 0.6, 3)
+		v += 3.6
+		row += 1
+	_put("mall_bench", (u0 + u1) * 0.5, vm - 0.6, -_vd())
+	_put("potted_plant", u0 - 0.4, vm - 0.7, _vd())
+
+
+func _lay_office(k: int) -> void:
+	var vm: float = _lay.vmax
+	if k == 0:
+		_by_door("front_desk", 3.0)
+	_grid("office_cubicle", _clear_u0() + 2.2, _clear_u1() - 2.2, 2.6, vm - 2.0, 5.4, 4.8, _vd())
+	_run("copier", true, vm - 0.4, _clear_u0(), _clear_u0() + 4.0, -_vd(), 1.0)
+	_put("table_chairs", _clear_u1() - 1.2, vm - 1.8, _vd(), {"main": DARKWOOD})
+	_put("potted_plant", _clear_u1() - 0.6, 0.7, _vd())
+
+
+func _lay_bank(k: int) -> void:
+	var um: float = _lay.umax
+	var vm: float = _lay.vmax
+	if k > 0:
+		_run("desk_chair", true, vm - 0.45, _clear_u0(), _clear_u1(), -_vd(), 1.0)
+		_put("table_chairs", um * 0.5, vm * 0.4, _vd(), {"main": DARKWOOD})
+		return
+	# Teller counters across the back of the hall, the vault behind them in the
+	# corner, bankers' desks on the side, a waiting bench and plants by the door.
+	_put("vault", um - 2.2, vm - 2.6, _vd())
+	_run("teller_counter", true, vm - 2.4, um * 0.3, um * 0.75, _vd(), 0.0)
+	_put("desk_chair", _clear_u0() + 1.0, vm * 0.45, -_ud())
+	_put("desk_chair", _clear_u0() + 1.0, vm * 0.45 + 2.2, -_ud())
+	_by_door("mall_bench", 4.0)
+	_put("potted_plant", _clear_u1() - 0.6, 0.7, _vd())
+
+
+func _lay_diner(k: int) -> void:
+	var vm: float = _lay.vmax
+	if k > 0:
+		_grid("table_chairs", _clear_u0() + 1.5, _clear_u1() - 1.5, 2.0, vm - 2.0, 3.2, 3.2, _vd(), {"main": WOOD})
+		return
+	# Counter with stools along the back, booths along the front windows.
+	_run("diner_counter", true, vm - 1.5, _clear_u0() + 1.0, _clear_u1() - 1.0, -_vd(), 0.0, 4)
+	_run("diner_booth", true, 0.75, _clear_u0(), _clear_u1(), _vd(), 0.2)
+	_grid("table_chairs", _clear_u0() + 2.0, _clear_u1() - 2.0, vm * 0.5 - 0.2, vm * 0.5 - 0.2, 3.4, 3.0, _vd(), {"main": WOOD})
+
+
+func _lay_bar(k: int) -> void:
+	var vm: float = _lay.vmax
+	_run("bar_counter", true, vm - 1.5, _clear_u0() + 1.0, _clear_u1() - 1.0, -_vd(), 0.0, 3)
+	_grid("pool_table", _clear_u0() + 2.5, _clear_u1() - 2.5, vm * 0.45, vm * 0.45, 4.0, 3.0, _ud())
+	_run("table_chairs", true, 1.2, _clear_u0() + 0.6, _clear_u1(), _vd(), 1.4, 0, {"main": WOOD})
+
+
+func _lay_club(k: int) -> void:
+	var um: float = _lay.umax
+	var vm: float = _lay.vmax
+	# Dance floor in the middle (you can walk on it), bar on the back wall,
+	# lounge sofas along the front wall.
+	for du: float in [-1.5, 1.5]:
+		for dv: float in [-1.5, 1.5]:
+			_put("dance_floor", um * 0.5 + du, vm * 0.5 + dv, _vd(), {}, 0.0, false)
+	_occupied.append(_uv_rect(um * 0.5 - 3.0, vm * 0.5 - 3.0, um * 0.5 + 3.0, vm * 0.5 + 3.0))
+	_run("club_bar", true, vm - 0.45, _clear_u0() + 1.0, _clear_u1() - 1.0, _vd(), 0.0)
+	_run("sofa", true, 0.55, _clear_u0(), _clear_u1(), -_vd(), 2.5, 0, {"main": Color("6a2a5a")})
+
+
+func _lay_arcade(k: int) -> void:
+	var vm: float = _lay.vmax
+	# Cabinets along both long walls and back-to-back down the middle.
+	_run("arcade_cabinets", true, 0.45, _clear_u0(), _clear_u1(), -_vd(), 0.4)
+	_run("arcade_cabinets", true, vm - 0.45, _clear_u0(), _clear_u1(), _vd(), 0.4)
+	var mid := vm * 0.5
+	_run("arcade_cabinets", true, mid - 0.5, _clear_u0() + 1.5, _clear_u1() - 1.5, _vd(), 0.4, 4)
+	_run("arcade_cabinets", true, mid + 0.45, _clear_u0() + 1.5, _clear_u1() - 1.5, -_vd(), 0.4, 4)
+	_scatter(["air_hockey", "claw_machine"], 3)
+
+
+func _lay_casino(k: int) -> void:
+	var vm: float = _lay.vmax
+	if k == 0:
+		_by_door("casino_counter", 3.0)
+	# Back-to-back rows of slot machines with aisles, tables in the open middle.
+	var v := 1.6
+	var row := 0
+	while v < vm * 0.45:
+		_run("slot_machines", true, v, _clear_u0(), _clear_u1(), _vd() if row % 2 == 0 else -_vd(), 0.1, 4)  # pairs back to back
+		v += 0.85 if row % 2 == 0 else 2.6
+		row += 1
+	_grid("card_table", _clear_u0() + 2.0, _clear_u1() - 2.0, vm * 0.6, vm - 1.8, 3.6, 3.4, _vd())
+	_scatter(["craps_table"], 2)
+
+
+func _lay_library(k: int) -> void:
+	var vm: float = _lay.vmax
+	if k == 0:
+		_by_door("front_desk", 3.0)
+	# Book stacks across the back, reading tables in front by the windows.
+	_rows("bookshelf", vm * 0.5, vm - 1.0, _clear_u0() + 0.5, _clear_u1() - 0.5, 3.4, _vd(), 0.0, 4)
+	_grid("table_chairs", _clear_u0() + 1.8, _clear_u1() - 1.8, 2.0, vm * 0.5 - 2.0, 3.4, 2.8, _ud(), {"main": LIGHTWOOD})
+
+
+## Cinema: the screen on the far end wall (ground floor), rows of seats facing
+## it with an aisle down the middle, and the concession stand by the door.
+func _lay_theater(k: int, fh: float) -> void:
+	var um: float = _lay.umax
+	var vm: float = _lay.vmax
+	if k == 0:
+		var sw := minf(1.0, (vm - 1.0) / 8.4)
+		var sp := _uv(um - 0.05, vm * 0.5)
+		if fh >= 5.0:
+			_prefab("furniture/theater_screen", _at(Vector3(sp.x, _fy, sp.y), _yaw_to(-_ud()), Vector3(sw, 1, 1)))
+			_occupied.append(_uv_rect(um - 1.0, vm * 0.5 - 4.2 * sw, um, vm * 0.5 + 4.2 * sw))
+		_by_door("concession_stand", 3.0)
+	var u := um - 5.0 if k == 0 else um - 2.0
+	var last := um * 0.45 if k == 0 else _clear_u0() + 1.0
+	while u >= last:
+		# Two blocks of seats with a centre aisle.
+		_run("theater_seats", false, u, 1.0, vm * 0.5 - 0.8, -_ud(), 0.0)
+		_run("theater_seats", false, u, vm * 0.5 + 0.8, vm - 1.0, -_ud(), 0.0)
+		u -= 1.15
 
 
 func _desk_chair(c: Vector3, rot: bool) -> void:

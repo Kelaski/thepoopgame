@@ -8,7 +8,8 @@ extends Control
 const WIDGET := Vector2(240, 204)  # size at 1.0x
 const MIN_SCALE := 0.6
 const MAX_SCALE := 2.0
-const LABEL_SIZE := 9.0            # font size at 1.0x
+const LABEL_SIZE := 7.5            # font size at 1.0x (shrunk further to fit small buildings)
+const LABEL_MIN := 5
 
 var _acc := 0.0
 var _scale := 1.2
@@ -43,7 +44,8 @@ func _r(r: Rect2) -> Rect2:
 
 
 ## Location names centred on each building (and the park). Names wider than their
-## building are split onto two lines.
+## building are split onto two lines, and shrunk until they fit inside it, so
+## neighbouring names never overlap.
 func _draw_labels(builder) -> void:
 	var font := ThemeDB.fallback_font
 	var fs := int(round(LABEL_SIZE * _ui_scale))
@@ -59,8 +61,16 @@ func _draw_label(font: Font, fs: int, text: String, rect: Rect2) -> void:
 	var cut := text.find(" ", text.length() / 2)
 	if cut < 0:
 		cut = text.rfind(" ")
-	if width > rect.size.x + 6.0 and cut > 0:
+	if width > rect.size.x and cut > 0:
 		lines = [text.left(cut), text.substr(cut + 1)]
+	# Shrink until every line fits the building's width and the block its height.
+	while fs > LABEL_MIN:
+		var widest := 0.0
+		for line: String in lines:
+			widest = maxf(widest, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+		if widest <= rect.size.x and font.get_height(fs) * lines.size() <= rect.size.y + 2.0:
+			break
+		fs -= 1
 	var line_h := font.get_height(fs)
 	var y := rect.get_center().y - line_h * lines.size() * 0.5 + font.get_ascent(fs)
 	for line: String in lines:

@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nqs8t"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.101960786, 0.101960786, 0.11764706, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_vht3l"]
+size = Vector3(8.4, 4, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1bnfw"]
+shading_mode = 0
+albedo_color = Color(0.9098039, 0.93333334, 0.95686275, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_uop3a"]
+size = Vector3(8, 3.6, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_33fo7"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2901961, 0.12156863, 0.16470589, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_xnfus"]
+size = Vector3(8.4, 0.9, 0.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ydofs"]
+size = Vector3(8.4, 0.9, 0.8)
+
+[node name="TheaterScreen" type="Node3D" unique_id=1518777370]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1817740108]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0.05)
+material_override = SubResource("StandardMaterial3D_nqs8t")
+mesh = SubResource("BoxMesh_vht3l")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=1135702811]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0.11)
+material_override = SubResource("StandardMaterial3D_1bnfw")
+mesh = SubResource("BoxMesh_uop3a")
+metadata/glow = true
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=1586168974]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0.4)
+material_override = SubResource("StandardMaterial3D_33fo7")
+mesh = SubResource("BoxMesh_xnfus")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1758219496]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1617547111]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0.4)
+shape = SubResource("BoxShape3D_ydofs")
