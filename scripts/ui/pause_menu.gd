@@ -15,7 +15,7 @@ func _ready() -> void:
 	v.add_child(UiKit.label("(the match keeps running)", 14, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	v.add_child(UiKit.button("Resume", func(): main.close_overlay()))
 	v.add_child(UiKit.button("Settings", func(): main.open_settings(true)))
-	v.add_child(UiKit.button("Customize (music, colours, crosshair, spray)", func(): main.open_customize(true), 380))
+	v.add_child(UiKit.button("Customize (music, colours, crosshair, spray, skybox)", func(): main.open_customize(true), 380))
 	v.add_child(UiKit.button("Skip Song", func(): Sfx.skip_track()))
 	if multiplayer.is_server():
 		v.add_child(UiKit.button("End Match (back to lobby)", _end_match))

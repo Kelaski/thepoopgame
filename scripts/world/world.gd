@@ -12,6 +12,8 @@ var players := {}  # peer id -> Player
 var players_node: Node3D
 var env: WorldEnvironment
 var sun: DirectionalLight3D
+var _proc_sky: ProceduralSkyMaterial
+var _pano_sky: PanoramaSkyMaterial
 
 var tag_node: Node3D
 var tag_beam: MeshInstance3D
@@ -63,6 +65,9 @@ func _build_environment() -> void:
 	sm.ground_bottom_color = Color("6f7f5a")
 	sm.sun_angle_max = 20.0
 	sky.sky_material = sm
+	_proc_sky = sm
+	_pano_sky = PanoramaSkyMaterial.new()
+	_pano_sky.filter = true
 	sky.radiance_size = Sky.RADIANCE_SIZE_32
 	e.background_mode = Environment.BG_SKY
 	e.sky = sky
@@ -91,18 +96,37 @@ func _build_environment() -> void:
 ## Sky, fog and sunlight follow the colour customization live; map colours are
 ## applied when the map is built (next match).
 func _apply_colors() -> void:
-	if env and env.environment and env.environment.sky:
-		var sm := env.environment.sky.sky_material as ProceduralSkyMaterial
-		if sm:
-			sm.sky_top_color = Palette.get_color("sky_top")
-			sm.sky_horizon_color = Palette.get_color("sky_horizon")
-			sm.ground_horizon_color = Palette.get_color("sky_horizon")
+	if _proc_sky:
+		_proc_sky.sky_top_color = Palette.get_color("sky_top")
+		_proc_sky.sky_horizon_color = Palette.get_color("sky_horizon")
+		_proc_sky.ground_horizon_color = Palette.get_color("sky_horizon")
+	if env and env.environment:
 		env.environment.fog_light_color = Palette.get_color("sky_horizon")
 	if sun:
 		sun.light_color = Palette.get_color("sun")
 
 
+## Uses the player's custom skybox (an equirectangular panorama) when enabled and
+## present, otherwise the generated sky. Updates live from the Skybox menu.
+func _apply_sky() -> void:
+	if env == null or env.environment == null or env.environment.sky == null:
+		return
+	var tex: Texture2D = null
+	if Settings.g("sky_custom"):
+		tex = UserImages.texture(UserImages.SKYBOX)
+	var e := env.environment
+	if tex:
+		_pano_sky.panorama = tex
+		_pano_sky.energy_multiplier = float(Settings.g("sky_energy"))
+		e.sky.sky_material = _pano_sky
+		e.sky_rotation = Vector3(0.0, deg_to_rad(float(Settings.g("sky_rotation"))), 0.0)
+	else:
+		e.sky.sky_material = _proc_sky
+		e.sky_rotation = Vector3.ZERO
+
+
 func _apply_settings() -> void:
+	_apply_sky()
 	if env and env.environment:
 		env.environment.adjustment_brightness = float(Settings.g("brightness"))
 	if sun:

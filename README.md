@@ -197,6 +197,12 @@ scripts/
 
 Customize → **Spray** lets you choose an image (PNG, JPG, WebP, BMP, TGA or SVG). It's resized to fit 128 px and re-saved as a clean PNG. In a match, press **T** to spray it on the surface you're looking at (within 4 m), with a 5 s cooldown. Everyone sees it, and your newest spray replaces your previous one. The server only accepts PNG data under 64 KB, at most one new spray image per player every 3 s, re-checks the cooldown and distance, and every client decodes sprays as PNG only (at most 256×256). A player's spray disappears when they leave.
 
+## Custom skybox
+
+Customize → **Skybox** replaces the sky with your own 360° panorama: an equirectangular image about twice as wide as it is tall, such as the HDRIs from Poly Haven. PNG, JPG, WebP, BMP, TGA, HDR and EXR are supported. The image is resized to fit 4096 px and saved as `user://skybox.png`.
+
+The menu has a preview, a toggle, rotation and brightness. Changes apply instantly, even mid-match. The sky also provides the world's ambient light, so darker skies make the map darker. Your skybox only shows for you.
+
 ## Crosshair editor
 
 Customize → **Crosshair Editor** has Counter-Strike-style options:

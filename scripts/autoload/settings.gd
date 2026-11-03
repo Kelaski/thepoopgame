@@ -83,6 +83,10 @@ const DEFAULTS := {
 	"xh_image_scale": 1.0,
 	"scope_custom": false,
 	"scope_scale": 1.0,
+	# Custom skybox (equirectangular panorama in user://skybox.png)
+	"sky_custom": false,
+	"sky_rotation": 0.0,
+	"sky_energy": 1.0,
 	"hitmarker_sound": true,
 }
 

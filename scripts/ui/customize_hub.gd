@@ -18,6 +18,7 @@ func _ready() -> void:
 	v.add_child(UiKit.button("Colours", func(): main.open_colors(back_to_pause, true)))
 	v.add_child(UiKit.button("Crosshair Editor", func(): main.open_crosshair(back_to_pause, true)))
 	v.add_child(UiKit.button("Spray", func(): main.open_spray(back_to_pause, true)))
+	v.add_child(UiKit.button("Skybox", func(): main.open_skybox(back_to_pause, true)))
 	v.add_child(UiKit.button("Back", _back))
 
 

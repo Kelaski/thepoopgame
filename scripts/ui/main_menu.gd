@@ -61,17 +61,14 @@ func _ready() -> void:
 	btns.add_child(join)
 	v.add_child(btns)
 	var b2 := UiKit.hbox(10)
-	var st := UiKit.button("Settings", func(): main.open_settings(false), 200)
-	st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var quit := UiKit.button("Quit", func(): get_tree().quit(), 200)
 	quit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b2.add_child(st)
 	b2.add_child(quit)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
-	for item in [["Music & Playlist", "open_music"], ["Customize Colours", "open_colors"], ["Crosshair Editor", "open_crosshair"], ["Spray", "open_spray"]]:
+	for item in [["Music & Playlist", "open_music"], ["Customize Colours", "open_colors"], ["Crosshair Editor", "open_crosshair"], ["Spray", "open_spray"], ["Skybox", "open_skybox"], ["Settings", "open_settings"]]:
 		var b := UiKit.button(item[0], Callable(main, item[1]).bind(false), 200)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid.add_child(b)

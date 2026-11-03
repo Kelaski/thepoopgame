@@ -225,6 +225,10 @@ func open_spray(back_to_pause: bool, from_hub := false) -> void:
 	_open_custom(SprayMenu.new(), back_to_pause, from_hub)
 
 
+func open_skybox(back_to_pause: bool, from_hub := false) -> void:
+	_open_custom(SkyboxMenu.new(), back_to_pause, from_hub)
+
+
 func _open_custom(menu: Control, back_to_pause: bool, from_hub: bool) -> void:
 	_settings_back_to_pause = back_to_pause
 	_back_to_hub = from_hub
