@@ -269,7 +269,7 @@ func _process(delta: float) -> void:
 		_crosshair.spread = spread
 	# Sniper: ring showing when the next shot is ready.
 	if alive and lp.weapon == "sniper" and not Game.ui_open:
-		var period := 1.0 / float(wd.rps)
+		var period: float = lp.shot_interval()
 		_crosshair.cooldown = clampf(lp.fire_cd / period, 0.0, 1.0)
 		if lp.reloading > 0.0:
 			_crosshair.cooldown = clampf(lp.reloading / lp.reload_time(), 0.0, 1.0)

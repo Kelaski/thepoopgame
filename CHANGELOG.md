@@ -7,6 +7,22 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.16.2
+
+### Changed
+- **Trackstar:** reloads now take half the time with every weapon except the Spiked Bat, which never reloads. The shotgun and sniper also re-chamber between shots in half the time, so they fire twice as fast.
+- **Shoot through gaps:** collision now matches what you see, so bullets go through any gap you can see through:
+  - between bench slats and under benches
+  - through warehouse racks
+  - under picnic tables
+  - over car bonnets and boots, and around car cabins
+
+### Fixed
+- **Car windscreens:** the gaps around the front and rear windows are closed.
+- **Fountain plaza flicker:** the paving round the fountain fought with the path under it. It now sits clearly on top.
+- **Pond on the path:** on small maps the pond could land across a path. It now moves clear of the paths and the plaza, and shrinks if the park is too small.
+- **Fountain inside the court:** the fountain plaza could overlap the basketball court. It now moves along the path to a spot clear of the court and the sandpit.
+
 ## 0.16.1
 
 ### Changed

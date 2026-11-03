@@ -1108,7 +1108,15 @@ func _start_reload() -> void:
 	Sfx.play("reload", -6.0)
 
 
-## Trackstar reloads 25% faster.
+## Time between shots. Trackstar re-chambers the shotgun and sniper in half the time.
+func shot_interval() -> float:
+	var t := 1.0 / float(Weapons.DATA[weapon].rps)
+	if addon == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
+		t *= Addons.TRACK_RECHAMBER_MULT
+	return t
+
+
+## Trackstar reloads in half the time.
 func reload_time() -> float:
 	return float(Weapons.DATA[weapon].reload) * (Addons.TRACK_RELOAD_MULT if addon == "trackstar" else 1.0)
 
@@ -1129,7 +1137,7 @@ func _try_fire() -> void:
 	if weapon != "bat" and ammo <= 0:
 		_start_reload()
 		return
-	fire_cd = 1.0 / float(w.rps)
+	fire_cd = shot_interval()
 	_on_moved()
 	if invisible:
 		_end_invis()  # Firing breaks Hider invisibility.

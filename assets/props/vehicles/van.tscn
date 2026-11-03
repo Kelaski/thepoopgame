@@ -222,6 +222,18 @@ size = Vector3(0.01, 0.12, 0.42)
 [sub_resource type="BoxMesh" id="BoxMesh_ecoap"]
 size = Vector3(0.01, 1.9, 0.03)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tw2al"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.4117647, 0.57254905, 0.7294118, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_m5ssd"]
+size = Vector3(0.5, 0.8, 1.86)
+
 [node name="Van" type="Node3D" unique_id=120352557]
 
 [node name="Collision" type="StaticBody3D" parent="." unique_id=785502905]
@@ -434,3 +446,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.705, 1.5, 0)
 material_override = SubResource("StandardMaterial3D_aeksk")
 mesh = SubResource("BoxMesh_ecoap")
 metadata/batch = "detail"
+
+[node name="Fill0" type="MeshInstance3D" parent="." unique_id=1861088528]
+transform = Transform3D(0.89879405, -0.43837115, 0, 0.43837115, 0.89879405, 0, 0, 0, 1, 2.1283379, 1.8372561, 0)
+material_override = SubResource("StandardMaterial3D_tw2al")
+mesh = SubResource("BoxMesh_m5ssd")
+metadata/slot = "body"

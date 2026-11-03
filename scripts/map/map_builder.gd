@@ -2112,17 +2112,8 @@ func _build_park() -> void:
 	var sand := pg.grow(1.2)  # props/park/sandpit is this size
 	_prefab("props/park/sandpit", _at(Vector3(pc.x, 0, pc.y)))
 	_prefab("props/park/playground", _at(Vector3(pc.x, 0, pc.y)))
-	_prefab("props/park/pond", _at(Vector3(x0 + 26.5 * kx, 0, z0 + 34.0 * kz), 0.0, Vector3(kx, 1, kz)))
-	var pond := Rect2(x0 + 20.0 * kx, z0 + 24.5 * kz, 12.0 * kx, 17.0 * kz)
 
-	# Keep clear of the big pieces, the Tag and the spawn zones.
-	var avoid := [court.grow(1.0), sand.grow(0.8), pond.grow(0.8)]
-	for o in objectives:
-		avoid.append(Rect2(o.pos.x - 3.5, o.pos.z - 3.5, 7.0, 7.0))
-	for s: Vector3 in spawn_dots:
-		avoid.append(Rect2(s.x - 3.0, s.z - 3.0, 6.0, 6.0))
-
-	# Paths, and the plaza where they meet
+	# Paths first: everything else keeps off them.
 	var path_x := maxf(x0 + 19.5 * kx, court.end.x + 2.2)
 	var path_z := (sand.end.y + court.position.y) * 0.5
 	var cross := court.position.y - sand.end.y >= PATH_W + 1.0
@@ -2133,9 +2124,39 @@ func _build_park() -> void:
 	for pi in range(1, paths.size()):
 		for piece: Rect2 in _subtract(paths[pi], paths[0]):
 			_park_path(piece)
-	var plaza := Vector2(path_x, path_z if cross else z0 + r.size.y * 0.25)
+
+	# Keep clear of the big pieces, the Tag and the spawn zones.
+	var avoid := [court.grow(1.0), sand.grow(0.8)]
+	for o in objectives:
+		avoid.append(Rect2(o.pos.x - 3.5, o.pos.z - 3.5, 7.0, 7.0))
+	for s: Vector3 in spawn_dots:
+		avoid.append(Rect2(s.x - 3.0, s.z - 3.0, 6.0, 6.0))
+
+	# The plaza and fountain sit on the main path, at the crossing if there's
+	# room, otherwise wherever along the path it clears the court and sandpit.
 	var plaza_r := 4.2
-	if not _hits_any(Rect2(plaza - Vector2.ONE * 2.4, Vector2(4.8, 4.8)), avoid.slice(3), 0.0):
+	var plaza_room := plaza_r + 0.6
+	var plaza := Vector2.INF
+	var want_z: float = path_z if cross else z0 + r.size.y * 0.25
+	var best := INF
+	var pz := z0 + plaza_room + 0.5
+	while pz <= r.end.y - plaza_room - 0.5:
+		var pr2 := Rect2(Vector2(path_x, pz) - Vector2.ONE * plaza_room, Vector2.ONE * plaza_room * 2.0)
+		if r.encloses(pr2) and not court.intersects(pr2) and not sand.intersects(pr2) and not _hits_any(pr2, avoid.slice(2), 0.0):
+			if absf(pz - want_z) < best:
+				best = absf(pz - want_z)
+				plaza = Vector2(path_x, pz)
+		pz += 0.5
+	var plaza_rect := Rect2()
+	if plaza.is_finite():
+		plaza_rect = Rect2(plaza - Vector2.ONE * (plaza_r + 2.2), Vector2.ONE * (plaza_r + 2.2) * 2.0)
+
+	# The pond: by default bottom right; moved off the paths and plaza (and shrunk
+	# on small parks) so it never lies across a path.
+	var pond := _place_pond(r, kx, kz, paths, plaza_rect, [court.grow(0.6), sand.grow(0.6)])
+	if pond.has_area():
+		avoid.append(pond.grow(0.8))
+	if plaza.is_finite():
 		_prefab("props/park/plaza", _at(Vector3(plaza.x, 0, plaza.y)))
 		_prefab("props/park/fountain", _at(Vector3(plaza.x, 0, plaza.y)))
 		# Flower beds on the plaza's diagonals, turned to follow it round
@@ -2144,9 +2165,9 @@ func _build_park() -> void:
 			var d := Vector2(cos(a), sin(a))
 			var fp := plaza + d * (plaza_r + 1.4)
 			var fr := Rect2(fp - Vector2(1.3, 1.3), Vector2(2.6, 2.6))
-			if r.grow(-0.5).encloses(fr) and not _hits_any(fr, avoid, 0.0):
+			if r.grow(-0.5).encloses(fr) and not _hits_any(fr, avoid, 0.0) and not _hits_any(fr, paths, 0.2):
 				_prefab("props/park/flower_bed", _at(Vector3(fp.x, 0, fp.y), _yaw_x(Vector3(-d.y, 0, d.x))))
-		avoid.append(Rect2(plaza - Vector2.ONE * (plaza_r + 2.2), Vector2.ONE * (plaza_r + 2.2) * 2.0))
+		avoid.append(plaza_rect)
 	var path_keep := []
 	for pr: Rect2 in paths:
 		path_keep.append(pr.grow(0.4))
@@ -2235,6 +2256,38 @@ func _build_park() -> void:
 		if r.grow(-0.5).has_point(p) and not _hits_any(Rect2(p - Vector2.ONE * 0.6, Vector2.ONE * 1.2), avoid.slice(3), 0.0):
 			_bush(Vector3(p.x, 0, p.y))
 	_detail = true
+
+
+## Places props/park/pond (local extent x -5.8..6.2, z -9.7..8.0 at scale 1,
+## scaled by kx/kz) where it clears the paths, plaza and keep-out rects: first
+## where the classic layout puts it, then shifted right of the main path and
+## up/down, shrinking it if the park is too small. Returns its footprint (empty
+## if there was no room).
+func _place_pond(r: Rect2, kx: float, kz: float, paths: Array, plaza_rect: Rect2, keep_out: Array) -> Rect2:
+	var blocks := keep_out.duplicate()
+	for p: Rect2 in paths:
+		blocks.append(p.grow(0.6))
+	if plaza_rect.has_area():
+		blocks.append(plaza_rect)
+	var x_lo: float = (paths[0] as Rect2).end.x + 0.6
+	for sc: float in [1.0, 0.85, 0.7, 0.55]:
+		var sx := kx * sc
+		var sz := kz * sc
+		var cands := [Vector2(r.position.x + 26.5 * kx, r.position.y + 34.0 * kz)]
+		var lo_x := x_lo + 5.8 * sx
+		var hi_x := r.end.x - 0.8 - 6.2 * sx
+		var lo_z := r.position.y + 0.8 + 9.7 * sz
+		var hi_z := r.end.y - 0.8 - 8.0 * sz
+		if lo_x <= hi_x and lo_z <= hi_z:
+			for fz: float in [1.0, 0.5, 0.0]:
+				for fx: float in [0.5, 0.0, 1.0]:
+					cands.append(Vector2(lerpf(lo_x, hi_x, fx), lerpf(lo_z, hi_z, fz)))
+		for c: Vector2 in cands:
+			var foot := Rect2(c.x - 5.8 * sx, c.y - 9.7 * sz, 12.0 * sx, 17.7 * sz)
+			if r.grow(-0.5).encloses(foot) and not _hits_any(foot, blocks, 0.0):
+				_prefab("props/park/pond", _at(Vector3(c.x, 0, c.y), 0.0, Vector3(sx, 1, sz)))
+				return foot
+	return Rect2()
 
 
 ## A paved park path: props/park/path (1 m long along local Z) stretched to the

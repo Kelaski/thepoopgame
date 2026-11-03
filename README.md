@@ -135,7 +135,7 @@ Every player holds a visible model of their weapon (the same model as your own f
 | Addon | Effect |
 |---|---|
 | Hider | Shift: 15 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 12 s cooldown after it ends. |
-| Trackstar | Passive +15% speed and 25% faster reloads (reload time × 0.8). Shift: +35% for 6 s. 30 s cooldown from activation. |
+| Trackstar | Passive +15% speed, and reloads take half the time (every weapon but the bat). The shotgun and sniper also re-chamber between shots in half the time. Shift: +35% for 6 s. 30 s cooldown from activation. |
 | Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
 | Stalker | See wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
 | Phantom | Shift: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
