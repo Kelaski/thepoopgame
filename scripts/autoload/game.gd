@@ -424,6 +424,28 @@ func server_map_command(sender: int, args: PackedStringArray) -> String:
 	return "Map set to %s." % MapData.size_name(size)
 
 
+## /time command (host only). Returns a reply for the chat.
+func server_time_command(sender: int, args: PackedStringArray) -> String:
+	var names := PackedStringArray()
+	for t: String in TIMES_OF_DAY:
+		names.append(t.to_lower())
+	var usage := "Usage: /time <%s|next>" % "|".join(names)
+	if args.is_empty():
+		return "Time of day: %s. %s" % [TIMES_OF_DAY[time_of_day], usage]
+	if sender != 1:
+		return "Only the host can change the time of day."
+	if not in_match:
+		return "Start a match first."
+	var arg := args[0].to_lower()
+	var idx := (time_of_day + 1) % TIMES_OF_DAY.size() if arg == "next" else names.find(arg)
+	if idx < 0:
+		return "Unknown time \"%s\". %s" % [arg.left(16), usage]
+	if idx == time_of_day:
+		return "It's already %s." % TIMES_OF_DAY[idx].to_lower()
+	_set_time_of_day.rpc(idx)
+	return "Time of day set to %s." % TIMES_OF_DAY[idx].to_lower()
+
+
 func send_map_size_to(id: int) -> void:
 	if multiplayer.is_server():
 		_sync_map_size.rpc_id(id, map_size)

@@ -6,6 +6,7 @@ const LIST := {
 	"help": {"usage": "/help", "desc": "List the available commands."},
 	"kill": {"usage": "/kill", "desc": "Eliminate yourself (the respawn timer still applies)."},
 	"map": {"usage": "/map <small|medium|large>", "desc": "Host: change the map size (restarts a running match)."},
+	"time": {"usage": "/time <morning|afternoon|evening|night|next>", "desc": "Host: change the time of day (blends over 10 s)."},
 }
 
 
@@ -40,4 +41,6 @@ static func run(sender: int, text: String) -> Array:
 			return [Game.server_suicide(sender)]
 		"map":
 			return [Game.server_map_command(sender, parts.slice(1))]
+		"time":
+			return [Game.server_time_command(sender, parts.slice(1))]
 	return []

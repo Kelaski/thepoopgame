@@ -479,8 +479,17 @@ func _build_ground() -> void:
 	box(Vector3(0, -0.53, 0), Vector3(700, 1.0, 700), Color("7f9a5a"), DECOR)
 	# Roads with dashed centre lines (none inside junctions: they stay clear)
 	_find_junctions()
-	for r: Rect2 in road_rects:
-		box(Vector3(r.get_center().x, 0.012, r.get_center().y), Vector3(r.size.x, 0.024, r.size.y), ASPHALT, DECOR)
+	for ri in road_rects.size():
+		var r: Rect2 = road_rects[ri]
+		# Where roads overlap, only the first draws the surface (no flickering).
+		var pieces: Array = [r]
+		for rj in ri:
+			var next: Array = []
+			for pc: Rect2 in pieces:
+				next.append_array(_subtract(pc, road_rects[rj]))
+			pieces = next
+		for pc: Rect2 in pieces:
+			box(Vector3(pc.get_center().x, 0.012, pc.get_center().y), Vector3(pc.size.x, 0.024, pc.size.y), ASPHALT, DECOR)
 		var horizontal := r.size.x > r.size.y
 		var length := r.size.x if horizontal else r.size.y
 		var n := int(length / 6.0)
@@ -780,7 +789,14 @@ func _build_parking_lots() -> void:
 		var inner := lot.grow(-1.0)
 		if inner.size.x < 6.0 or inner.size.y < 6.0:
 			continue
-		box(Vector3(lot.get_center().x, 0.012, lot.get_center().y), Vector3(lot.size.x, 0.024, lot.size.y), ASPHALT, DECOR)
+		var lot_pieces: Array = [lot]
+		for rr: Rect2 in road_rects:
+			var next: Array = []
+			for pc: Rect2 in lot_pieces:
+				next.append_array(_subtract(pc, rr))
+			lot_pieces = next
+		for pc: Rect2 in lot_pieces:
+			box(Vector3(pc.get_center().x, 0.012, pc.get_center().y), Vector3(pc.size.x, 0.024, pc.size.y), ASPHALT, DECOR)
 		var rows_x := inner.size.x >= inner.size.y
 		var row_len := inner.size.x if rows_x else inner.size.y
 		var depth := inner.size.y if rows_x else inner.size.x
@@ -990,8 +1006,10 @@ func _build_building(b: Array) -> void:
 			room_walls.append(m0 * MODULE)
 	var rooms_on_ground := can_rooms and 0 in room_floors
 
-	# --- Exterior doors (ground floor), each in a whole wall module
+	# --- Exterior doors (ground floor), each in a whole wall module. Usually one,
+	# sometimes two, on the sides that face a street.
 	var door_spots := []  # [side, t, module]
+	var side_spots := []
 	for side in 4:
 		var horizontal := side < 2
 		var a0 := (x0 if horizontal else z0) + WALL_T
@@ -1005,8 +1023,12 @@ func _build_building(b: Array) -> void:
 			if rooms_on_ground and _door_hits_rooms(side, t, x0, z0, x1, z1, room_walls, umax):
 				continue
 			if not _hits_any(clear, stairs, 0.4):
-				door_spots.append([side, t, slot])
+				side_spots.append([side, t, slot])
 				break
+	side_spots.sort_custom(func(a: Array, b: Array) -> bool: return _street_dist(a[0], x0, z0, x1, z1) < _street_dist(b[0], x0, z0, x1, z1))
+	var n_doors := 1 if rng.randf() < 0.55 else 2
+	for i in mini(n_doors, side_spots.size()):
+		door_spots.append(side_spots[i])
 
 	# --- Floors / roof (slabs around the stair holes)
 	_prefab("building/floor_finish", _rect_xf(inner, 0.0), {"color": st.floor})
@@ -1031,20 +1053,36 @@ func _build_building(b: Array) -> void:
 
 	# --- Exterior walls
 	_wall_slots = []
-	_build_exterior_walls(type, floors, fh, x0, z0, x1, z1, door_spots, st)
+	# The room partition (v = ROOM_V) meets the two end walls: no windows there.
+	var solid := {}
+	if can_rooms and not room_floors.is_empty():
+		var ends := [2, 3] if _ax else [0, 1]
+		var slot := int(ROOM_V / MODULE)
+		for es: int in ends:
+			solid[es] = [slot - 1, slot, slot + 1] if fmod(ROOM_V, MODULE) < 0.35 or fmod(ROOM_V, MODULE) > MODULE - 0.35 else [slot]
+	_build_exterior_walls(type, floors, fh, x0, z0, x1, z1, door_spots, st, solid)
 
-	# --- Signs: the name centred over every street door (or on the two long
-	# faces if a building has no door)
-	var sign_y := minf(DOOR_H + 0.75, minf(top, fh) - 0.45)
+	# --- Signs: the name centred on each wall that has a street door (or on the
+	# two long faces if a building has no door), and an awning over every door
+	var sign_y := minf(top, fh) - 0.9
+	var signed := []
 	for ds in door_spots:
 		var dside: int = ds[0]
 		var dt: float = ds[1]
 		var outward: Vector3 = [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT][dside]
-		var face_c: Vector3 = [Vector3(dt, 0, z0), Vector3(dt, 0, z1), Vector3(x0, 0, dt), Vector3(x1, 0, dt)][dside]
-		_label(bname.to_upper(), face_c + outward * 0.08 + Vector3(0, sign_y, 0), _yaw_to(outward), 80)
+		var door_c: Vector3 = [Vector3(dt, 0, z0), Vector3(dt, 0, z1), Vector3(x0, 0, dt), Vector3(x1, 0, dt)][dside]
+		_prefab("building/door_awning", _at(door_c, _yaw_to(outward)))
+		if dside in signed:
+			continue
+		signed.append(dside)
+		var wall_c: Vector3 = [Vector3((x0 + x1) * 0.5, 0, z0), Vector3((x0 + x1) * 0.5, 0, z1), Vector3(x0, 0, (z0 + z1) * 0.5), Vector3(x1, 0, (z0 + z1) * 0.5)][dside]
+		_label(bname.to_upper(), wall_c + outward * 0.08 + Vector3(0, sign_y, 0), _yaw_to(outward), 96)
 	if door_spots.is_empty():
 		_label(bname.to_upper(), Vector3((x0 + x1) * 0.5, minf(top, fh) - 0.9, z0 - 0.05), PI, 96)
 		_label(bname.to_upper(), Vector3((x0 + x1) * 0.5, minf(top, fh) - 0.9, z1 + 0.05), 0.0, 96)
+
+	# --- Rooftop clutter
+	_roof_props(inner, top, stairs, floors)
 
 	# --- Furniture forbidden zones
 	_forbid = []
@@ -1178,10 +1216,19 @@ func _build_stairwell(floors: int, fh: float, run: float, top: float, st: Dictio
 		# above the steps (stair_divider is a 1 m box standing on its origin,
 		# tilted to the flight and stretched along it).
 		var dp := _uv(STAIR_LANDING + run * 0.5, STAIR_W * 0.5)
-		var slope := atan2(fh, run)
-		var tilt := Basis(Vector3(0, 0, 1), slope if lane_a else -slope)
-		var guard := Basis(Vector3.UP, u_yaw) * tilt * Basis.from_scale(Vector3(sqrt(run * run + fh * fh), STAIR_GUARD_H * cos(slope), 1))
-		_prefab("building/stair_divider", Transform3D(guard, Vector3(dp.x, h0 + fh * 0.5 - 0.05, dp.y)), trim)
+		var climb := ud if lane_a else -ud
+		var across := Vector3(-ud.z, 0, ud.x)
+		var guard := Basis(climb * run + Vector3.UP * fh, Vector3.UP * STAIR_GUARD_H, across)
+		var gp := Vector3(dp.x, h0 + fh * 0.5 - 0.04, dp.y)
+		_prefab("building/stair_guard", Transform3D(guard, gp), trim)
+		var prism := PackedVector3Array()
+		for gx: float in [-0.5, 0.5]:
+			for gy: float in [0.0, 1.0]:
+				for gz: float in [-0.05, 0.05]:
+					prism.append(guard * Vector3(gx, gy, gz))
+		var shape := ConvexPolygonShape3D.new()
+		shape.points = prism
+		_add_shape(L_WALL, shape, Transform3D(Basis.IDENTITY, gp))
 		# Railing on the open edge of the hole (upper floors)
 		if k >= 1:
 			_stair_rail(h0, rails, u_yaw, trim)
@@ -1200,7 +1247,7 @@ func _stair_rail(y: float, count: int, yaw: float, cols: Dictionary) -> void:
 ## after another window, so there's plenty of solid wall to run along. Storeys
 ## taller than MODULE_H get a filler on top; a trim band runs along each storey,
 ## corner posts fill the corners and a parapet runs round the roof.
-func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: float, x1: float, z1: float, door_spots: Array, st: Dictionary) -> void:
+func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: float, x1: float, z1: float, door_spots: Array, st: Dictionary, solid := {}) -> void:
 	var top := floors * fh
 	var p_win := 0.2 if type in ["warehouse", "water", "sports"] else 0.35
 	var window: String = WINDOW_PIECES[rng.randi() % WINDOW_PIECES.size()]
@@ -1216,6 +1263,8 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 			if ds[0] == side:
 				door_slots.append(ds[2])
 		var window_cols := _window_columns(n, p_win)
+		for s: int in solid.get(side, []):
+			window_cols.erase(s)
 		for k in floors:
 			var y0 := k * fh
 			for i in n:
@@ -1230,6 +1279,8 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 				if piece == "building/wall_solid":
 					var inward: Vector3 = [Vector3.BACK, Vector3.FORWARD, Vector3.RIGHT, Vector3.LEFT][side]
 					_wall_slots.append([at + inward * WALL_T * 0.5, inward, k])
+					if k > 0 and rng.randf() < 0.07:
+						_prefab("building/wall_ac", _at(at - inward * WALL_T * 0.5, _yaw_to(-inward)))
 				_prefab(piece, _at(at, yaw), cols)
 				if fh > MODULE_H:
 					_prefab("building/wall_filler", _at(at + Vector3(0, MODULE_H, 0), yaw, Vector3(1, fh - MODULE_H, 1)), cols)
@@ -1241,7 +1292,7 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 	for c: Vector2 in [Vector2(x0, z0), Vector2(x1, z0), Vector2(x0, z1), Vector2(x1, z1)]:
 		var cx := c.x + (WALL_T * 0.5 if c.x == x0 else -WALL_T * 0.5)
 		var cz := c.y + (WALL_T * 0.5 if c.y == z0 else -WALL_T * 0.5)
-		_prefab("building/corner_post", _at(Vector3(cx, 0, cz), 0.0, Vector3(1, top + 1.1, 1)), cols)
+		_prefab("building/corner_post", _at(Vector3(cx, 0, cz), 0.0, Vector3(1, top + 1.12, 1)), cols)
 
 
 ## Which wall modules of an n-module side get windows: about the same share as
@@ -1264,6 +1315,51 @@ func _window_columns(n: int, p: float) -> Array:
 		for j in count:
 			cols.append(1 + int((j + 0.5) * inner_n / float(count)))
 	return cols
+
+
+## A/C units and vents on the roof (cover to fight around), and a water tower on
+## buildings of 4+ storeys. They keep clear of the stairwell, the roof edges and
+## the middle of each edge, where crane bridges land.
+func _roof_props(inner: Rect2, top: float, stairs: Array, floors: int) -> void:
+	var placed := []
+	var mids := []
+	var c := inner.get_center()
+	for m: Vector2 in [Vector2(c.x, inner.position.y), Vector2(c.x, inner.end.y), Vector2(inner.position.x, c.y), Vector2(inner.end.x, c.y)]:
+		mids.append(Rect2(m - Vector2(3.5, 3.5), Vector2(7, 7)))
+	var area := inner.grow(-1.4)
+	if area.size.x < 3.0 or area.size.y < 3.0:
+		return
+	var want := [["props/roof/ac_unit", 1.0, rng.randi_range(1, 3)], ["props/roof/vent", 0.5, rng.randi_range(1, 3)]]
+	if floors >= 4:
+		want.push_front(["props/roof/water_tower", 1.4, 1])
+	for w: Array in want:
+		var half: float = w[1]
+		var count := 0
+		for attempt in 12:
+			if count >= int(w[2]):
+				break
+			var p := Vector2(rng.randf_range(area.position.x + half, area.end.x - half), rng.randf_range(area.position.y + half, area.end.y - half))
+			var foot := Rect2(p - Vector2(half, half), Vector2(half, half) * 2.0)
+			if _hits_any(foot, stairs, 1.2) or _hits_any(foot, mids, 0.0) or _hits_any(foot, placed, 0.8):
+				continue
+			_prefab(w[0], _at(Vector3(p.x, top, p.y), PI * 0.5 * rng.randi_range(0, 3)))
+			placed.append(foot)
+			count += 1
+
+
+## How far the street is from the middle of a building side (0 if a road runs
+## right past it): doors go on the sides closest to a street.
+func _street_dist(side: int, x0: float, z0: float, x1: float, z1: float) -> float:
+	var mid := Vector2((x0 + x1) * 0.5, (z0 + z1) * 0.5)
+	var out: Vector2 = [Vector2(0, -1), Vector2(0, 1), Vector2(-1, 0), Vector2(1, 0)][side]
+	var edge: Vector2 = [Vector2(mid.x, z0), Vector2(mid.x, z1), Vector2(x0, mid.y), Vector2(x1, mid.y)][side]
+	var probe := edge + out * 3.0
+	var best := INF
+	for r: Rect2 in road_rects:
+		var cx := clampf(probe.x, r.position.x, r.end.x)
+		var cz := clampf(probe.y, r.position.y, r.end.y)
+		best = minf(best, probe.distance_to(Vector2(cx, cz)))
+	return best
 
 
 ## True if an exterior door at (side, t) would be blocked by interior room walls.
@@ -1325,10 +1421,10 @@ const THEME_DECOR := {
 	"school": ["ceiling_panel", ["bulletin_board", "wall_clock", "poster", "whiteboard"], ["vending_machine", "trash_can", "water_cooler"], false],
 	"theater": ["pendant_lamp", ["movie_poster", "curtain", "wall_lamp"], ["trash_can"], false],
 	"bank": ["ceiling_panel", ["picture_frame", "wall_clock"], ["water_cooler"], true],
-	"diner": ["pendant_lamp", ["neon_sign", "poster", "wall_clock"], ["jukebox"], false],
+	"diner": ["pendant_lamp", ["neon_sign", "poster", "wall_clock", "wall_tv"], ["jukebox"], false],
 	"arcade": ["ceiling_panel", ["neon_sign", "poster"], ["vending_machine", "trash_can"], false],
-	"club": ["pendant_lamp", ["neon_sign"], ["speaker_stack"], false],
-	"bar": ["pendant_lamp", ["neon_sign", "wall_shelf_bottles", "dartboard"], ["jukebox"], false],
+	"club": ["pendant_lamp", ["neon_sign", "wall_tv"], ["speaker_stack"], false],
+	"bar": ["pendant_lamp", ["neon_sign", "wall_shelf_bottles", "dartboard", "wall_tv"], ["jukebox"], false],
 	"apartments": ["pendant_lamp", ["picture_frame", "wall_lamp", "poster"], [], true],
 	"mall": ["ceiling_panel", ["poster", "neon_sign", "banner"], ["mannequin", "trash_can"], false],
 	"motel": ["pendant_lamp", ["picture_frame", "wall_lamp"], ["vending_machine"], true],
@@ -2035,8 +2131,10 @@ func _build_park() -> void:
 	var paths := [Rect2(path_x - PATH_W * 0.5, z0, PATH_W, r.size.y)]
 	if cross:
 		paths.append(Rect2(x0, path_z - PATH_W * 0.5, r.size.x, PATH_W))
-	for pr: Rect2 in paths:
-		_park_path(pr)
+	_park_path(paths[0])
+	for pi in range(1, paths.size()):
+		for piece: Rect2 in _subtract(paths[pi], paths[0]):
+			_park_path(piece)
 	var plaza := Vector2(path_x, path_z if cross else z0 + r.size.y * 0.25)
 	var plaza_r := 4.2
 	if not _hits_any(Rect2(plaza - Vector2.ONE * 2.4, Vector2(4.8, 4.8)), avoid.slice(3), 0.0):

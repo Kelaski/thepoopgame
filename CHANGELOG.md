@@ -7,6 +7,29 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.16.0
+
+### Added
+- **/time command (host):** `/time morning`, `afternoon`, `evening`, `night` or `next` changes the time of day for everyone, blending over 10 s. `/time` on its own shows the current one.
+- **Tag arrow at the first spawn:** the on-screen Tag arrow now also shows at the start of every round, while the Tag waits at its spawn for the first pickup.
+- **Exterior decoration:** awnings over street doors, A/C units and vents on rooftops, water towers on tall buildings, and window A/C units on upper floors.
+- **Wall TVs** in bars, diners and the nightclub.
+
+### Changed
+- **Revamped vehicles,** in the same cartoony style:
+  - **Cars and taxis:** bonnet and boot, a sloped windscreen and rear window, side windows, round wheels with hubcaps, wheel arches, door seams and handles, mirrors, bumpers, a grille and lights.
+  - **Vans:** a proper cab with a sloped windscreen, a sliding door and rubbing strips.
+  - **Buses:** a row of windows, two doors, a white roof with an A/C pod and a livery stripe.
+- **Benches:** wooden slats on metal legs, with armrests.
+- **Doors:** buildings usually have one street door, sometimes two, on the sides facing a street, instead of a door on every side.
+- **Building names** are back to being centred on the wall, and only on walls that have a door.
+
+### Fixed
+- **Floor flicker:** roads overlapping at junctions, car parks overlapping roads, and the park's crossing paths drew on top of each other and flickered. They're now drawn once.
+- **Windows split by walls:** an inside room wall could run through the middle of a window on the end walls. Those spots are always solid wall now.
+- **Stair guard catching players:** the sloped wall between the stair lanes overhung the bottom landing. Its ends are now vertical and flush with the stairs.
+- **Corner posts** no longer flicker with the parapet.
+
 ## 0.15.0
 
 ### Added

@@ -1,9 +1,9 @@
 class_name TagIndicator
 extends Control
-## Points you to the Tag while it's lying on the ground after being dropped
-## (assets/ui/tag_indicator.tscn, part of the HUD). On screen, an arrow bobs above
-## it with the distance; off screen, an arrow at the edge of the screen points the
-## way to turn.
+## Points you to the Tag whenever it's on the ground: at its spawn at the start
+## of a round and after it's dropped (assets/ui/tag_indicator.tscn, part of the
+## HUD). On screen, an arrow bobs above it with the distance; off screen, an arrow
+## at the edge of the screen points the way to turn.
 
 const EDGE_MARGIN := 56.0
 const ARROW := 16.0
@@ -19,7 +19,7 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
-	if not Game.in_match or Game.phase != Game.Phase.DROPPED or Game.holder != 0:
+	if not Game.in_match or Game.holder != 0 or not (Game.phase in [Game.Phase.PREROUND, Game.Phase.RUSH, Game.Phase.DROPPED]):
 		return
 	var cam := get_viewport().get_camera_3d()
 	if cam == null:

@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wqxri"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.54901963, 0.5803922, 0.6039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_8tqwo"]
+top_radius = 0.18
+bottom_radius = 0.18
+height = 0.9
+radial_segments = 16
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_bnpex"]
+height = 0.9
+radius = 0.18
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rcy8s"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.41568628, 0.4392157, 0.4627451, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_yj3l7"]
+top_radius = 0.3
+bottom_radius = 0.3
+height = 0.08
+radial_segments = 16
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_kjhun"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.08
+radial_segments = 16
+rings = 1
+
+[node name="RoofVent" type="Node3D" unique_id=344043529]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1708077550]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_wqxri")
+mesh = SubResource("CylinderMesh_8tqwo")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1617146234]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=386429376]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("CylinderShape3D_bnpex")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=1978543590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+material_override = SubResource("StandardMaterial3D_rcy8s")
+mesh = SubResource("CylinderMesh_yj3l7")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=781914730]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.02, 0)
+material_override = SubResource("StandardMaterial3D_rcy8s")
+mesh = SubResource("CylinderMesh_kjhun")
