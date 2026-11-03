@@ -59,8 +59,6 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	if not firewall_allowed():
-		request_firewall_access()
 
 
 func _exit_tree() -> void:
@@ -97,7 +95,8 @@ func firewall_allowed() -> bool:
 func request_firewall_access() -> void:
 	if not _firewall_applies():
 		return
-	var exe := OS.get_executable_path().replace("/", "\\")
+	# In a .cmd file a % starts a variable, so double any in the path.
+	var exe := OS.get_executable_path().replace("/", "\\").replace("%", "%%")
 	var script := "@echo off\r\n"
 	script += "netsh advfirewall firewall delete rule name=all dir=in program=\"%s\"\r\n" % exe
 	script += "netsh advfirewall firewall add rule name=\"%s\" dir=in action=allow program=\"%s\" enable=yes profile=any\r\n" % [FIREWALL_RULE, exe]
@@ -133,6 +132,10 @@ func host(port: int) -> String:
 		return "Could not host on port %d (error %d). Is it already in use?" % [port, err]
 	multiplayer.multiplayer_peer = peer
 	online = true
+	# Only the host takes incoming connections, so only hosting asks Windows
+	# for the firewall rule (players who just join never see the prompt).
+	if not firewall_allowed():
+		request_firewall_access()
 	players.clear()
 	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
 	Game._set_map_size_local(str(Settings.g("map_size")))

@@ -7,6 +7,12 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.17.4
+
+### Fixed
+- **Firewall prompt:** the Windows administrator (UAC) prompt for the firewall rule now appears only when you host a game. Players who only join no longer get it at launch, and their firewall is left alone. The lobby's **Allow Through Firewall** button still works for hosts.
+- **Firewall rule for some install folders:** the rule is now set up correctly when the game sits in a folder whose name contains `%`.
+
 ## 0.17.3
 
 ### Changed
