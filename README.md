@@ -1,6 +1,6 @@
 # Tag Rush
 
-A team-based, first-person objective shooter built in **Godot 4.3+ (GDScript only, no extra plugins)**.
+A team-based, first-person objective shooter built in **Godot 4.7 (GDScript only, no extra plugins)**.
 Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and the team holding it
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
@@ -8,7 +8,7 @@ Everything (map, furniture, sounds, UI) is generated in code, so the repository 
 
 ## Running it
 
-1. Install [Godot 4.3 or newer](https://godotengine.org/download) (standard build, not .NET).
+1. Install [Godot 4.7 or newer](https://godotengine.org/download) (standard build, not .NET). The project file is saved with 4.7; older 4.x editors warn when opening it.
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** (Run Project).
 
