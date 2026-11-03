@@ -154,6 +154,7 @@ func _on_match_started() -> void:
 	hud = Hud.new()
 	hud.main = self
 	ui_root.add_child(hud)
+	Sfx.start_music()
 	ui_root.move_child(hud, 0)
 	_update_mouse()
 
@@ -169,6 +170,7 @@ func _on_match_ended() -> void:
 
 
 func _teardown_world() -> void:
+	Sfx.stop_music()
 	if hud:
 		hud.queue_free()
 		hud = null

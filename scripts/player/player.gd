@@ -113,6 +113,10 @@ var wall_normal := Vector3.ZERO
 var wallrun_t := 0.0
 var wallrun_cd := 0.0
 var _last_wall_normal := Vector3.ZERO
+var _wall_touch_t := 0.0          # coyote: recently touched a wall in the air
+var _wall_touch_n := Vector3.ZERO
+var _wall_jump_t := 0.0           # coyote: recently left a wall run
+var _wall_jump_n := Vector3.ZERO
 var lean := 0.0          # -1 (left) .. 1 (right), smoothed
 var lean_offset := 0.0   # metres, clamped against walls
 var _step_t := 0.0
@@ -491,6 +495,11 @@ func is_head_hit(p: Vector3) -> bool:
 	return p.y > global_position.y + (0.82 if is_crouched() else 1.4)
 
 
+## Below the halfway mark of the body.
+func is_lower_hit(p: Vector3) -> bool:
+	return p.y < global_position.y + (CROUCH_H if is_crouched() else STAND_H) * 0.5
+
+
 func aim_dir() -> Vector3:
 	if cam:
 		return -cam.global_basis.z
@@ -578,7 +587,7 @@ func _physics_process(delta: float) -> void:
 
 	var on_floor := is_on_floor()
 	if on_floor:
-		coyote = 0.12
+		coyote = 0.1
 		_last_wall_normal = Vector3.ZERO
 		if wallrunning:
 			_end_wallrun()
@@ -599,12 +608,19 @@ func _physics_process(delta: float) -> void:
 		_aim_toggle = false
 		aiming = false
 
-	# --- Wall run start: airborne, moving fast along a wall, holding forward
-	if not on_floor and not wallrunning and phasing <= 0.0 and wallrun_cd <= 0.0 and forward_in and is_on_wall():
-		var n := get_wall_normal()
+	# --- Wall contact coyote time (0.1 s)
+	_wall_touch_t -= delta
+	_wall_jump_t -= delta
+	if not on_floor and is_on_wall():
+		_wall_touch_t = 0.1
+		_wall_touch_n = get_wall_normal()
+
+	# --- Wall run start: airborne, moving fast along a wall, holding forward.
+	# No limit on how many walls you can chain before landing.
+	if not on_floor and not wallrunning and phasing <= 0.0 and wallrun_cd <= 0.0 and forward_in and _wall_touch_t > 0.0:
+		var n := _wall_touch_n
 		var along := hvel.normalized().dot(n)
-		if absf(n.y) < 0.3 and speed_now > WALLRUN_MIN_SPEED and velocity.y > -8.0 and absf(along) < 0.85 \
-				and (_last_wall_normal == Vector3.ZERO or n.dot(_last_wall_normal) < 0.8):
+		if absf(n.y) < 0.3 and speed_now > WALLRUN_MIN_SPEED and velocity.y > -8.0 and absf(along) < 0.85:
 			wallrunning = true
 			wall_normal = Vector3(n.x, 0.0, n.z).normalized()
 			wallrun_t = WALLRUN_TIME
@@ -684,14 +700,19 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= GRAVITY * delta
 	var jump_tap := can_input and not frozen and Input.is_action_just_pressed("jump")
 	if jump_tap:
-		if wallrunning:
-			# Kick off the wall.
-			# Keep (and add to) the speed along the wall so it chains into the next
-			# wall run, a slide, or a slide-jump.
+		if wallrunning or (_wall_jump_t > 0.0 and not on_floor):
+			# Kick off the wall, keeping (and adding to) the speed along it so it chains
+			# into the next wall run, a slide, or a slide-jump. Also works up to 0.1 s
+			# after leaving the wall.
+			var n := wall_normal if wallrunning else _wall_jump_n
 			velocity.y = WALLJUMP_UP
-			var along_wall := hvel + wall_normal * 1.0
-			hvel = along_wall + along_wall.normalized() * WALLJUMP_BOOST + wall_normal * WALLJUMP_OUT
+			var along_wall := hvel - n * hvel.dot(n)
+			if along_wall.length() > 0.5:
+				along_wall += along_wall.normalized() * WALLJUMP_BOOST
+			hvel = along_wall + n * WALLJUMP_OUT
 			_end_wallrun()
+			_wall_jump_t = 0.0
+			_wall_touch_t = 0.0
 			_on_moved()
 		elif coyote > 0.0:
 			if crouching and not sliding and _can_stand():
@@ -811,8 +832,10 @@ func _speed_mult() -> float:
 func _end_wallrun() -> void:
 	if wallrunning:
 		_last_wall_normal = wall_normal
+		_wall_jump_t = 0.1
+		_wall_jump_n = wall_normal
 	wallrunning = false
-	wallrun_cd = 0.25
+	wallrun_cd = 0.3
 
 
 func _ray_hits(from: Vector3, offset: Vector3) -> bool:
@@ -1028,7 +1051,13 @@ func _try_fire() -> void:
 			var res := _hitscan(origin, _spread_dir(b, spread), w.range, 0, false)
 			ends.append(res.end)
 			for h in res.hits:
-				_acc(hits, h.id, w.head if h.head else w.body, h.head)
+				var far: bool = h.dist > float(w.falloff)
+				var dmg: float
+				if h.head:
+					dmg = w.head_far if far else w.head
+				else:
+					dmg = w.body_far if far else w.body
+				_acc(hits, h.id, dmg, h.head)
 		"shotgun":
 			for i in int(w.pellets):
 				var res := _hitscan(origin, _spread_dir(b, float(w.cone) * 0.5), w.range, 0, false)
@@ -1041,7 +1070,9 @@ func _try_fire() -> void:
 			var res := _hitscan(origin, _spread_dir(b, spread), w.range, 1, true)
 			ends.append(res.end)
 			for h in res.hits:
-				_acc(hits, h.id, w.dmg, h.head)
+				# Headshots always kill; lower body takes slightly less.
+				var dmg: float = w.dmg_head if h.head else (w.dmg_low if h.low else w.dmg)
+				_acc(hits, h.id, dmg, h.head)
 		"bat":
 			swing_t = 1.0
 			for off: Vector2 in [Vector2.ZERO, Vector2(0.06, 0.0), Vector2(-0.06, 0.0), Vector2(0.0, -0.08)]:
@@ -1095,7 +1126,7 @@ func _hitscan(from: Vector3, dir: Vector3, max_dist: float, wall_pierce: int, pi
 			return {"hits": hits, "end": end}
 		var col = r.collider
 		if col is Player:
-			hits.append({"id": col.peer_id, "head": col.is_head_hit(r.position), "dist": from.distance_to(r.position)})
+			hits.append({"id": col.peer_id, "head": col.is_head_hit(r.position), "low": col.is_lower_hit(r.position), "dist": from.distance_to(r.position)})
 			if not pierce_players:
 				return {"hits": hits, "end": r.position}
 			exclude.append(col.get_rid())

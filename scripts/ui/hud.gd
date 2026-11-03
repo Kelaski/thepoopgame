@@ -383,8 +383,9 @@ func _process(delta: float) -> void:
 	# Health
 	var hp: float = Game.my_hp() if alive else 0.0
 	_hp_label.text = str(int(ceil(hp)))
-	_hp_fill.size.x = 276.0 * clampf(hp / 100.0, 0.0, 1.0)
-	_hp_fill.color = Color("7ad16a").lerp(Color("e0503a"), clampf(1.0 - hp / 100.0, 0.0, 1.0))
+	var max_hp: float = Game.my_max_hp()
+	_hp_fill.size.x = 276.0 * clampf(hp / max_hp, 0.0, 1.0)
+	_hp_fill.color = Color("7ad16a").lerp(Color("e0503a"), clampf(1.0 - hp / max_hp, 0.0, 1.0))
 	var low := clampf((45.0 - hp) / 45.0, 0.0, 1.0) if alive else 0.0
 	_vignette.color.a = maxf(lp.damage_flash * 0.28, low * (0.12 + 0.06 * sin(Time.get_ticks_msec() * 0.008)))
 

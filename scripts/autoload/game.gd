@@ -66,6 +66,17 @@ func is_alive(id: int) -> bool:
 	return alive_ids.get(id, false)
 
 
+## Max health depends on the weapon you spawned with (the bat gives 150).
+func max_hp_of(id: int) -> float:
+	if Net.players.has(id):
+		return Weapons.max_hp(Net.players[id].weapon)
+	return Weapons.DEFAULT_MAX_HP
+
+
+func my_max_hp() -> float:
+	return max_hp_of(multiplayer.get_unique_id())
+
+
 func my_hp() -> float:
 	return hp.get(multiplayer.get_unique_id(), 100.0)
 
@@ -107,7 +118,7 @@ func on_player_joined(id: int) -> void:
 	if not in_match:
 		return
 	alive_ids[id] = false
-	hp[id] = 100.0
+	hp[id] = max_hp_of(id)
 	respawn_left[id] = RESPAWN_TIME
 	_start_match.rpc_id(id)
 	_late_sync.rpc_id(id, alive_ids, objective, scores, round_num)
@@ -172,7 +183,7 @@ func _server_begin_round() -> void:
 	_respawn_ready.clear()
 	for id in Net.players:
 		alive_ids[id] = true
-		hp[id] = 100.0
+		hp[id] = max_hp_of(id)
 		respawn_left.erase(id)
 		_last_hit[id] = -100.0
 	_begin_round.rpc(round_num, objective, team_dots, spawns, scores)
@@ -231,13 +242,13 @@ func _server_tick(delta: float) -> void:
 				_respawn_ready.erase(id)
 				var pos: Vector3 = world.find_respawn(id)
 				alive_ids[id] = true
-				hp[id] = 100.0
+				hp[id] = max_hp_of(id)
 				_last_hit[id] = -100.0
 				_on_respawn.rpc(id, pos)
 	# Health regeneration
 	for id in hp.keys():
-		if alive_ids.get(id, false) and hp[id] < 100.0 and _now - _last_hit.get(id, -100.0) >= REGEN_DELAY:
-			hp[id] = minf(100.0, hp[id] + REGEN_RATE * delta)
+		if alive_ids.get(id, false) and hp[id] < max_hp_of(id) and _now - _last_hit.get(id, -100.0) >= REGEN_DELAY:
+			hp[id] = minf(max_hp_of(id), hp[id] + REGEN_RATE * delta)
 	_hp_acc += delta
 	if _hp_acc >= 0.1:
 		_hp_acc = 0.0
@@ -405,7 +416,7 @@ func _begin_round(rnd: int, obj: int, _team_dots: Array, spawns: Dictionary, sc:
 	respawn_left.clear()
 	for id in Net.players:
 		alive_ids[id] = true
-		hp[id] = 100.0
+		hp[id] = max_hp_of(id)
 	if world:
 		tag_pos = world.builder.objectives[obj].pos
 		world.on_round_begin(obj)
@@ -513,7 +524,7 @@ func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos:
 @rpc("authority", "call_local", "reliable")
 func _on_respawn(id: int, pos: Vector3) -> void:
 	alive_ids[id] = true
-	hp[id] = 100.0
+	hp[id] = max_hp_of(id)
 	respawn_left.erase(id)
 	if world and world.players.has(id):
 		world.players[id].respawn(pos, true)

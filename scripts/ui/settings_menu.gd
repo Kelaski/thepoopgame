@@ -147,6 +147,7 @@ func _audio() -> VBoxContainer:
 	v.add_child(UiKit.slider_row("Master volume", 0.0, 1.0, 0.01, Settings.g("master_volume"), func(x): Settings.s("master_volume", x)))
 	v.add_child(UiKit.slider_row("Effects volume", 0.0, 1.0, 0.01, Settings.g("sfx_volume"), func(x): Settings.s("sfx_volume", x)))
 	v.add_child(UiKit.slider_row("Interface volume", 0.0, 1.0, 0.01, Settings.g("ui_volume"), func(x): Settings.s("ui_volume", x)))
+	v.add_child(UiKit.slider_row("Music volume", 0.0, 1.0, 0.01, Settings.g("music_volume"), func(x): Settings.s("music_volume", x)))
 	v.add_child(UiKit.check_row("Hitmarker sound", Settings.g("hitmarker_sound"), func(x): Settings.s("hitmarker_sound", x)))
 	return v
 

@@ -54,6 +54,7 @@ const DEFAULTS := {
 	"master_volume": 0.8,
 	"sfx_volume": 1.0,
 	"ui_volume": 0.8,
+	"music_volume": 0.45,
 	# HUD
 	"crosshair_size": 8.0,
 	"crosshair_color": "ffffff",
@@ -83,7 +84,7 @@ func _ready() -> void:
 
 
 func _setup_buses() -> void:
-	for bus in ["SFX", "UI"]:
+	for bus in ["SFX", "UI", "Music"]:
 		if AudioServer.get_bus_index(bus) == -1:
 			AudioServer.add_bus()
 			var i := AudioServer.bus_count - 1
@@ -199,6 +200,7 @@ func apply_all() -> void:
 	_set_bus("Master", g("master_volume"))
 	_set_bus("SFX", g("sfx_volume"))
 	_set_bus("UI", g("ui_volume"))
+	_set_bus("Music", g("music_volume"))
 
 
 func _set_bus(bus: String, v) -> void:

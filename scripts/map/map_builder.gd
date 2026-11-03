@@ -146,6 +146,10 @@ func build(parent: Node3D) -> void:
 	_build_park()
 	_end_chunk()
 
+	_begin_chunk("Cranes")
+	_build_cranes()
+	_end_chunk()
+
 	_build_spawn_points()
 
 
@@ -1334,6 +1338,187 @@ func _build_park() -> void:
 			var h := rng.randf_range(2.5, 3.5)
 			cyl(Vector3(p.x, h * 0.5, p.y), 0.25, h, Color("6b4a32"), L_WALL)
 			sphere(Vector3(p.x, h + 1.0, p.y), rng.randf_range(1.6, 2.2), Color("4f8a3a").lerp(Color("7ab04a"), rng.randf()))
+
+
+# ================================================================ cranes & rooftop bridges
+
+# [building A id, building B id, material]
+const BRIDGES := [
+	[1, 2, "planks"],
+	[10, 15, "planks"],
+	[15, 16, "metal"],
+	[13, 14, "metal"],
+	[4, 5, "planks"],
+	[17, 18, "metal"],
+]
+
+
+func _building(id: int) -> Dictionary:
+	for b in buildings:
+		if b.id == id:
+			return b
+	return {}
+
+
+## Tower cranes holding building materials (planks / sheet metal) that bridge
+## the gap between two rooftops. Deck ends rest on top of each roof's parapet;
+## a crate on each roof makes it easy to climb up.
+func _build_cranes() -> void:
+	var avoid: Array = spawn_dots.duplicate()
+	for o in objectives:
+		avoid.append(o.pos)
+	for br in BRIDGES:
+		var a := _building(br[0])
+		var b := _building(br[1])
+		if a.is_empty() or b.is_empty():
+			continue
+		var ra: Rect2 = a.rect
+		var rb: Rect2 = b.rect
+		var ya: float = a.top + 1.15
+		var yb: float = b.top + 1.15
+		var p0: Vector3
+		var p1: Vector3
+		var along_x := true
+		if ra.end.x <= rb.position.x or rb.end.x <= ra.position.x:
+			var west := ra if ra.end.x <= rb.position.x else rb
+			var east := rb if west == ra else ra
+			var yw := ya if west == ra else yb
+			var ye := yb if west == ra else ya
+			var z := (maxf(ra.position.y, rb.position.y) + minf(ra.end.y, rb.end.y)) * 0.5
+			p0 = Vector3(west.end.x - 1.0, yw, z)
+			p1 = Vector3(east.position.x + 1.0, ye, z)
+		else:
+			along_x = false
+			var north := ra if ra.end.y <= rb.position.y else rb
+			var south := rb if north == ra else ra
+			var yn := ya if north == ra else yb
+			var ys := yb if north == ra else ya
+			var x := (maxf(ra.position.x, rb.position.x) + minf(ra.end.x, rb.end.x)) * 0.5
+			p0 = Vector3(x, yn, north.end.y - 1.0)
+			p1 = Vector3(x, ys, south.position.y + 1.0)
+		_bridge_deck(p0, p1, along_x, br[2])
+		# Crates on each roof to climb onto the parapet / deck.
+		for end_p: Vector3 in [p0, p1]:
+			var inward := (p0 - p1) if end_p == p0 else (p1 - p0)
+			inward.y = 0.0
+			inward = inward.normalized()
+			var roof_y := end_p.y - 1.15
+			box(Vector3(end_p.x, roof_y + 0.3, end_p.z) + inward * 1.6, Vector3(1.1, 0.6, 1.1), WOOD, L_WALL)
+		# Crane beside the bridge, on the side away from spawns and objectives.
+		var mid := (p0 + p1) * 0.5
+		var perp := Vector3(0, 0, 1) if along_x else Vector3(1, 0, 0)
+		var best_side := 1.0
+		var best_score := -INF
+		for side: float in [1.0, -1.0]:
+			var base := Vector2(mid.x, mid.z) + Vector2(perp.x, perp.z) * side * 5.0
+			var score := 0.0
+			if _in_building(base, 1.5):
+				score -= 1000.0
+			for q in avoid:
+				score += minf(Vector2(q.x, q.z).distance_to(base), 20.0)
+			if score > best_score:
+				best_score = score
+				best_side = side
+		_crane(mid, perp * best_side, p0, p1, br[2])
+
+
+func _bridge_deck(p0: Vector3, p1: Vector3, along_x: bool, material: String) -> void:
+	var d := p1 - p0
+	var length := d.length() + 0.4
+	var center := (p0 + p1) * 0.5
+	var rot: Basis
+	if along_x:
+		rot = Basis(Vector3(0, 0, 1), atan2(d.y, d.x))
+	else:
+		rot = Basis(Vector3(1, 0, 0), -atan2(d.y, d.z))
+	var width := 1.9
+	var size := Vector3(length, 0.14, width) if along_x else Vector3(width, 0.14, length)
+	# Collision: one solid walkway.
+	_add_shape(L_FLOOR, _box_shape(size), Transform3D(rot, center))
+	if material == "planks":
+		var boards := 5
+		for i in boards:
+			var off := (float(i) - (boards - 1) * 0.5) * (width / boards)
+			var bsize := Vector3(length - rng.randf_range(0.0, 0.5), 0.12, width / boards - 0.05) if along_x else Vector3(width / boards - 0.05, 0.12, length - rng.randf_range(0.0, 0.5))
+			var boff := Vector3(0, 0, off) if along_x else Vector3(off, 0, 0)
+			box(center + boff, bsize, LIGHTWOOD.lerp(WOOD, rng.randf()), 0, false, rot)
+		# Cross battens underneath
+		var n := int(length / 1.5)
+		for i in n:
+			var t := (float(i) + 0.5) / n - 0.5
+			var bpos := center + d.normalized() * (t * length) + rot * Vector3(0, -0.1, 0)
+			box(bpos, Vector3(0.12, 0.08, width + 0.1) if along_x else Vector3(width + 0.1, 0.08, 0.12), DARKWOOD, 0, false, rot)
+	else:
+		box(center, size, Color("9aa3a8"), 0, false, rot)
+		var ribs := 6
+		for i in ribs:
+			var off := (float(i) - (ribs - 1) * 0.5) * (width / ribs)
+			var rsize := Vector3(length, 0.05, 0.06) if along_x else Vector3(0.06, 0.05, length)
+			var roff := Vector3(0, 0.09, off) if along_x else Vector3(off, 0.09, 0)
+			box(center + rot * roff, rsize, Color("7d868c"), 0, false, rot)
+
+
+## Thin box between two points (cables, slings).
+func _strut(a: Vector3, b: Vector3, thick: float, col: Color) -> void:
+	var d := b - a
+	var len_d := d.length()
+	if len_d < 0.01:
+		return
+	var y := d / len_d
+	var ref := Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT
+	var x := y.cross(ref).normalized()
+	var z := x.cross(y).normalized()
+	box((a + b) * 0.5, Vector3(thick, len_d, thick), col, 0, false, Basis(x, y, z))
+
+
+func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: String) -> void:
+	var yellow := Color("e0b13c")
+	var base := mid + out * 5.0
+	base.y = 0.0
+	var top_y := maxf(p0.y, p1.y) + 9.0
+	# Concrete footing + mast
+	box(base + Vector3(0, 0.5, 0), Vector3(3.2, 1.0, 3.2), Color("a8a49a"), L_WALL)
+	_add_shape(L_WALL, _box_shape(Vector3(1.5, top_y - 1.0, 1.5)), Transform3D(Basis.IDENTITY, base + Vector3(0, (top_y + 1.0) * 0.5, 0)))
+	for cx: float in [-0.7, 0.7]:
+		for cz: float in [-0.7, 0.7]:
+			box(base + Vector3(cx, (top_y + 1.0) * 0.5, cz), Vector3(0.14, top_y - 1.0, 0.14), yellow, 0)
+	var y := 2.0
+	while y < top_y - 1.0:
+		_strut(base + Vector3(-0.7, y, -0.7), base + Vector3(0.7, y + 1.4, -0.7), 0.07, yellow)
+		_strut(base + Vector3(0.7, y, 0.7), base + Vector3(-0.7, y + 1.4, 0.7), 0.07, yellow)
+		_strut(base + Vector3(-0.7, y, 0.7), base + Vector3(-0.7, y + 1.4, -0.7), 0.07, yellow)
+		_strut(base + Vector3(0.7, y, -0.7), base + Vector3(0.7, y + 1.4, 0.7), 0.07, yellow)
+		y += 1.4
+	# Slewing unit, cab, jib towards the bridge, counter-jib with weights
+	box(base + Vector3(0, top_y, 0), Vector3(2.0, 1.0, 2.0), yellow.darkened(0.2), 0)
+	box(base + Vector3(0, top_y + 0.2, 0) - out * 1.3, Vector3(1.2, 1.4, 1.2), Color("d8d2c8"), 0)
+	var jib_end := base - out * 11.0 + Vector3(0, top_y + 0.6, 0)
+	var cj_end := base + out * 6.0 + Vector3(0, top_y + 0.6, 0)
+	_strut(base + Vector3(0, top_y + 0.6, 0), jib_end, 0.7, yellow)
+	_strut(base + Vector3(0, top_y + 0.6, 0), cj_end, 0.6, yellow)
+	box(cj_end - out * 1.0 + Vector3(0, -0.6, 0), Vector3(1.6, 1.6, 1.6), Color("8a8478"), 0)
+	box(base + Vector3(0, top_y + 3.2, 0), Vector3(0.5, 4.0, 0.5), yellow, 0)
+	_strut(base + Vector3(0, top_y + 5.2, 0), jib_end, 0.05, DARKMETAL)
+	_strut(base + Vector3(0, top_y + 5.2, 0), cj_end, 0.05, DARKMETAL)
+	# Hook over the bridge with slings down to the deck
+	var hook_top := Vector3(mid.x, top_y + 0.2, mid.z)
+	var hook := Vector3(mid.x, maxf(p0.y, p1.y) + 3.5, mid.z)
+	box(Vector3(mid.x, top_y + 0.1, mid.z), Vector3(0.6, 0.3, 0.6), DARKMETAL, 0)
+	_strut(hook_top, hook, 0.06, DARKMETAL)
+	box(hook, Vector3(0.5, 0.4, 0.5), Color("c0453a"), 0)
+	var dir := (p1 - p0).normalized()
+	var span := p0.distance_to(p1)
+	var a_pt := mid - dir * span * 0.3
+	var b_pt := mid + dir * span * 0.3
+	_strut(hook, a_pt + Vector3(0, 0.1, 0), 0.04, DARKMETAL)
+	_strut(hook, b_pt + Vector3(0, 0.1, 0), 0.04, DARKMETAL)
+	# A spare load hanging off the other side for flavour
+	var spare := base - out * 8.5 + Vector3(0, top_y - 4.0, 0)
+	_strut(Vector3(spare.x, top_y + 0.2, spare.z), spare + Vector3(0, 0.4, 0), 0.05, DARKMETAL)
+	if material == "planks":
+		box(spare, Vector3(2.4, 0.6, 1.0), LIGHTWOOD, 0)
+	else:
+		box(spare, Vector3(2.4, 0.4, 1.2), Color("9aa3a8"), 0)
 
 
 # ================================================================ spawn points

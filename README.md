@@ -43,6 +43,8 @@ Optional command-line flags (after `--`):
 | Loadout (while dead) | B |
 | Pause / settings | Esc |
 
+A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and has its own volume slider.
+
 Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch, always-sprint,
 FOV (90–120, horizontal), brightness, fullscreen, V-Sync, FPS cap, render scale, MSAA, shadows,
 view distance, master/effects/UI volume, hitmarker sound, crosshair size and colour, and an FPS counter.
@@ -60,7 +62,7 @@ view distance, master/effects/UI volume, hitmarker sound, crosshair size and col
 - **Winning a round:** the timer reaches 0 while the Tag is held. The holding team wins. First to 4 wins the match.
 - **Runner self-defence:** every kill the Runner gets takes 5 s off their team's timer.
 - **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
-- **Health:** 100 HP. After 8 s without taking damage, health regenerates quickly (50 HP/s).
+- **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s).
 - **Respawn:** after a 6 s timer, press **Jump (Space)** to respawn. Use the wait to change loadouts. Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
   A spawn point is rejected if any living enemy has line of sight to it (or is within 12 m).
   You get 3 s of spawn protection from the moment you spawn. Moving or shooting ends it early.
@@ -71,17 +73,17 @@ view distance, master/effects/UI volume, hitmarker sound, crosshair size and col
 
 | Weapon | Damage | Rate | Sight | Notes |
 |---|---|---|---|---|
-| Assault Rifle | 33 body / 45 head | 9.5 rps | 1.5x holo | 30-round magazine |
-| SMG | 19 / 26 | 13 rps | 1.2x holo | 40-round magazine |
-| Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1.25 rps | 1.15x irons | 12° cone, 6 shells |
-| Sniper | 100 at any range | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready |
-| Spiked Bat | 45 per swing | 2.25 swings/s | none | 7 m reach, +10% move speed. A killing swing launches the victim's gun where you look (70 dmg) |
+| Assault Rifle | 33 body / 45 head, 22 / 30 beyond 25 m | 9.5 rps | 1.5x holo | 30-round magazine |
+| SMG | 19 / 26, 12 / 19 beyond 18 m | 13 rps | 1.2x holo | 40-round magazine |
+| Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1 rps | 1.15x irons | 12° cone, 6 shells |
+| Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready |
+| Spiked Bat | 45 per swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
 
 ### Addons
 
 | Addon | Effect |
 |---|---|
-| Hider | F: 18 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 7 s cooldown after it ends. |
+| Hider | F: 15 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 12 s cooldown after it ends. |
 | Trackstar | Passive +15% speed. F: +35% for 6 s. 30 s cooldown from activation. |
 | Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
 | Stalker | See red ground trails behind every enemy, fading 15 m behind them. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
@@ -92,7 +94,7 @@ view distance, master/effects/UI volume, hitmarker sound, crosshair size and col
 Snappy ground acceleration, sprint, crouch, and a momentum slide (sprint + crouch). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
 Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved.
 **Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
-Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off.
+Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. There is no limit on how many walls you can chain before landing. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
 **Leaning** (Q / C) peeks around corners. Your head hitbox moves with the lean, and walls limit how far you can lean.
 Doors swing open, away from you and at full speed, when you sprint or slide into them. **E** opens and closes them normally.
 
@@ -122,6 +124,7 @@ A fence with tall invisible collision surrounds it.
 
 Buildings are at most 5 storeys. Each has a two-lane ramp stairwell from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
 Exterior doors are on the ground floor, open windows of varied size and position are spread out on every floor (leaving long stretches of wall for wall running), and residential and school floors have corridors with rooms behind doors.
+Six tower cranes hang planks or sheet metal between rooftops as bridges: Warehouse–School, Apartments–Meridian Tower, Meridian Tower–Casino, the two Tenements, Theater–Bank, and Water Treatment–Library. Crates on each roof help you climb onto them.
 The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).
 
 ## Performance notes

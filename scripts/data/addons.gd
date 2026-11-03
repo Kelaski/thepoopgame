@@ -6,7 +6,7 @@ const ORDER := ["hider", "trackstar", "skywalker", "stalker", "phantom"]
 const DATA := {
 	"hider": {
 		"name": "Hider",
-		"desc": "F: 18s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Ends early if you fire. 7s cooldown after it ends.",
+		"desc": "F: 15s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Ends early if you fire. 12s cooldown after it ends.",
 		"active": true,
 	},
 	"trackstar": {
@@ -31,8 +31,8 @@ const DATA := {
 	},
 }
 
-const HIDER_TIME := 18.0
-const HIDER_CD := 7.0
+const HIDER_TIME := 15.0
+const HIDER_CD := 12.0
 const TRACK_PASSIVE := 1.15
 const TRACK_ACTIVE := 1.35
 const TRACK_TIME := 6.0
