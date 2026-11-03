@@ -12,20 +12,19 @@ rim_tint = 0.6
 [sub_resource type="BoxMesh" id="BoxMesh_0baar"]
 size = Vector3(0.75, 1.9, 0.75)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mtn40"]
-diffuse_mode = 3
-specular_mode = 1
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0baar"]
+shading_mode = 0
 albedo_color = Color(0.43529412, 0.8392157, 1, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_xvhgu"]
 size = Vector3(0.55, 0.45, 0.04)
 
 [sub_resource type="BoxMesh" id="BoxMesh_a2eb6"]
 size = Vector3(0.75, 1.9, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mtn40"]
+shading_mode = 0
+albedo_color = Color(0.43529412, 0.8392157, 1, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_0urfq"]
 size = Vector3(0.55, 0.45, 0.04)
@@ -42,6 +41,35 @@ size = Vector3(0.75, 1.9, 0.75)
 [sub_resource type="BoxShape3D" id="BoxShape3D_k5hu0"]
 size = Vector3(0.55, 0.45, 0.04)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5cs1h"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16470589, 0.16470589, 0.18039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_csnde"]
+size = Vector3(0.7, 0.08, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tlsqb"]
+shading_mode = 0
+albedo_color = Color(1, 0.8235294, 0.24705882, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1jwrd"]
+size = Vector3(0.65, 0.16, 0.02)
+
+[sub_resource type="BoxMesh" id="BoxMesh_k5hu0"]
+size = Vector3(0.7, 0.08, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fplp4"]
+shading_mode = 0
+albedo_color = Color(1, 0.8235294, 0.24705882, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1qpfc"]
+size = Vector3(0.65, 0.16, 0.02)
+
 [node name="ArcadeCabinets" type="Node3D" unique_id=630639615]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=722836900]
@@ -52,8 +80,9 @@ metadata/slot_choices = PackedColorArray(0.3529412, 0.23921569, 0.5411765, 1, 0.
 
 [node name="Part1" type="MeshInstance3D" parent="." unique_id=1291635895]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.35, -0.39)
-material_override = SubResource("StandardMaterial3D_mtn40")
+material_override = SubResource("StandardMaterial3D_0baar")
 mesh = SubResource("BoxMesh_xvhgu")
+metadata/glow = true
 
 [node name="Part2" type="MeshInstance3D" parent="." unique_id=520314303]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.95, 0)
@@ -65,6 +94,7 @@ metadata/slot_choices = PackedColorArray(0.3529412, 0.23921569, 0.5411765, 1, 0.
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.35, -0.39)
 material_override = SubResource("StandardMaterial3D_mtn40")
 mesh = SubResource("BoxMesh_0urfq")
+metadata/glow = true
 
 [node name="Collision" type="StaticBody3D" parent="." unique_id=622282136]
 collision_layer = 2
@@ -85,3 +115,25 @@ shape = SubResource("BoxShape3D_1jwrd")
 [node name="Shape3" type="CollisionShape3D" parent="Collision" unique_id=1470076634]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.35, -0.39)
 shape = SubResource("BoxShape3D_k5hu0")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=1576326818]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1, -0.45)
+material_override = SubResource("StandardMaterial3D_5cs1h")
+mesh = SubResource("BoxMesh_csnde")
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=1189684271]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.8, -0.385)
+material_override = SubResource("StandardMaterial3D_tlsqb")
+mesh = SubResource("BoxMesh_1jwrd")
+metadata/glow = true
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=1358384187]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1, -0.45)
+material_override = SubResource("StandardMaterial3D_5cs1h")
+mesh = SubResource("BoxMesh_k5hu0")
+
+[node name="Detail3" type="MeshInstance3D" parent="." unique_id=1725063586]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.8, -0.385)
+material_override = SubResource("StandardMaterial3D_fplp4")
+mesh = SubResource("BoxMesh_1qpfc")
+metadata/glow = true

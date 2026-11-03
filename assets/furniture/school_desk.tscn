@@ -30,6 +30,18 @@ size = Vector3(0.7, 0.7, 0.5)
 [sub_resource type="BoxShape3D" id="BoxShape3D_okr6d"]
 size = Vector3(0.4, 0.44, 0.38)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hnpe4"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.27058825, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_a6ex7"]
+size = Vector3(0.25, 0.03, 0.18)
+
 [node name="SchoolDesk" type="Node3D" unique_id=71115701]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=1779850528]
@@ -53,3 +65,9 @@ shape = SubResource("BoxShape3D_a6ex7")
 [node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1520274961]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, 0.35)
 shape = SubResource("BoxShape3D_okr6d")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=1714645193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.715, -0.1)
+material_override = SubResource("StandardMaterial3D_hnpe4")
+mesh = SubResource("BoxMesh_a6ex7")
+metadata/slot_choices = PackedColorArray(0.7529412, 0.27058825, 0.22745098, 1, 0.24705882, 0.43529412, 0.65882355, 1, 0.18431373, 0.41568628, 0.2901961, 1, 0.8784314, 0.69411767, 0.23529412, 1)

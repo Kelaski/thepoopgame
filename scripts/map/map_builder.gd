@@ -36,6 +36,7 @@ const STAIR_RISE := 0.5
 const ROOM_MODULES := 3  # interior rooms are 3 modules (6 m) wide
 const WINDOW_PIECES := ["building/wall_window_small", "building/wall_window_wide", "building/wall_window_tall"]
 const FURNITURE_VIS_RANGE := 75.0
+const GLOW_BOOST := 3.0  # glowing parts are drawn with their brightest channel at this level, so they bloom
 
 const STYLES := {
 	"warehouse": {"wall": Color("9c8b74"), "floor": Color("7a7670"), "roof": Color("5e5a52"), "trim": Color("6b5d4b"), "door": Color("5b6b74")},
@@ -86,6 +87,7 @@ var spawn_dots: Array = []       # Vector3
 var objectives: Array = []       # {pos: Vector3, name: String}
 var spawn_points: Array = []     # Vector3 candidate respawn points
 var doors: Array = []            # Door
+var lights: Array = []           # OmniLight3D from lamp prefabs (World thins them per the Interior lights setting)
 var buildings: Array = []        # {id, name, rect: Rect2, floors, fh, top, color}
 var road_rects: Array = []       # Rect2 (clipped to the map bounds)
 var park_rect := Rect2()
@@ -102,6 +104,7 @@ var _fboxes: Array = []
 var _cyls: Array = []
 var _fcyls: Array = []
 var _spheres: Array = []
+var _glows: Array = []   # [kind, transform, colour, detail]: glowing parts
 var _floor_body: StaticBody3D
 var _wall_body: StaticBody3D
 var _solid_body: StaticBody3D
@@ -244,6 +247,7 @@ func _begin_chunk(nm: String) -> void:
 	_cyls = []
 	_fcyls = []
 	_spheres = []
+	_glows = []
 
 
 func _end_chunk() -> void:
@@ -252,9 +256,18 @@ func _end_chunk() -> void:
 	_make_mm(_box_mesh, _fboxes, FURNITURE_VIS_RANGE)
 	_make_mm(_cyl_mesh, _fcyls, FURNITURE_VIS_RANGE)
 	_make_mm(_sph_mesh, _spheres, 0.0)
+	# Glowing parts: one batch per shape and draw distance
+	var meshes := {"box": _box_mesh, "cyl": _cyl_mesh, "sphere": _sph_mesh}
+	for kind: String in meshes:
+		for detail: bool in [false, true]:
+			var items := []
+			for g: Array in _glows:
+				if g[0] == kind and g[3] == detail:
+					items.append([g[1], g[2]])
+			_make_mm(meshes[kind], items, FURNITURE_VIS_RANGE if detail else 0.0, Mats.vertex_glow())
 
 
-func _make_mm(mesh: Mesh, items: Array, vis_range: float) -> void:
+func _make_mm(mesh: Mesh, items: Array, vis_range: float, mat: Material = null) -> void:
 	if items.is_empty():
 		return
 	var mm := MultiMesh.new()
@@ -267,7 +280,9 @@ func _make_mm(mesh: Mesh, items: Array, vis_range: float) -> void:
 		mm.set_instance_color(i, items[i][1])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
-	mmi.material_override = Mats.vertex_toon()
+	mmi.material_override = mat if mat else Mats.vertex_toon()
+	if mat or vis_range > 0.0:
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if vis_range > 0.0:
 		mmi.visibility_range_end = vis_range
 		mmi.visibility_range_end_margin = 5.0
@@ -350,6 +365,10 @@ func _prefab(name: String, xf: Transform3D, slots := {}) -> void:
 				col = col.lightened(p.lighten)
 		var t: Transform3D = xf * p.xform
 		var detail: bool = _detail if p.batch == "" else p.batch == "detail"
+		if p.glow:
+			var gain := GLOW_BOOST / maxf(0.05, maxf(col.r, maxf(col.g, col.b)))
+			_glows.append([p.kind, t, Color(col.r * gain, col.g * gain, col.b * gain), detail])
+			continue
 		match p.kind:
 			"box":
 				(_fboxes if detail else _boxes).append([t, col])
@@ -366,6 +385,18 @@ func _prefab(name: String, xf: Transform3D, slots := {}) -> void:
 			_add_shape(s.layer, _box_shape(size), Transform3D(rot, t.origin))
 		else:
 			_add_shape(s.layer, _cyl_shape(size.x, size.y), Transform3D(rot, t.origin))
+	for li: Dictionary in r.lights:
+		var l := OmniLight3D.new()
+		l.position = xf * (li.pos as Vector3)
+		l.light_color = li.color
+		l.light_energy = li.energy
+		l.omni_range = li.range
+		l.light_specular = 0.2
+		l.light_bake_mode = Light3D.BAKE_DISABLED
+		l.distance_fade_enabled = true
+		l.distance_fade_length = 8.0
+		_chunk.add_child(l)
+		lights.append(l)
 
 
 ## Transform for a prop at c: yaw (radians) and optional stretch.

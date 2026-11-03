@@ -28,14 +28,9 @@ height = 0.3
 radial_segments = 10
 rings = 1
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1lnm3"]
-diffuse_mode = 3
-specular_mode = 1
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qfgji"]
+shading_mode = 0
 albedo_color = Color(1, 0.9490196, 0.6901961, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
 
 [sub_resource type="SphereMesh" id="SphereMesh_tmsjm"]
 radius = 0.14
@@ -57,5 +52,12 @@ mesh = SubResource("CylinderMesh_gaxcc")
 
 [node name="Part3" type="MeshInstance3D" parent="." unique_id=701806071]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
-material_override = SubResource("StandardMaterial3D_1lnm3")
+material_override = SubResource("StandardMaterial3D_qfgji")
 mesh = SubResource("SphereMesh_tmsjm")
+metadata/glow = true
+
+[node name="Light" type="OmniLight3D" parent="." unique_id=104486653]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.7, 0)
+light_color = Color(1, 0.9411765, 0.8156863, 1)
+light_energy = 1.4
+omni_range = 10.0

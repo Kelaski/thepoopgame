@@ -21,14 +21,9 @@ size = Vector3(0.6, 1.2, 0.02)
 [sub_resource type="BoxShape3D" id="BoxShape3D_xjsnt"]
 size = Vector3(0.2, 0.9, 0.02)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m3ahr"]
-diffuse_mode = 3
-specular_mode = 1
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_boyyl"]
+shading_mode = 0
 albedo_color = Color(0.7490196, 0.8901961, 0.9372549, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_gbi6g"]
 size = Vector3(0.6, 1.2, 0.02)
@@ -44,6 +39,18 @@ rim_tint = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_i6vxv"]
 size = Vector3(0.2, 0.9, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5cs1h"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16470589, 0.16470589, 0.18039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_4h6uq"]
+size = Vector3(0.6, 0.2, 0.02)
 
 [node name="VendingMachine" type="Node3D" unique_id=1897616357]
 
@@ -71,10 +78,16 @@ shape = SubResource("BoxShape3D_xjsnt")
 
 [node name="Part2" type="MeshInstance3D" parent="." unique_id=37460098]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.15, 0.81)
-material_override = SubResource("StandardMaterial3D_m3ahr")
+material_override = SubResource("StandardMaterial3D_boyyl")
 mesh = SubResource("BoxMesh_gbi6g")
+metadata/glow = true
 
 [node name="Part3" type="MeshInstance3D" parent="." unique_id=404880406]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 1.2, 0.81)
 material_override = SubResource("StandardMaterial3D_dgmcl")
 mesh = SubResource("BoxMesh_i6vxv")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=1244352694]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.25, 0.81)
+material_override = SubResource("StandardMaterial3D_5cs1h")
+mesh = SubResource("BoxMesh_4h6uq")

@@ -45,6 +45,36 @@ size = Vector3(2.2, 0.6, 0.18)
 [sub_resource type="BoxShape3D" id="BoxShape3D_425ng"]
 size = Vector3(1, 0.44, 0.55)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xilah"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.40784314, 0.45882353, 0.3529412, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_cmfna"]
+size = Vector3(0.18, 0.4, 0.9)
+
+[sub_resource type="BoxMesh" id="BoxMesh_l8xfk"]
+size = Vector3(0.18, 0.4, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o4mbl"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.47843137, 0.5411765, 0.41568628, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_425ng"]
+size = Vector3(0.95, 0.06, 0.7)
+
+[sub_resource type="BoxMesh" id="BoxMesh_kve6r"]
+size = Vector3(0.95, 0.06, 0.7)
+
 [node name="Sofa" type="Node3D" unique_id=592036114]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=1341230972]
@@ -80,3 +110,31 @@ shape = SubResource("BoxShape3D_o4mbl")
 [node name="Shape2" type="CollisionShape3D" parent="Collision" unique_id=1105926444]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, -1.1)
 shape = SubResource("BoxShape3D_425ng")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=506049151]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.15, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_xilah")
+mesh = SubResource("BoxMesh_cmfna")
+metadata/slot = "main"
+metadata/slot_darken = 0.15
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=1467745971]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.15, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_xilah")
+mesh = SubResource("BoxMesh_l8xfk")
+metadata/slot = "main"
+metadata/slot_darken = 0.15
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=2046453086]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.52, -0.05)
+material_override = SubResource("StandardMaterial3D_o4mbl")
+mesh = SubResource("BoxMesh_425ng")
+metadata/slot = "main"
+metadata/slot_lighten = 0.08
+
+[node name="Detail3" type="MeshInstance3D" parent="." unique_id=266569283]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.52, -0.05)
+material_override = SubResource("StandardMaterial3D_o4mbl")
+mesh = SubResource("BoxMesh_kve6r")
+metadata/slot = "main"
+metadata/slot_lighten = 0.08

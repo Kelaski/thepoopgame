@@ -51,6 +51,46 @@ size = Vector3(0.5, 0.46, 0.5)
 [sub_resource type="BoxShape3D" id="BoxShape3D_mmx32"]
 size = Vector3(0.5, 0.6, 0.06)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5cs1h"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16470589, 0.16470589, 0.18039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_24cqb"]
+size = Vector3(0.45, 0.02, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hnpe4"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.27058825, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_x7one"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.1
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mmx32"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.95686275, 0.95686275, 0.95686275, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_qb6a5"]
+size = Vector3(0.3, 0.01, 0.22)
+
 [node name="DeskChair" type="Node3D" unique_id=1886197088]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=57289683]
@@ -92,3 +132,18 @@ shape = SubResource("BoxShape3D_x7one")
 [node name="Shape3" type="CollisionShape3D" parent="Collision" unique_id=228932302]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.98)
 shape = SubResource("BoxShape3D_mmx32")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=1209784078]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.78, 0.15)
+material_override = SubResource("StandardMaterial3D_5cs1h")
+mesh = SubResource("BoxMesh_24cqb")
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=1803131919]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.82, 0.1)
+material_override = SubResource("StandardMaterial3D_hnpe4")
+mesh = SubResource("CylinderMesh_x7one")
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=908038497]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.775, 0)
+material_override = SubResource("StandardMaterial3D_mmx32")
+mesh = SubResource("BoxMesh_qb6a5")

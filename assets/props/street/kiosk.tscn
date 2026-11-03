@@ -30,6 +30,36 @@ size = Vector3(2.4, 2.2, 1.8)
 [sub_resource type="BoxShape3D" id="BoxShape3D_f8ihx"]
 size = Vector3(2.8, 0.12, 2.4)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1lask"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16862746, 0.22745098, 0.2901961, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_tt8y1"]
+size = Vector3(1.6, 0.8, 0.01)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nq2ud"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5411765, 0.3529412, 0.23529412, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_gmitp"]
+size = Vector3(1.8, 0.06, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_f8ihx"]
+size = Vector3(1.6, 0.8, 0.01)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bkd7s"]
+size = Vector3(1.8, 0.06, 0.2)
+
 [node name="Kiosk" type="Node3D" unique_id=417113105]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=2080410884]
@@ -54,3 +84,27 @@ shape = SubResource("BoxShape3D_gmitp")
 [node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=886664377]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
 shape = SubResource("BoxShape3D_f8ihx")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=1178327768]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, -0.905)
+material_override = SubResource("StandardMaterial3D_1lask")
+mesh = SubResource("BoxMesh_tt8y1")
+metadata/batch = "detail"
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=1323209558]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, -1)
+material_override = SubResource("StandardMaterial3D_nq2ud")
+mesh = SubResource("BoxMesh_gmitp")
+metadata/batch = "detail"
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=25029912]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0.905)
+material_override = SubResource("StandardMaterial3D_1lask")
+mesh = SubResource("BoxMesh_f8ihx")
+metadata/batch = "detail"
+
+[node name="Detail3" type="MeshInstance3D" parent="." unique_id=1629220554]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 1)
+material_override = SubResource("StandardMaterial3D_nq2ud")
+mesh = SubResource("BoxMesh_bkd7s")
+metadata/batch = "detail"

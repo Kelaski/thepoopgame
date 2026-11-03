@@ -30,6 +30,57 @@ size = Vector3(2.6, 0.9, 0.65)
 [sub_resource type="BoxShape3D" id="BoxShape3D_b2m4q"]
 size = Vector3(0.8, 1.9, 0.7)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y5322"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.54901963, 0.5803922, 0.6039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_1ryhb"]
+size = Vector3(0.6, 0.02, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5xuvd"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.76862746, 0.78431374, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_b2m4q"]
+top_radius = 0.02
+bottom_radius = 0.02
+height = 0.2
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5cs1h"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16470589, 0.16470589, 0.18039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_g7ujw"]
+top_radius = 0.1
+bottom_radius = 0.1
+height = 0.02
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_jtwfy"]
+top_radius = 0.1
+bottom_radius = 0.1
+height = 0.02
+radial_segments = 12
+rings = 1
+
 [node name="Kitchen" type="Node3D" unique_id=526838193]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=1084769168]
@@ -53,3 +104,23 @@ shape = SubResource("BoxShape3D_1ryhb")
 [node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1337515350]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0.95, 0)
 shape = SubResource("BoxShape3D_b2m4q")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=2222318]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.905, 0)
+material_override = SubResource("StandardMaterial3D_y5322")
+mesh = SubResource("BoxMesh_1ryhb")
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=2107722152]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 1, -0.25)
+material_override = SubResource("StandardMaterial3D_5xuvd")
+mesh = SubResource("CylinderMesh_b2m4q")
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=1223405917]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.91, 0)
+material_override = SubResource("StandardMaterial3D_5cs1h")
+mesh = SubResource("CylinderMesh_g7ujw")
+
+[node name="Detail3" type="MeshInstance3D" parent="." unique_id=304289015]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.91, 0)
+material_override = SubResource("StandardMaterial3D_5cs1h")
+mesh = SubResource("CylinderMesh_jtwfy")

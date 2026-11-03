@@ -92,7 +92,7 @@ The map itself (ground, roads, grass and buildings) always uses its built-in col
 Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu and sky colours change instantly. Team colours apply when the next match loads. Colours are personal and don't affect other players.
 
 Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch,
-FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows,
+FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows, interior lights (off / low / high), bloom,
 view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, and an FPS counter.
 
 ## Rules
@@ -204,7 +204,7 @@ Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**
 - **Walls:** each storey's walls are a row of 2 m modules. A module is solid, has the building's window style (small, wide or tall), or is a door on the ground floor.
 - **Windows:** never at the ends of a wall or next to a door, and less likely right after another window, which leaves long solid stretches for wall running. Windows are open gaps you can shoot and jump through.
 - **Rooms:** residential and school floors have a corridor with 6 m rooms behind doors.
-- **Decor:** every storey has ceiling lights, and the walls get decor that fits the building: posters and clocks in the school, neon signs and a jukebox in the diner and bar, bottle shelves and a dartboard in the bar, picture frames and rugs in the bank, apartments, motel and library, pipes and safety signs in the warehouse and water treatment centre, and so on. Exit signs hang over the street doors. Lights are fixtures only, not real light sources.**Streets** look like a busy city:
+- **Decor:** every storey has ceiling lights, and the walls get decor that fits the building: posters and clocks in the school, neon signs and a jukebox in the diner and bar, bottle shelves and a dartboard in the bar, picture frames and rugs in the bank, apartments, motel and library, pipes and safety signs in the warehouse and water treatment centre, and so on. Exit signs hang over the street doors. The lamps cast real light, and bulbs, screens and neon glow.**Streets** look like a busy city:
 - **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses), with about half the spots taken. Every vehicle, on the road or in a car park, is at least 1.4 m from every other one (front, back and side to side), so you can always slide between two cars. The two lanes are staggered rather than side by side.
 - **Junctions:** kept clear, with zebra crossings.
 - **Sidewalks:** along every curb, a lamp post and street trees alternate every 6 m. In between there are benches, bins, fire hydrants with newspaper boxes, mailboxes and the odd bus shelter.
@@ -221,6 +221,8 @@ The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are t
 - Collision uses shape owners on one `StaticBody3D` per layer per building instead of thousands of nodes. Box shapes are shared by size.
 - There are no textures and no imported assets. Sounds are synthesized at startup.
 - The renderer is kept simple: toon shading, one directional light with 2-split shadows (can be turned off), no SSAO/SSR/GI.
+- **Interior lights:** lamps are real `OmniLight3D`s without shadows that fade out beyond about 40 m (22 m on Low), so only nearby ones are drawn. A large map has about 450 to 650. The **Interior lights** setting (Off / Low / High) thins them.
+- **Glowing parts:** these are drawn unshaded and over-bright in their own MultiMeshes, so the **Bloom** setting only picks them up, not sunlit walls.
 - The **Render scale**, **Shadows**, **MSAA** and **View distance** settings are the main performance controls.
 
 ## Networking model
@@ -275,6 +277,8 @@ Edit them in the Godot editor. The next match uses your changes.
   - `slot`: a colour filled in by the game, such as `body` on cars, `leaf` on tree crowns, `main` on sofas and tables, or `blanket` on beds. `slot_darken` / `slot_lighten` shade it.
   - `slot_choices`: a list of colours. One is picked at random for each placement, as with kiosk awnings, arcade cabinets and books.
   - `batch`: `static` or `detail`. Detail parts are hidden beyond 75 m, like the furniture.
+  - `glow`: true for parts that light up (bulbs, screens, neon, headlights). They're drawn unshaded and bright enough to bloom.
+- **Lights:** an `OmniLight3D` in a template becomes a real light wherever the piece is placed. Its colour, energy and range are used, and shadows stay off. The lamp scenes in `assets/furniture/decor/` have one each.
 - **Placement:**
   - Props are placed on the ground at their origin.
   - Street props face their local +Z away from the road.

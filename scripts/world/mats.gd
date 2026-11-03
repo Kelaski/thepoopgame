@@ -63,6 +63,18 @@ static func glow(color: Color, alpha := 1.0, no_depth := false) -> StandardMater
 	return m
 
 
+## Material for glowing MultiMesh parts: unshaded, the (over-bright) instance
+## colour is drawn as is so it blooms.
+static func vertex_glow() -> StandardMaterial3D:
+	if _cache.has("vglow"):
+		return _cache["vglow"]
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.vertex_color_use_as_albedo = true
+	_cache["vglow"] = m
+	return m
+
+
 static func vertex_unshaded(no_depth := false) -> StandardMaterial3D:
 	var key := "vun_%s" % no_depth
 	if _cache.has(key):

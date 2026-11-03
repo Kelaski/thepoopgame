@@ -33,6 +33,21 @@ size = Vector3(1, 0.6, 0.3)
 [sub_resource type="BoxMesh" id="BoxMesh_qnwnd"]
 size = Vector3(1, 1, 0.3)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tyhdx"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5411765, 0.5411765, 0.5411765, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_8w7jk"]
+size = Vector3(1.1, 0.06, 0.42)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ccbs5"]
+size = Vector3(1.1, 0.08, 0.36)
+
 [node name="WallWindowTall" type="Node3D" unique_id=1809774818]
 
 [node name="Mesh0" type="MeshInstance3D" parent="." unique_id=1370996243]
@@ -82,3 +97,17 @@ material_override = SubResource("StandardMaterial3D_onwj0")
 mesh = SubResource("BoxMesh_qnwnd")
 metadata/slot = "wall"
 metadata/batch = "static"
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=160341159]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.63, 0)
+material_override = SubResource("StandardMaterial3D_tyhdx")
+mesh = SubResource("BoxMesh_8w7jk")
+metadata/slot = "trim"
+metadata/batch = "detail"
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=654062316]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.96, 0)
+material_override = SubResource("StandardMaterial3D_tyhdx")
+mesh = SubResource("BoxMesh_ccbs5")
+metadata/slot = "trim"
+metadata/batch = "detail"

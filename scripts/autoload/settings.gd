@@ -57,6 +57,8 @@ const DEFAULTS := {
 	"max_fps": 144,
 	"render_scale": 1.0,
 	"shadows": true,
+	"interior_lights": 2,  # 0 off, 1 low (every other lamp, shorter reach), 2 high
+	"bloom": true,
 	"msaa": 0,
 	"view_distance": 260.0,
 	"show_fps": true,

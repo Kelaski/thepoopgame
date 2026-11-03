@@ -48,6 +48,64 @@ size = Vector3(0.45, 0.46, 0.45)
 [sub_resource type="BoxShape3D" id="BoxShape3D_0573r"]
 size = Vector3(0.45, 0.46, 0.45)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lfyxl"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.43137255, 0.28235295, 0.1882353, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_45nqc"]
+size = Vector3(0.45, 0.5, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mmx32"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.95686275, 0.95686275, 0.95686275, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_yq712"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.01
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_t3rn0"]
+size = Vector3(0.45, 0.5, 0.06)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_w1ufm"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.01
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_258mg"]
+size = Vector3(0.45, 0.5, 0.06)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_bsoge"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.01
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_0573r"]
+size = Vector3(0.45, 0.5, 0.06)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_h65og"]
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.01
+radial_segments = 12
+rings = 1
+
 [node name="TableChairs" type="Node3D" unique_id=1188526090]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=12758820]
@@ -107,3 +165,51 @@ shape = SubResource("BoxShape3D_bsoge")
 [node name="Shape4" type="CollisionShape3D" parent="Collision" unique_id=1403037809]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.23, -0.75)
 shape = SubResource("BoxShape3D_0573r")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=1874810465]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0.7, -0.97)
+material_override = SubResource("StandardMaterial3D_lfyxl")
+mesh = SubResource("BoxMesh_45nqc")
+metadata/slot = "main"
+metadata/slot_darken = 0.1
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=397192021]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0.745, -0.22)
+material_override = SubResource("StandardMaterial3D_mmx32")
+mesh = SubResource("CylinderMesh_yq712")
+
+[node name="Detail2" type="MeshInstance3D" parent="." unique_id=259673011]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0.7, 0.97)
+material_override = SubResource("StandardMaterial3D_lfyxl")
+mesh = SubResource("BoxMesh_t3rn0")
+metadata/slot = "main"
+metadata/slot_darken = 0.1
+
+[node name="Detail3" type="MeshInstance3D" parent="." unique_id=2058921666]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0.745, 0.22)
+material_override = SubResource("StandardMaterial3D_mmx32")
+mesh = SubResource("CylinderMesh_w1ufm")
+
+[node name="Detail4" type="MeshInstance3D" parent="." unique_id=918333654]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.7, -0.97)
+material_override = SubResource("StandardMaterial3D_lfyxl")
+mesh = SubResource("BoxMesh_258mg")
+metadata/slot = "main"
+metadata/slot_darken = 0.1
+
+[node name="Detail5" type="MeshInstance3D" parent="." unique_id=954669224]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.745, -0.22)
+material_override = SubResource("StandardMaterial3D_mmx32")
+mesh = SubResource("CylinderMesh_bsoge")
+
+[node name="Detail6" type="MeshInstance3D" parent="." unique_id=1217812167]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.7, 0.97)
+material_override = SubResource("StandardMaterial3D_lfyxl")
+mesh = SubResource("BoxMesh_0573r")
+metadata/slot = "main"
+metadata/slot_darken = 0.1
+
+[node name="Detail7" type="MeshInstance3D" parent="." unique_id=1583296158]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0.745, 0.22)
+material_override = SubResource("StandardMaterial3D_mmx32")
+mesh = SubResource("CylinderMesh_h65og")

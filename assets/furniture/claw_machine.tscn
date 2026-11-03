@@ -30,6 +30,25 @@ size = Vector3(1.3, 2.2, 1.3)
 [sub_resource type="BoxShape3D" id="BoxShape3D_u7x7s"]
 size = Vector3(1.2, 1, 1.2)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1m71y"]
+shading_mode = 0
+albedo_color = Color(0.8784314, 0.30980393, 0.6509804, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_n0e2j"]
+size = Vector3(1, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_u7x7s"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(1, 0.8235294, 0.24705882, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_pjjqf"]
+size = Vector3(1.1, 0.12, 1.1)
+
 [node name="ClawMachine" type="Node3D" unique_id=412223167]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=1419496097]
@@ -53,3 +72,15 @@ shape = SubResource("BoxShape3D_n0e2j")
 [node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=106391591]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 shape = SubResource("BoxShape3D_u7x7s")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=291241138]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+material_override = SubResource("StandardMaterial3D_1m71y")
+mesh = SubResource("BoxMesh_n0e2j")
+metadata/glow = true
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=1340606760]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.06, 0)
+material_override = SubResource("StandardMaterial3D_u7x7s")
+mesh = SubResource("BoxMesh_pjjqf")
+metadata/slot_choices = PackedColorArray(1, 0.8235294, 0.24705882, 1, 0.3019608, 0.88235295, 1, 1, 1, 0.3019608, 0.9411765, 1)

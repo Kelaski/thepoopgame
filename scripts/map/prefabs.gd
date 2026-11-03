@@ -12,6 +12,10 @@ class_name Prefabs
 ##       slot_choices PackedColorArray: one is picked at random per placement
 ##       batch        "static" or "detail" (detail = furniture batch with a
 ##                    75 m draw distance); otherwise it follows where it's placed
+##       glow         true = lit from within (bulbs, screens, neon): drawn unshaded
+##                    and bright enough to bloom
+##   * OmniLight3D: a real light, placed with the prefab (colour, energy and range
+##     are used; shadows stay off). The player's Interior lights setting thins them.
 ##   * StaticBody3D with CollisionShape3D children (BoxShape3D, CylinderShape3D):
 ##     the body's collision_layer is the layer (1 floor, 2 wall, 16 solid).
 ##     Meshes without a body around them are visual only.
@@ -25,13 +29,13 @@ static var _recipes := {}
 
 
 ## Recipe for "props/vehicles/car" etc. (path under assets/, without .tscn):
-## {"parts": [{kind, xform, color, slot, darken, lighten, choices, batch}],
-##  "shapes": [{kind, layer, size, xform}]}
+## {"parts": [{kind, xform, color, slot, darken, lighten, choices, batch, glow}],
+##  "shapes": [{kind, layer, size, xform}], "lights": [{pos, color, energy, range}]}
 static func recipe(name: String) -> Dictionary:
 	if _recipes.has(name):
 		return _recipes[name]
 	var ps: PackedScene = load(ROOT + name + ".tscn")
-	var r := {"parts": [], "shapes": []}
+	var r := {"parts": [], "shapes": [], "lights": []}
 	if ps == null:
 		push_error("Prefab not found: " + name)
 	else:
@@ -52,6 +56,8 @@ static func _collect(n: Node, xf: Transform3D, layer: int, r: Dictionary) -> voi
 			_add_part(c, cxf, r)
 		elif c is CollisionShape3D and c.shape and lay != 0 and not c.disabled:
 			_add_shape(c.shape, cxf, lay, r)
+		elif c is OmniLight3D and c.visible:
+			r.lights.append({"pos": cxf.origin, "color": c.light_color, "energy": c.light_energy, "range": c.omni_range})
 		_collect(c, cxf, lay, r)
 
 
@@ -86,6 +92,7 @@ static func _add_part(mi: MeshInstance3D, xf: Transform3D, r: Dictionary) -> voi
 		"lighten": float(mi.get_meta("slot_lighten", 0.0)),
 		"choices": mi.get_meta("slot_choices", PackedColorArray()),
 		"batch": str(mi.get_meta("batch", "")),
+		"glow": bool(mi.get_meta("glow", false)),
 	})
 
 

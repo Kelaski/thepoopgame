@@ -89,6 +89,11 @@ func _build_environment() -> void:
 	e.fog_density = 0.0025
 	e.fog_aerial_perspective = 0.3
 	e.adjustment_enabled = true
+	# Bloom only catches the over-bright glowing parts (bulbs, screens, neon).
+	e.glow_intensity = 0.7
+	e.glow_bloom = 0.0
+	e.glow_hdr_threshold = 2.0
+	e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 	env.environment = e
 	add_child(env)
 	sun = DirectionalLight3D.new()
@@ -134,8 +139,22 @@ func _apply_settings() -> void:
 	_apply_sky()
 	if env and env.environment:
 		env.environment.adjustment_brightness = float(Settings.g("brightness"))
+		env.environment.glow_enabled = bool(Settings.g("bloom"))
 	if sun:
 		sun.shadow_enabled = bool(Settings.g("shadows"))
+	_apply_lights()
+
+
+## Interior lights: Off hides them, Low keeps every other lamp lit with a shorter
+## reach, High lights them all. Lights fade out with distance either way.
+func _apply_lights() -> void:
+	if builder == null:
+		return
+	var q := int(Settings.g("interior_lights"))
+	for i in builder.lights.size():
+		var l: OmniLight3D = builder.lights[i]
+		l.visible = q == 2 or (q == 1 and i % 2 == 0)
+		l.distance_fade_begin = 40.0 if q == 2 else 22.0
 
 
 ## The Tag (assets/models/tag.tscn): Gem, PickupRing and Beam, tinted with the

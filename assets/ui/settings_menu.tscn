@@ -216,6 +216,22 @@ script = ExtResource("5_mpnul")
 setting = "shadows"
 label_text = "Shadows"
 
+[node name="InteriorLights" type="HBoxContainer" parent="Center/Panel/Content/Tabs/Video/VideoContent" unique_id=1739204415 instance=ExtResource("6_7g5uy")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("7_x7bog")
+setting = "interior_lights"
+label_text = "Interior lights"
+items = PackedStringArray("Off", "Low", "High")
+values = [0, 1, 2]
+
+[node name="Bloom" type="HBoxContainer" parent="Center/Panel/Content/Tabs/Video/VideoContent" unique_id=588120947 instance=ExtResource("4_i3kxd")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("5_mpnul")
+setting = "bloom"
+label_text = "Bloom (glowing lights)"
+
 [node name="ViewDistance" type="HBoxContainer" parent="Center/Panel/Content/Tabs/Video/VideoContent" unique_id=293924528 instance=ExtResource("2_bi44n")]
 layout_mode = 2
 theme_override_constants/separation = 12

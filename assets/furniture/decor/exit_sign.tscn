@@ -1,13 +1,8 @@
 [gd_scene format=3]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cx545"]
-diffuse_mode = 3
-specular_mode = 1
+shading_mode = 0
 albedo_color = Color(0.18431373, 0.6039216, 0.2901961, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_ug0lm"]
 size = Vector3(0.6, 0.25, 0.06)
@@ -30,6 +25,7 @@ size = Vector3(0.48, 0.13, 0.01)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.03)
 material_override = SubResource("StandardMaterial3D_cx545")
 mesh = SubResource("BoxMesh_ug0lm")
+metadata/glow = true
 
 [node name="Part2" type="MeshInstance3D" parent="." unique_id=1805109239]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.065)

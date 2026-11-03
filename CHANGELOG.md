@@ -7,6 +7,19 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.11.0
+
+### Added
+- **Real interior lights:** ceiling panels, hanging lamps, industrial lamps and wall lamps now cast actual light, so rooms get warm pools of light on the floors, walls and ceilings. Lights have no shadows and fade out beyond about 40 m to stay fast.
+- **Glowing parts with bloom:** bulbs, street lamp heads, neon signs, exit signs, screens (arcade cabinets, slot machines, monitors, TVs, teller screens), the vending machine and jukebox fronts, the dance floor, the scoreboard, bus shelter ads, the taxi roof sign and vehicle headlights and taillights all glow.
+- **More detail:**
+  - **Vehicles:** headlights, taillights, bumpers, number plates, side mirrors, hubcaps and a grille. Taxis get a checker stripe, vans get side windows and rear doors, and buses get a windscreen, doors and a lit destination sign.
+  - **Street:** street lamps get a base, an arm and a hood. Kiosks get serving windows and counters.
+  - **Buildings:** windows get sills and headers, and street doors get a frame on both sides.
+  - **Furniture:** keyboards, mugs and papers on desks; plates and chair backs at tables; sofa armrests and cushions; a sink, tap and hob in kitchens; bedside lamps; bottles and stool seats at bars; books on school desks; arcade control panels and marquees; slot machine lights; a claw machine sign and prizes.
+  - The jukebox has a rounded top.
+- **Video settings:** **Interior lights** (Off / Low / High; Low lights every other lamp with a shorter reach) and **Bloom** (on/off).
+
 ## 0.10.0
 
 ### Added

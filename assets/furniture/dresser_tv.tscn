@@ -30,6 +30,20 @@ size = Vector3(1.6, 0.9, 0.55)
 [sub_resource type="BoxShape3D" id="BoxShape3D_fn105"]
 size = Vector3(0.9, 0.55, 0.12)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cxxmm"]
+shading_mode = 0
+albedo_color = Color(0.49803922, 0.6901961, 0.8784314, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tey5a"]
+size = Vector3(0.82, 0.47, 0.01)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fn105"]
+shading_mode = 0
+albedo_color = Color(0.49803922, 0.6901961, 0.8784314, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_dvw72"]
+size = Vector3(0.82, 0.47, 0.01)
+
 [node name="DresserTv" type="Node3D" unique_id=1997948632]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=1488587160]
@@ -53,3 +67,15 @@ shape = SubResource("BoxShape3D_tey5a")
 [node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=2095550713]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
 shape = SubResource("BoxShape3D_fn105")
+
+[node name="Detail0" type="MeshInstance3D" parent="." unique_id=1342017466]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, -0.065)
+material_override = SubResource("StandardMaterial3D_cxxmm")
+mesh = SubResource("BoxMesh_tey5a")
+metadata/glow = true
+
+[node name="Detail1" type="MeshInstance3D" parent="." unique_id=1756797068]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0.065)
+material_override = SubResource("StandardMaterial3D_fn105")
+mesh = SubResource("BoxMesh_dvw72")
+metadata/glow = true
