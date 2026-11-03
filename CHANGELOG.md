@@ -7,6 +7,22 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.14.2
+
+### Fixed (security)
+- **Damage cheats:** a modified client could claim hits with any weapon (sniper or bat damage while holding an SMG), from any distance, as fast as it liked, and could claim thrown-gun hits at any time. The server now checks:
+  - that you're holding the weapon you claim
+  - that the victim is within that weapon's range
+  - that hits don't arrive faster than the weapon fires
+  - that a thrown gun only follows a bat kill (2 hits within 4 s)
+- **Bat momentum:** bat damage now uses the speed the server actually saw you moving at, not the speed your client claims.
+- **Doors:** any player could open or slam any door on the map, and push it past its hinges. A door now only moves for a living player near it, and only through its normal swing.
+- **Fake shot effects:** a client could play any sound to everyone or flood clients with huge tracer lists. Shot effects must now be a real weapon, fired from the shooter's position, with at most 16 tracers.
+- **Thrown guns:** a client could launch thrown guns on another player's behalf, which made that player's game report hits. Only the thrower can launch their gun now, and at most 12 can be in flight.
+- **Movement updates:** broken numbers (NaN or infinity) are dropped, and lean and look angles are clamped. A huge lean could move a head hitbox far from the body.
+- **Re-registering:** a connected player could register again to reset their team mid-match. Extra registrations are ignored.
+- **Ping spam:** double-tap danger pings skipped the ping rate limit. They now count toward it.
+
 ## 0.14.1
 
 ### Changed

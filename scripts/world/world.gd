@@ -23,6 +23,9 @@ const PING_DANGER := Color("ff4a3a")
 const PINGS_PER_PLAYER := 3     # older pings from the same player disappear
 const PING_BURST := 5           # at most this many pings...
 const PING_BURST_TIME := 3.0    # ...per this many seconds (server-side spam limit)
+const DOOR_REACH := 9.0         # a remote player must be this close to move a door
+const MAX_SHOT_TRACERS := 16    # shotgun pellets are 13
+const MAX_PROJECTILES := 12
 const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # bullet tracers + impacts
 const FX_TRAILS_MAT := preload("res://assets/materials/fx_trails.tres")    # Stalker trails
 ## Times of day (same order as Game.TIMES_OF_DAY). top / horizon tint the sky
@@ -468,17 +471,42 @@ func find_respawn(id: int) -> Vector3:
 
 # ================================================================ RPC: doors & effects
 
+## The player who sent the RPC being handled, or null if it came from this machine.
+func _remote_sender() -> Player:
+	if not _is_remote_call():
+		return null
+	return players.get(multiplayer.get_remote_sender_id())
+
+
+func _is_remote_call() -> bool:
+	var sid := multiplayer.get_remote_sender_id()
+	return sid != 0 and sid != multiplayer.get_unique_id()
+
+
 @rpc("any_peer", "call_local", "reliable")
 func door_rpc(idx: int, target: float, fast: bool) -> void:
-	if idx < 0 or idx >= builder.doors.size():
+	if idx < 0 or idx >= builder.doors.size() or not is_finite(target):
 		return
 	var d: Door = builder.doors[idx]
-	d.set_target(target, fast)
+	if _is_remote_call():
+		var p := _remote_sender()
+		if p == null or not p.alive or p.global_position.distance_to(d.global_position) > DOOR_REACH:
+			return
+	d.set_target(clampf(target, -Door.OPEN_ANGLE, Door.OPEN_ANGLE), fast)
 	Sfx.play_at("door", d.global_position + Vector3(0, 1.2, 0), -2.0 if fast else -8.0, 40.0, 0.8 if fast else 1.0)
 
 
 @rpc("any_peer", "call_remote", "unreliable")
 func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
+	# Only real weapons, a handful of tracers, from where the shooter actually is.
+	if not Weapons.DATA.has(weapon) or ends.size() > MAX_SHOT_TRACERS or not origin.is_finite():
+		return
+	var p := _remote_sender()
+	if p == null or not p.alive or p.global_position.distance_to(origin) > 6.0:
+		return
+	for e in ends:
+		if not e.is_finite() or e.distance_to(origin) > 450.0:
+			return
 	Sfx.play_at(weapon, origin, 0.0, 140.0 if weapon == "sniper" else 90.0, randf_range(0.95, 1.05))
 	add_tracers(origin, ends, weapon)
 
@@ -503,6 +531,11 @@ func launch_thrown_gun(start: Vector3, dir: Vector3, victim: int) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func _fx_projectile(owner_id: int, start: Vector3, vel: Vector3, victim: int) -> void:
+	# Only the thrower can launch their own gun, and only a sensible one.
+	if _is_remote_call() and multiplayer.get_remote_sender_id() != owner_id:
+		return
+	if not (start.is_finite() and vel.is_finite()) or vel.length() > 60.0 or _projectiles.size() >= MAX_PROJECTILES:
+		return
 	# The victim's actual gun (its held, third-person model) tumbles through the air.
 	var w: String = Net.players[victim].weapon if Net.players.has(victim) else "ar"
 	if not Player.WEAPON_SCENES.has(w) or w == "bat":
@@ -744,8 +777,8 @@ func request_ping(pos: Vector3, kind: String) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	var recent: Array = _ping_times.get(id, [])
 	recent = recent.filter(func(t: float) -> bool: return now - t < PING_BURST_TIME)
-	if recent.size() >= PING_BURST and kind != "danger":
-		return
+	if recent.size() >= PING_BURST + (1 if kind == "danger" else 0):
+		return  # one extra slot so a double tap's danger ping still gets through
 	recent.append(now)
 	_ping_times[id] = recent
 	var team := Net.team_of(id)

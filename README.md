@@ -246,7 +246,19 @@ The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are t
 ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015. The host opens the port with UPnP when it can.
 A joining player sends their version number, and the host turns away anyone on a different version, or anyone who doesn't register within 5 s (older builds).
 Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
-Shooting is resolved on the shooter's client, and the server validates every hit (alive, enemy team, not spawn-protected, damage clamped to the weapon maximum) before applying damage.
+Shooting is resolved on the shooter's client, and the server validates every hit before applying damage:
+- The shooter is alive, the victim is an enemy, and the victim isn't spawn-protected.
+- The weapon is the one the shooter actually holds. A thrown gun only counts for a few seconds after a bat kill, for 2 hits at most.
+- The victim is within the weapon's range (plus slack for lag).
+- Hits can't arrive faster than the weapon fires (with slack for lag and multi-hit shots).
+- Damage is clamped to the weapon's maximum. The bat's momentum damage uses the speed the server actually saw the attacker move at.
+
+Every peer also checks what other players send:
+- Doors only move for a living player standing near them.
+- Shot effects must be a real weapon, fired from where the shooter is, with at most 16 tracers.
+- A thrown gun can only be launched by its thrower.
+- Movement updates with broken numbers are dropped, and lean and look angles are clamped.
+- A player can't register twice, and pings are rate-limited.
 Round state, the timer, respawns, the Tag and health regeneration all run on the server.
 
 ## Editing models

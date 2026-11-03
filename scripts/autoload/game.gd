@@ -356,6 +356,8 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
 	_respawn_ready.erase(victim)
 	if Net.players.has(victim):
 		Net.players[victim].deaths += 1
+	if weapon == "bat" and killer != victim:
+		_thrown[killer] = [THROWN_HITS, _now + THROWN_WINDOW]  # the victim's gun goes flying
 	if Net.players.has(killer) and killer != victim:
 		Net.players[killer].kills += 1
 		# Kill reward: heal the killer (capped at their max health).
@@ -456,7 +458,10 @@ func _push_state() -> void:
 
 # ==================================================================== client-callable
 
-## Called by a shooter after their local hitscan. The server validates and applies it.
+## Called by a shooter after their local hitscan. The server validates and applies it:
+## the weapon must be the one they're holding (or the gun a bat kill just threw),
+## the victim must be in that weapon's range, and hits can't come faster than the
+## weapon can fire.
 @rpc("any_peer", "call_local", "reliable")
 func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 	if not multiplayer.is_server() or not in_match or world == null:
@@ -464,13 +469,20 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 	var shooter: int = Net.sender()
 	if not (phase in [Phase.RUSH, Phase.HELD, Phase.DROPPED]):
 		return
-	if not alive_ids.get(victim, false):
+	if not alive_ids.get(victim, false) or not Net.players.has(shooter) or not is_finite(damage):
 		return
-	if weapon != "thrown" and not alive_ids.get(shooter, false):
+	if weapon == "thrown":
+		if not _take_thrown_hit(shooter):
+			return
+	elif not alive_ids.get(shooter, false) or Net.players[shooter].weapon != weapon:
 		return
 	if Net.team_of(shooter) == Net.team_of(victim) or shooter == victim:
 		return
 	if world.players.has(victim) and world.players[victim].is_protected():
+		return
+	if weapon != "thrown" and not _hit_in_range(shooter, victim, weapon):
+		return
+	if weapon != "thrown" and not _take_hit_token(shooter, weapon):
 		return
 	damage = clampf(damage, 0.0, Weapons.MAX_DAMAGE.get(weapon, 50.0))
 	if weapon == "bat" and world.players.has(shooter):
@@ -479,7 +491,11 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 		# only ever allows more damage, never less.
 		var sp: Player = world.players[shooter]
 		var v: Vector3 = sp.velocity if sp.is_local else sp.net_vel
-		var spd := Vector2(v.x, v.z).length() + Weapons.BAT_SPEED_SLACK
+		var spd := Vector2(v.x, v.z).length()
+		if not sp.is_local:
+			# Don't trust a claimed speed the server didn't see them move at.
+			spd = minf(spd, sp.observed_speed())
+		spd += Weapons.BAT_SPEED_SLACK
 		damage = minf(damage, Weapons.bat_damage(spd, Player.SPRINT * Weapons.BAT_SPEED_MULT))
 	hp[victim] = hp.get(victim, 100.0) - damage
 	_last_hit[victim] = _now
@@ -487,6 +503,47 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 		_server_kill(victim, shooter, weapon, head)
 	else:
 		_on_damage.rpc(victim, shooter, hp[victim], damage, head)
+
+
+# Hit validation (server). Each weapon gets a budget of hits that refills as fast
+# as it can fire (with slack for latency and for hitting several people with one
+# shot). The gun a bat kill throws gets a couple of hits for a few seconds.
+const HIT_RATE_SLACK := 1.6
+const HIT_RANGE_SLACK := 12.0   # m over the weapon's range (latency, interpolation)
+const THROWN_WINDOW := 4.0      # s after a bat kill that its thrown gun can hit
+const THROWN_HITS := 2
+var _hit_tokens := {}           # shooter -> [tokens, time]
+var _thrown := {}               # shooter -> [hits left, until]
+
+
+func _take_hit_token(shooter: int, weapon: String) -> bool:
+	var d: Dictionary = Weapons.DATA.get(weapon, {})
+	var per_shot := 4.0 if weapon in ["shotgun", "sniper"] else (2.0 if weapon == "bat" else 1.0)
+	var rate := float(d.get("rps", 1.0)) * per_shot * HIT_RATE_SLACK
+	var cap := per_shot * 2.0 + 2.0
+	var b: Array = _hit_tokens.get(shooter, [cap, _now])
+	var tokens := minf(cap, float(b[0]) + (_now - float(b[1])) * rate)
+	if tokens < 1.0:
+		_hit_tokens[shooter] = [tokens, _now]
+		return false
+	_hit_tokens[shooter] = [tokens - 1.0, _now]
+	return true
+
+
+func _hit_in_range(shooter: int, victim: int, weapon: String) -> bool:
+	if not world.players.has(shooter) or not world.players.has(victim):
+		return false
+	var d: Dictionary = Weapons.DATA.get(weapon, {})
+	var reach := float(d.get("range", 300.0)) + (4.0 if weapon == "bat" else HIT_RANGE_SLACK)
+	return world.players[shooter].global_position.distance_to(world.players[victim].global_position) <= reach
+
+
+func _take_thrown_hit(shooter: int) -> bool:
+	var t: Array = _thrown.get(shooter, [0, 0.0])
+	if int(t[0]) <= 0 or _now > float(t[1]):
+		return false
+	_thrown[shooter] = [int(t[0]) - 1, t[1]]
+	return true
 
 
 # ==================================================================== broadcasts

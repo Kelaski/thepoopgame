@@ -409,6 +409,8 @@ func register(pname: String, weapon: String, addon: String, version: String) -> 
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
+	if players.has(id):
+		return  # already registered (re-registering would reset their team mid-match)
 	if version != GameVersion.CURRENT:
 		_reject(id, "Version mismatch: the host is on %s, you're on %s. Update to the same version." % [GameVersion.CURRENT, version.left(16)])
 		return

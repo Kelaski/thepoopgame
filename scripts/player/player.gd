@@ -933,15 +933,40 @@ func _flags() -> int:
 
 @rpc("authority", "call_remote", "unreliable_ordered")
 func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int, ln: float) -> void:
-	net_lean = ln
+	if not (pos.is_finite() and vel.is_finite() and is_finite(y) and is_finite(p) and is_finite(ln)):
+		return
+	_observe_speed(pos)
+	net_lean = clampf(ln, -LEAN_DIST, LEAN_DIST)
 	net_pos = pos
 	net_yaw = y
-	net_pitch = p
+	net_pitch = clampf(p, -PI * 0.5, PI * 0.5)
 	net_vel = vel
 	net_flags = f
 	if not _has_net:
 		_has_net = true
 		global_position = pos
+
+
+# How fast this remote player has actually been moving, from the positions they
+# sent (the server checks claimed speeds, like the bat's momentum damage, against it).
+var _obs_pos := Vector3.ZERO
+var _obs_t := -1.0
+var _obs_speed := 0.0
+
+
+func _observe_speed(pos: Vector3) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if _obs_t > 0.0 and now > _obs_t:
+		var d := Vector2(pos.x - _obs_pos.x, pos.z - _obs_pos.z).length()
+		var inst := d / maxf(now - _obs_t, 1.0 / 60.0)
+		# Peak speed that decays over about half a second.
+		_obs_speed = maxf(inst, _obs_speed * exp(-(now - _obs_t) * 2.0))
+	_obs_pos = pos
+	_obs_t = now
+
+
+func observed_speed() -> float:
+	return _obs_speed
 
 
 # ================================================================ per-frame visuals
