@@ -12,7 +12,7 @@ const DATA := {
 	},
 	"trackstar": {
 		"name": "Trackstar",
-		"desc": "Passive +15% move speed, and reloads (and the shotgun and sniper re-chambering between shots) take half the time. Ability key: +35% for 6s. 30s cooldown from activation.",
+		"desc": "Passive +15% move speed, and reloads (and the shotgun re-chambering between shots) are 35% faster; 30% faster with the sniper. Ability key: +35% for 6s. 24s cooldown from activation.",
 		"active": true,
 	},
 	"skywalker": {
@@ -22,8 +22,8 @@ const DATA := {
 	},
 	"stalker": {
 		"name": "Stalker",
-		"desc": "Passive: see wide red trails behind every enemy that linger for 6s. Walls and floors hide them. All trails look the same.",
-		"active": false,
+		"desc": "Passive: see wide red trails behind every enemy that linger for 6s. Walls and floors hide them. Ability key: see the outline of every player through walls for 4s. 14s cooldown from activation.",
+		"active": true,
 	},
 	"phantom": {
 		"name": "Phantom",
@@ -32,7 +32,7 @@ const DATA := {
 	},
 	"grapple": {
 		"name": "Grapple",
-		"desc": "Hold the ability key: throw a grappling hook (30m range). It latches onto whatever it hits and reels you in while you steer: hook something above you to swing, and get a pop up at the end to climb ledges. Release the key (or jump) to let go with your momentum. Hooking an enemy yanks them towards you. 9s cooldown from a hit; a miss only costs 1s.",
+		"desc": "Hold the ability key: throw a grappling hook (27m range, up to 20 m/s). It latches onto whatever it hits and reels you in while you steer: hook something above you to swing, and get a pop up at the end to climb ledges. Release the key (or jump) to let go with your momentum. Hooking an enemy yanks them towards you. 9s cooldown from a hit; a miss only costs 1s.",
 		"active": true,
 	},
 }
@@ -42,25 +42,34 @@ const HIDER_CD := 12.0
 const TRACK_PASSIVE := 1.15
 const TRACK_ACTIVE := 1.35
 const TRACK_TIME := 6.0
-const TRACK_CD := 30.0
-const TRACK_RELOAD_MULT := 0.5     # reloads take half the time (every weapon but the bat, which never reloads)
-const TRACK_RECHAMBER_MULT := 0.5  # ...and so does re-chambering between shots on the pump / bolt guns
+const TRACK_CD := 24.0
+# Trackstar's reloads and the shotgun / sniper re-chambering between shots are
+# faster: these are time multipliers (0.65 = 35% faster). The bat never reloads.
+const TRACK_RELOAD_MULT := 0.65
+const TRACK_SNIPER_MULT := 0.70
 const RECHAMBER_WEAPONS := ["shotgun", "sniper"]
 const PHANTOM_TIME := 2.0
 const PHANTOM_CD := 23.0
 const STALKER_TRAIL_TIME := 6.0  # seconds each piece of trail lingers
+const STALKER_SCAN_TIME := 4.0   # ability: every player's outline shows through walls for this long
+const STALKER_SCAN_CD := 14.0    # ...and it's ready again this long after activation
 const SKYWALKER_CD := 5.0
-const GRAPPLE_RANGE := 30.0
+const GRAPPLE_RANGE := 27.0
 const GRAPPLE_CD := 9.0          # starts when the hook latches on
 const GRAPPLE_MISS_CD := 1.0
 const GRAPPLE_HOOK_SPEED := 110.0  # thrown hook speed (m/s): ~0.27 s to full range
 const GRAPPLE_PULL := 42.0       # reel-in acceleration (m/s^2)
 const GRAPPLE_STEER := 14.0      # air steering while on the rope (m/s^2)
-const GRAPPLE_MAX_SPEED := 24.0
+const GRAPPLE_MAX_SPEED := 20.0  # the most speed the grapple can give you (m/s)
 const GRAPPLE_MAX_TIME := 2.5    # the rope lets go after this long
 const GRAPPLE_ARRIVE := 2.0      # within this distance you pop off the end
 const GRAPPLE_END_POP := 6.5     # upward speed at the end, to clear ledges
 const GRAPPLE_YANK := 11.0       # speed a hooked enemy is pulled towards you
+
+
+## Trackstar's time multiplier for reloading / re-chambering with weapon.
+static func track_mult(weapon: String) -> float:
+	return TRACK_SNIPER_MULT if weapon == "sniper" else TRACK_RELOAD_MULT
 
 
 static func display_name(id: String) -> String:

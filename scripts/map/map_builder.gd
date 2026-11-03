@@ -2106,7 +2106,8 @@ func _build_park() -> void:
 	# Basketball court (left), playground on a sandpit (top left), pond (bottom right)
 	var court := Rect2(x0 + 2.5 * kx, z0 + minf(13.0 * kz, r.size.y - 27.0), 14.0, 26.0)
 	var cc := court.get_center()
-	_prefab("props/park/basketball_court", _at(Vector3(cc.x, 0, cc.y)))  # with hoops and fence
+	_prefab("props/park/basketball_court", _at(Vector3(cc.x, 0, cc.y)))  # hoops, fence, lines, benches, ball rack, floodlights
+	court.size.x += 1.6  # the team benches, ball rack and floodlights stand along its +X side
 	var pg := Rect2(x0 + 6.5 * kx - 4.0, z0 + 5.1 * kz - 2.6, 8.0, 5.2)
 	var pc := pg.get_center()
 	var sand := pg.grow(1.2)  # props/park/sandpit is this size
@@ -2159,6 +2160,11 @@ func _build_park() -> void:
 	if plaza.is_finite():
 		_prefab("props/park/plaza", _at(Vector3(plaza.x, 0, plaza.y)))
 		_prefab("props/park/fountain", _at(Vector3(plaza.x, 0, plaza.y)))
+		# Benches round the fountain on the diagonals, facing it
+		for i in 4:
+			var ba := PI * 0.25 + i * PI * 0.5
+			var bd := Vector3(cos(ba), 0, sin(ba))
+			_prefab("props/park/bench", _at(Vector3(plaza.x, 0, plaza.y) + bd * 3.3, _yaw_to(bd)))
 		# Flower beds on the plaza's diagonals, turned to follow it round
 		for i in 4:
 			var a := PI * 0.25 + i * PI * 0.5
@@ -2286,6 +2292,8 @@ func _place_pond(r: Rect2, kx: float, kz: float, paths: Array, plaza_rect: Rect2
 			var foot := Rect2(c.x - 5.8 * sx, c.y - 9.7 * sz, 12.0 * sx, 17.7 * sz)
 			if r.grow(-0.5).encloses(foot) and not _hits_any(foot, blocks, 0.0):
 				_prefab("props/park/pond", _at(Vector3(c.x, 0, c.y), 0.0, Vector3(sx, 1, sz)))
+				# A little wooden dock from the bank on the path side out over the water
+				_prefab("props/park/pond_dock", _at(Vector3(c.x - 5.6 * sx, 0, c.y + 2.5 * sz), _yaw_x(Vector3.RIGHT)))
 				return foot
 	return Rect2()
 

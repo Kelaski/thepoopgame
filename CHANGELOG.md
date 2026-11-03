@@ -7,6 +7,20 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.17.0
+
+### Added
+- **Stalker ability:** the trails are now Stalker's passive. Press the ability key to see a red outline of every player through walls for 4 s (only on your screen). 14 s cooldown from activation.
+- **The park, developed:**
+  - **Basketball court:** painted boundary lines, keys, free-throw circles and three-point arcs. Team benches, a ball rack and two floodlights (lit in the evening and at night) line the side facing the path.
+  - **Fountain:** a stone coping lip, a middle tier, a statue on top and arcing water jets. Four benches face it round the plaza.
+  - **Pond:** lily pads with flowers, three ducks and a wooden dock you can walk out on.
+
+### Changed
+- **Grapple:** range is now 27 m (from 30 m), and it never gives you more than 20 m/s of momentum (from 24 m/s), including the pop at the end.
+- **Trackstar:** reloads and re-chambering are now 35% faster instead of twice as fast (30% faster with the sniper). The ability cooldown is now 24 s (from 30 s).
+- **Car side mirrors** no longer have collision: you can't snag on or be shielded by them.
+
 ## 0.16.2
 
 ### Changed

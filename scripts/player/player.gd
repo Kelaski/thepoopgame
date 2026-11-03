@@ -270,6 +270,28 @@ func _apply_team_look() -> void:
 
 
 
+# Stalker scan: while the local Stalker's ability runs, other players get a red
+# outline drawn through walls (assets/materials/scan_outline.tres).
+const SCAN_OUTLINE := preload("res://assets/materials/scan_outline.tres")
+var _scan_shown := false
+
+
+func set_scan_outline(on: bool) -> void:
+	if on == _scan_shown:
+		return
+	_scan_shown = on
+	for mi: MeshInstance3D in _meshes_under(body_root, []):
+		mi.material_overlay = SCAN_OUTLINE if on else null
+
+
+static func _meshes_under(n: Node, out: Array) -> Array:
+	for c in n.get_children():
+		if c is MeshInstance3D:
+			out.append(c)
+		_meshes_under(c, out)
+	return out
+
+
 ## Lean input: Toggle lean (the default) flips a side on each tap; otherwise the
 ## side follows the key you're holding (the last one pressed wins). Sliding and
 ## wall running stand you back up.
@@ -1108,17 +1130,17 @@ func _start_reload() -> void:
 	Sfx.play("reload", -6.0)
 
 
-## Time between shots. Trackstar re-chambers the shotgun and sniper in half the time.
+## Time between shots. Trackstar re-chambers the shotgun (35%) and sniper (30%) faster.
 func shot_interval() -> float:
 	var t := 1.0 / float(Weapons.DATA[weapon].rps)
 	if addon == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
-		t *= Addons.TRACK_RECHAMBER_MULT
+		t *= Addons.track_mult(weapon)
 	return t
 
 
-## Trackstar reloads in half the time.
+## Trackstar reloads 35% faster (30% with the sniper).
 func reload_time() -> float:
-	return float(Weapons.DATA[weapon].reload) * (Addons.TRACK_RELOAD_MULT if addon == "trackstar" else 1.0)
+	return float(Weapons.DATA[weapon].reload) * (Addons.track_mult(weapon) if addon == "trackstar" else 1.0)
 
 
 func _spread_dir(b: Basis, deg: float) -> Vector3:
@@ -1271,6 +1293,11 @@ func _use_addon() -> void:
 			if addon_cd <= 0.0 and phasing <= 0.0:
 				phasing = Addons.PHANTOM_TIME
 				Sfx.play("addon", -4.0, 0.7)
+		"stalker":
+			if addon_cd <= 0.0:
+				addon_active = Addons.STALKER_SCAN_TIME
+				addon_cd = Addons.STALKER_SCAN_CD
+				Sfx.play("addon", -4.0, 0.85)
 		"grapple":
 			if grapple_state == Hook.NONE and addon_cd <= 0.0:
 				_fire_grapple()
@@ -1347,9 +1374,12 @@ func _apply_grapple(delta: float, hvel: Vector3, wish: Vector3, jump_tap: bool, 
 	if d < Addons.GRAPPLE_ARRIVE:
 		# Arrived: pop up and over the edge you hooked, keeping your momentum.
 		v.y = maxf(v.y, Addons.GRAPPLE_END_POP)
+		v += Vector3(n.x, 0.0, n.z) * 2.0
+		if v.length() > Addons.GRAPPLE_MAX_SPEED:
+			v = v.normalized() * Addons.GRAPPLE_MAX_SPEED
 		velocity.y = v.y
 		_end_grapple()
-		return Vector3(v.x, 0.0, v.z) + Vector3(n.x, 0.0, n.z) * 2.0
+		return Vector3(v.x, 0.0, v.z)
 	# The rope snaps if something gets between you and the hook.
 	var q := PhysicsRayQueryParameters3D.create(chest, grapple_point - n * 0.35, MASK_AIM, [get_rid()])
 	if not get_world_3d().direct_space_state.intersect_ray(q).is_empty():
@@ -1472,7 +1502,7 @@ func _tick_addon(delta: float) -> void:
 					_end_invis()
 			else:
 				addon_cd = maxf(0.0, addon_cd - delta)
-		"trackstar":
+		"trackstar", "stalker":
 			addon_active = maxf(0.0, addon_active - delta)
 			addon_cd = maxf(0.0, addon_cd - delta)
 		"phantom":
@@ -1532,7 +1562,10 @@ func addon_status() -> Array:
 		"skywalker":
 			return ["DOUBLE JUMP READY" if dj_ready else "LAND TO RECHARGE", 1.0 if dj_ready else 0.0, "passive"]
 		"stalker":
-			return ["TRACKING", 1.0, "passive"]
+			if addon_active > 0.0:
+				return ["SCANNING %.0fs" % addon_active, addon_active / Addons.STALKER_SCAN_TIME, "active"]
+			if addon_cd > 0.0:
+				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.STALKER_SCAN_CD, "cooldown"]
 	return ["READY [%s]" % Settings.bind_text("addon"), 1.0, "ready"]
 
 

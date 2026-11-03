@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+render_priority = 10
+transparency = 1
+no_depth_test = true
+shading_mode = 0
+cull_mode = 1
+albedo_color = Color(1, 0.22, 0.18, 0.6)
+grow = true
+grow_amount = 0.035

@@ -561,6 +561,18 @@ func _process(delta: float) -> void:
 	_draw_fx(delta)
 	_update_trails()
 	_update_heartbeat(delta)
+	_update_stalker_scan()
+
+
+## Stalker's ability: while it runs, every other player is outlined through walls
+## (only on the Stalker's own screen).
+func _update_stalker_scan() -> void:
+	var lp := local_player()
+	var scanning := lp != null and lp.alive and lp.addon == "stalker" and lp.addon_active > 0.0
+	for id in players:
+		var p: Player = players[id]
+		if p != lp:
+			p.set_scan_outline(scanning and p.alive)
 
 
 func _update_tag_visual(delta: float) -> void:

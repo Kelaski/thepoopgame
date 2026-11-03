@@ -543,7 +543,7 @@ func _take_hit_token(shooter: int, weapon: String) -> bool:
 	var per_shot := 4.0 if weapon in ["shotgun", "sniper"] else (2.0 if weapon == "bat" else 1.0)
 	var rate := float(d.get("rps", 1.0)) * per_shot * HIT_RATE_SLACK
 	if Net.players.has(shooter) and Net.players[shooter].addon == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
-		rate /= Addons.TRACK_RECHAMBER_MULT  # Trackstar fires the pump / bolt guns twice as often
+		rate /= Addons.track_mult(weapon)  # Trackstar re-chambers the pump / bolt guns faster
 	var cap := per_shot * 2.0 + 2.0
 	var b: Array = _hit_tokens.get(shooter, [cap, _now])
 	var tokens := minf(cap, float(b[0]) + (_now - float(b[1])) * rate)

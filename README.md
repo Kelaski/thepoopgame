@@ -135,11 +135,11 @@ Every player holds a visible model of their weapon (the same model as your own f
 | Addon | Effect |
 |---|---|
 | Hider | Shift: 15 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 12 s cooldown after it ends. |
-| Trackstar | Passive +15% speed, and reloads take half the time (every weapon but the bat). The shotgun and sniper also re-chamber between shots in half the time. Shift: +35% for 6 s. 30 s cooldown from activation. |
+| Trackstar | Passive +15% speed, and reloads are 35% faster (every weapon but the bat; 30% with the sniper). The shotgun (35%) and sniper (30%) also re-chamber between shots faster. Shift: +35% for 6 s. 24 s cooldown from activation. |
 | Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
-| Stalker | See wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
+| Stalker | Passive: see wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. Shift: for 4 s, see a red outline of every player through walls (only on your screen). 14 s cooldown from activation. |
 | Phantom | Shift: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
-| Grapple | Hold Shift: throw a grappling hook up to 30 m (it flies out over about 0.3 s). It latches onto whatever it hits (walls, floors, doors, props or players) and reels you in while you keep steering, up to 24 m/s for at most 2.5 s. The rope only ever shortens, so hooking something above you swings you underneath it. Reaching the hook pops you upwards so you can climb onto ledges. The grapple only lasts while you hold Shift: releasing it (or pressing Jump) lets go with your momentum, and releasing while the hook is still flying reels it back in (counts as a miss). The rope also snaps if something gets in the way. Hooking an enemy yanks them towards you. 9 s cooldown after a hit; a miss only costs 1 s. Everyone sees the hook and rope. |
+| Grapple | Hold Shift: throw a grappling hook up to 27 m (it flies out over about 0.3 s). It latches onto whatever it hits (walls, floors, doors, props or players) and reels you in while you keep steering, up to 20 m/s for at most 2.5 s. The grapple never gives you more than 20 m/s, including the pop at the end. The rope only ever shortens, so hooking something above you swings you underneath it. Reaching the hook pops you upwards so you can climb onto ledges. The grapple only lasts while you hold Shift: releasing it (or pressing Jump) lets go with your momentum, and releasing while the hook is still flying reels it back in (counts as a miss). The rope also snaps if something gets in the way. Hooking an enemy yanks them towards you. 9 s cooldown after a hit; a miss only costs 1 s. Everyone sees the hook and rope. |
 
 ### Movement
 
@@ -455,5 +455,5 @@ You can also upload a **custom crosshair image** (with a scale slider) and a **c
 - **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Foliage blocks sight but not bullets.
 - **Dropped-Tag timer:** the timer keeps running while the Tag is on the ground (it only waits for the first pickup of a round). A pickup adds +10 s (enemy) or +15 s (teammate), capped at 2:00. If it runs out while the Tag is down, the team that held it last wins.
 - **Phantom's** 23 s cooldown starts when the phase ends. Trackstar's 30 s cooldown starts at activation, as specified.
-- Skywalker's double jump and Stalker's trails are passive, so the ability key does nothing for them.
+- Skywalker's double jump is passive, so the ability key does nothing for it.
 - **Grapple's** cooldown starts when the hook hits (like Trackstar's, from activation). A miss only costs 1 s so you can try again.
