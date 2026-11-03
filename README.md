@@ -167,7 +167,7 @@ scripts/
 
 ## Easter egg
 
-Every time you spawn or respawn, there's a 1% chance that a sweaty guy appears on your screen for 2 seconds while birds chirp. Press **Ctrl+F4** to trigger it whenever you like. It only shows for you (`scripts/ui/bird_event.gd`, `assets/sweaty_guy.png`, `assets/birds_chirping.ogg`).
+Every time you spawn or respawn, there's a 1% chance that a sweaty guy appears on your screen while birds chirp, staying up for the whole clip. Press **Ctrl+F4** to trigger it whenever you like. It only shows for you (`scripts/ui/bird_event.gd`, `assets/sweaty_guy.png`, `assets/birds_chirping.ogg`).
 
 ## Assumptions and choices not covered by the spec
 

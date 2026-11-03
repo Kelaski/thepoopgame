@@ -1,12 +1,12 @@
 class_name BirdEvent
 extends CanvasLayer
-## Rare easter egg: the sweaty guy pops up on screen for 2 seconds with birds chirping.
+## Rare easter egg: the sweaty guy pops up on screen while the bird-chirping clip plays
+## (the image stays up for the full length of the audio).
 ## Every time you spawn in or respawn there is a 1% chance; Ctrl+F4 triggers it at
 ## any time. Local only (other players don't see it).
 
 const IMAGE_PATH := "res://assets/sweaty_guy.png"
 const SOUND_PATH := "res://assets/birds_chirping.ogg"
-const SHOW_TIME := 2.0
 const CHANCE := 0.01
 
 static var instance: BirdEvent
@@ -67,10 +67,12 @@ func _load_texture() -> Texture2D:
 
 
 func trigger() -> void:
-	_left = SHOW_TIME
 	_rect.visible = true
 	if _audio.stream:
 		_audio.play()
+		_left = _audio.stream.get_length()
+	else:
+		_left = 2.0
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -84,4 +86,3 @@ func _process(delta: float) -> void:
 		_left -= delta
 		if _left <= 0.0:
 			_rect.visible = false
-			_audio.stop()
