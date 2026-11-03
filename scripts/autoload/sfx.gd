@@ -245,6 +245,7 @@ const BUILTIN_TITLE := "Tag Rush Theme"
 const BUILTIN_PLAY_TIME := 48.0  # how long the looping theme plays in "both" mode
 
 var current_title := ""
+var _current_key := ""  # file path of the playing track, or BUILTIN_ID
 var _queue: Array = []
 var _qi := -1
 var _music_active := false
@@ -292,9 +293,32 @@ func _ensure_music_player() -> void:
 		Settings.music_changed.connect(_on_music_settings_changed)
 
 
+## Playlist edits keep the current song playing if it is still in the new queue;
+## otherwise the music restarts with the new settings.
 func _on_music_settings_changed() -> void:
-	if _music_active:
+	if not _music_active:
+		return
+	_build_queue()
+	var idx := -1
+	for i in _queue.size():
+		if _entry_key(_queue[i]) == _current_key:
+			idx = i
+			break
+	if idx < 0 or not _music.playing:
 		start_music()
+		return
+	_qi = idx
+	if _current_key == BUILTIN_ID:
+		if _queue.size() == 1:
+			_builtin_left = -1.0
+		elif _builtin_left < 0.0:
+			_builtin_left = BUILTIN_PLAY_TIME
+
+
+func _entry_key(entry) -> String:
+	if entry is String:
+		return entry
+	return str(entry.get("file", ""))
 
 
 func _build_queue() -> void:
@@ -336,6 +360,7 @@ func _next_track() -> void:
 			current_title = str(entry.name)
 			_builtin_left = -1.0
 		if stream:
+			_current_key = _entry_key(entry)
 			_music.stream = stream
 			_music.play()
 			now_playing.emit(current_title)
@@ -347,7 +372,58 @@ func _on_music_finished() -> void:
 		_next_track()
 
 
+# ------------------------------------------------------------ song import
+
+signal import_finished(added: int, errors: Array, mode_switched: bool)
+
+var _import_thread: Thread
+
+
+func importing() -> bool:
+	return _import_thread != null
+
+
+## Imports songs into the music library on a background thread: ffmpeg conversion
+## and WAV re-encoding can take seconds, and on the host a blocked main thread would
+## stall the match for everyone. Returns false if an import is already running.
+func import_songs(paths: PackedStringArray) -> bool:
+	if _import_thread:
+		return false
+	MusicLibrary.has_ffmpeg()  # cache the ffmpeg check on the main thread
+	_import_thread = Thread.new()
+	_import_thread.start(_import_worker.bind(paths))
+	return true
+
+
+func _import_worker(paths: PackedStringArray) -> Array:
+	var results: Array = []
+	for p in paths:
+		results.append(MusicLibrary.import_file(p))
+	return results
+
+
+func _finish_import() -> void:
+	var results: Array = _import_thread.wait_to_finish()
+	_import_thread = null
+	var tracks: Array = Settings.music_tracks()
+	var added := 0
+	var errors: Array = []
+	for res: Dictionary in results:
+		if res.ok:
+			tracks.append(res.track)
+			added += 1
+		else:
+			errors.append(res.error)
+	var switched := added > 0 and str(Settings.g("music_mode")) == "builtin"
+	if switched:
+		Settings.s("music_mode", "custom", false)
+	Settings.set_music_tracks(tracks)
+	import_finished.emit(added, errors, switched)
+
+
 func _process(delta: float) -> void:
+	if _import_thread and not _import_thread.is_alive():
+		_finish_import()
 	if _music_active and _builtin_left > 0.0:
 		_builtin_left -= delta
 		if _builtin_left <= 0.0:

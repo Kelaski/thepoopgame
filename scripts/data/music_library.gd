@@ -128,6 +128,9 @@ static func _import_wav(src: String, dest: String) -> Dictionary:
 	var bits: int = info.bits
 	var fmt: int = info.format
 	var data: PackedByteArray = info.data
+	var supported := (fmt == 1 and bits in [8, 16, 24, 32]) or (fmt == 3 and bits in [32, 64])
+	if not supported:
+		return {"ok": false, "error": "Unsupported WAV encoding (format %d, %d-bit)." % [fmt, bits]}
 	if fmt == 1 and bits == 16:
 		pcm16 = data
 	else:

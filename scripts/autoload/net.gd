@@ -17,9 +17,11 @@ var players := {}  # peer id -> {name, team, weapon, addon, kills, deaths}
 var sprays := {}   # peer id -> PackedByteArray (validated PNG)
 var _spray_tex := {}
 var _chat_times := {}  # server: peer id -> recent message timestamps (rate limit)
+var _spray_up_at := {}  # server: peer id -> time of last accepted spray upload
 
 const CHAT_BURST := 5        # messages allowed...
 const CHAT_WINDOW := 4.0     # ...per this many seconds
+const SPRAY_UPLOAD_INTERVAL := 3.0  # seconds between spray uploads per player
 var online := false
 
 
@@ -77,6 +79,7 @@ func leave() -> void:
 	sprays.clear()
 	_spray_tex.clear()
 	_chat_times.clear()
+	_spray_up_at.clear()
 	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
@@ -141,6 +144,7 @@ func _on_peer_disconnected(id: int) -> void:
 		players.erase(id)
 		sprays.erase(id)
 		_chat_times.erase(id)
+		_spray_up_at.erase(id)
 		_spray_data.rpc(id, PackedByteArray())
 		Game.on_player_left(id)
 		_broadcast()
@@ -298,6 +302,13 @@ func upload_spray(bytes: PackedByteArray) -> void:
 	var id := sender()
 	if not players.has(id) or not UserImages.valid_spray_bytes(bytes):
 		return
+	# Rate limit before decoding: each accepted upload is decoded here and resent to everyone.
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - float(_spray_up_at.get(id, -100.0)) < SPRAY_UPLOAD_INTERVAL:
+		return
+	if sprays.get(id, PackedByteArray()) == bytes:
+		return
+	_spray_up_at[id] = now
 	if UserImages.decode_spray(bytes) == null:
 		return
 	sprays[id] = bytes

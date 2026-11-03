@@ -103,12 +103,12 @@ func _input(event: InputEvent) -> void:
 			_complete()
 			get_viewport().set_input_as_handled()
 		KEY_UP:
-			if _suggest_panel.visible:
+			if _suggest_panel.visible and not _matches.is_empty():
 				_sel = posmod(_sel - 1, _matches.size())
 				_show_suggestions()
 				get_viewport().set_input_as_handled()
 		KEY_DOWN:
-			if _suggest_panel.visible:
+			if _suggest_panel.visible and not _matches.is_empty():
 				_sel = posmod(_sel + 1, _matches.size())
 				_show_suggestions()
 				get_viewport().set_input_as_handled()

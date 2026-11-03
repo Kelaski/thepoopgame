@@ -50,7 +50,10 @@ func _load_sound() -> AudioStream:
 		var s = load(SOUND_PATH)
 		if s is AudioStream:
 			return s
-	return AudioStreamOggVorbis.load_from_file(ProjectSettings.globalize_path(SOUND_PATH))
+	# Fallback: read the raw file through res:// (globalize_path only works in the editor).
+	if FileAccess.file_exists(SOUND_PATH):
+		return AudioStreamOggVorbis.load_from_file(SOUND_PATH)
+	return null
 
 
 func _load_texture() -> Texture2D:
@@ -59,11 +62,14 @@ func _load_texture() -> Texture2D:
 		var tex = load(IMAGE_PATH)
 		if tex is Texture2D:
 			return tex
-	# Fallback: read the raw file (e.g. before the editor has imported it).
-	var img := Image.load_from_file(ProjectSettings.globalize_path(IMAGE_PATH))
-	if img:
-		return ImageTexture.create_from_image(img)
-	return null
+	# Fallback: read the raw file through res:// (e.g. before the editor has imported it;
+	# globalize_path only works in the editor).
+	if not FileAccess.file_exists(IMAGE_PATH):
+		return null
+	var img := Image.new()
+	if img.load_png_from_buffer(FileAccess.get_file_as_bytes(IMAGE_PATH)) != OK:
+		return null
+	return ImageTexture.create_from_image(img)
 
 
 func trigger() -> void:

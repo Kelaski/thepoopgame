@@ -42,6 +42,7 @@ func _ready() -> void:
 	Net.roster_changed.connect(sync_players)
 	Settings.changed.connect(_apply_settings)
 	Settings.colors_changed.connect(_apply_colors)
+	Net.spray_updated.connect(_on_spray_updated)
 	sync_players()
 	_apply_settings()
 	_apply_colors()
@@ -583,6 +584,16 @@ func request_spray(pos: Vector3, normal: Vector3, up: Vector3) -> void:
 		return
 	_spray_last[id] = now
 	_spray_placed.rpc(id, pos, normal.normalized(), up.normalized())
+
+
+## A player's spray was cleared (they left): remove the one they placed.
+func _on_spray_updated(id: int) -> void:
+	if Net.sprays.has(id):
+		return
+	var mi: MeshInstance3D = _spray_nodes.get(id)
+	_spray_nodes.erase(id)
+	if mi and is_instance_valid(mi):
+		mi.queue_free()
 
 
 @rpc("authority", "call_local", "reliable")
