@@ -63,6 +63,7 @@ const GRASS := Color("6aa84f")
 const CONCRETE := Color("b9b4a6")
 const ASPHALT := Color("3c3d42")
 const TAXI := Color("f2c230")
+const CAR_GAP := 1.4  # min space between vehicles: a crouched player is 0.76 m wide
 const CAR_COLORS := [Color("c0453a"), Color("4f7fae"), Color("e0b13c"), Color("ece6da"), Color("3a3d42"), Color("5a8a4a"), Color("9aa3a8"), Color("1f2a44")]
 
 var root: Node3D
@@ -111,6 +112,7 @@ var _avoid: Array = []       # Vector3: spawn zones + Tag spots
 var _junctions: Array = []   # Rect2: where roads cross
 var _door_pts: Array = []    # Vector2: ground-floor door centres (props keep clear)
 var _lots: Array = []        # Rect2: car parks (cut building lots, or from the layout)
+var _car_rects: Array = []   # Rect2: footprint of every vehicle placed so far
 var _dumpsters: Array = []   # sketch-pixel points from the layout
 var park_name := MapData.PARK_NAME
 var bridges: Array = []      # [building A id, building B id, material]
@@ -493,9 +495,26 @@ func _build_crosswalks() -> void:
 						box(Vector3(mid.x + o, 0.034, mid.y), Vector3(0.45, 0.02, 2.4), paint, DECOR)
 
 
-## Both lanes of every road hold queues of stopped traffic. Gaps of 1.6-3.2 m
-## between vehicles let you cross, every few vehicles there's a longer break, and
-## junctions, crossings, spawn zones and Tag spots stay clear.
+## Footprint of a vehicle centred at c2: body length x width plus the wheels,
+## which stick out 0.125 m on each side.
+func _vehicle_rect(c2: Vector2, along_x: bool, vlen: float, vwid: float) -> Rect2:
+	var s := Vector2(vlen, vwid + 0.25) if along_x else Vector2(vwid + 0.25, vlen)
+	return Rect2(c2 - s * 0.5, s)
+
+
+## Every vehicle keeps at least CAR_GAP to every other one (front, back and side
+## to side), so you can always slide between two cars.
+func _vehicle_space_ok(rect: Rect2) -> bool:
+	for o: Rect2 in _car_rects:
+		if o.grow(CAR_GAP).intersects(rect):
+			return false
+	return true
+
+
+## Stopped traffic in both lanes of every road: about half the spots are taken,
+## every vehicle is at least CAR_GAP from the next one (so the two lanes are
+## staggered rather than side by side), and junctions, crossings, spawn zones
+## and Tag spots stay clear.
 func _build_traffic() -> void:
 	for r: Rect2 in road_rects:
 		var horizontal := r.size.x > r.size.y
@@ -514,10 +533,13 @@ func _build_traffic() -> void:
 					var q := c2 + (Vector2(vlen * s, 0.0) if horizontal else Vector2(0.0, vlen * s))
 					if _in_junction(q, 3.2) or not bounds.grow(-1.0).has_point(q):
 						fits = false
-				if not fits:
+				var vwid := 2.5 if vlen > 10.0 else (2.1 if vlen > 5.0 else 1.9)
+				var rect := _vehicle_rect(c2, horizontal, vlen, vwid)
+				if not fits or not _vehicle_space_ok(rect):
 					t += 2.0
 					continue
-				if rng.randf() < 0.8:
+				if rng.randf() < 0.55:
+					_car_rects.append(rect)
 					var c := Vector3(c2.x, 0.0, c2.y)
 					if vlen > 10.0:
 						_bus(c, horizontal, [Color("c0453a"), Color("3f6fa8"), Color("e0b13c")][rng.randi() % 3])
@@ -528,9 +550,9 @@ func _build_traffic() -> void:
 						box(c + Vector3(0, 1.93, 0), _along(horizontal, 0.5, 0.2, 0.25), Color("fff2b0"), L_WALL)
 					else:
 						_car(c, horizontal, CAR_COLORS[rng.randi() % CAR_COLORS.size()])
-					t += vlen + rng.randf_range(1.6, 3.2)
+					t += vlen + CAR_GAP + rng.randf_range(0.2, 2.5)
 				else:
-					t += rng.randf_range(6.0, 12.0)
+					t += rng.randf_range(6.0, 14.0)
 
 
 ## Every 6 m along both curbs: lamp, tree, furniture, tree, lamp...
@@ -600,8 +622,9 @@ func _street_furniture(c: Vector3, out: Vector3, along_x: bool) -> void:
 		box(c + Vector3(0, 0.6, 0), Vector3(0.5, 1.2, 0.45), Color("3f5f9a"), L_WALL)
 
 
-## Lots of buildings that were cut from a smaller map become car parks: rows of
-## bays back to back, 6 m aisles, about 70% of the bays taken.
+## Car parks (lots cut from a smaller map, or from a random city): rows of wide
+## 3.6 m bays back to back with 1.5 m between the rows, 6 m aisles, a bit under
+## half the bays taken, and every car at least CAR_GAP from the next.
 func _build_parking_lots() -> void:
 	var line := Color("d8d4c8")
 	for lot: Rect2 in _lots:
@@ -612,7 +635,7 @@ func _build_parking_lots() -> void:
 		var rows_x := inner.size.x >= inner.size.y
 		var row_len := inner.size.x if rows_x else inner.size.y
 		var depth := inner.size.y if rows_x else inner.size.x
-		var bays := int(row_len / 2.7)
+		var bays := int(row_len / 3.6)  # wide bays: room to slide between parked cars
 		var row := 0
 		var d := 2.3
 		while d < depth - 2.0 and bays > 0:
@@ -623,9 +646,11 @@ func _build_parking_lots() -> void:
 			for k in bays:
 				var u := (k + 0.5) * row_len / bays
 				var c2 := Vector2(inner.position.x + u, inner.position.y + d) if rows_x else Vector2(inner.position.x + d, inner.position.y + u)
-				if rng.randf() < 0.7 and _street_clear(c2, 0.5, 1.2):
+				var rect := _vehicle_rect(c2, not rows_x, 4.3, 1.9)
+				if rng.randf() < 0.45 and _street_clear(c2, 0.5, 1.2) and _vehicle_space_ok(rect):
+					_car_rects.append(rect)
 					_car(Vector3(c2.x, 0.0, c2.y), not rows_x, CAR_COLORS[rng.randi() % CAR_COLORS.size()])
-			d += 4.6 if row % 2 == 0 else 10.6
+			d += 5.8 if row % 2 == 0 else 10.6  # back-to-back rows 1.5 m apart, then a 6 m aisle
 			row += 1
 
 

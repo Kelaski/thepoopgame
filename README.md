@@ -189,7 +189,7 @@ Teammates' names float above their heads in small text (`NAMEPLATE_SCALE` in `sc
 Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane ramp stairwell from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
 Exterior doors are on the ground floor, open windows of varied size and position are spread out on every floor (leaving long stretches of wall for wall running), and residential and school floors have corridors with rooms behind doors.
 **Streets** look like a busy city:
-- **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses). There are 1.6–3.2 m gaps between vehicles to slip through, and longer breaks every few vehicles.
+- **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses), with about half the spots taken. Every vehicle, on the road or in a car park, is at least 1.4 m from every other one (front, back and side to side), so you can always slide between two cars. The two lanes are staggered rather than side by side.
 - **Junctions:** kept clear, with zebra crossings.
 - **Sidewalks:** along every curb, a lamp post and street trees alternate every 6 m. In between there are benches, bins, fire hydrants with newspaper boxes, mailboxes and the odd bus shelter.
 - **Open squares:** a few big tree planters, bench pairs, kiosks and dumpsters.

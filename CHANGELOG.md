@@ -7,6 +7,14 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.4.3
+
+### Changed
+- **Fewer cars:** a bit under half as many cars on the roads and in car parks. Every road still has traffic: for example, a Large map now has about 57-96 vehicles, down from 129-212.
+
+### Fixed
+- **Sliding between cars:** you can now slide between any two cars without getting stuck. Every vehicle is at least 1.4 m from every other one, front, back and side to side. A crouched player is 0.76 m wide. Side-by-side cars in the two lanes used to leave only 0.25-0.6 m, and parked cars about 0.5 m. Traffic in the two lanes is now staggered, and car park bays are wider (3.6 m) with 1.5 m between back-to-back rows.
+
 ## 0.4.2
 
 ### Fixed
