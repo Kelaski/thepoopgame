@@ -215,10 +215,6 @@ It has a live preview and copy/paste **share codes**. Pasted codes are parsed as
 
 You can also upload a **custom crosshair image** (with a scale slider) and a **custom sniper scope** image. The scope is fitted to the screen height and the rest is blacked out, so a transparent PNG with a see-through centre works best.
 
-## Easter egg
-
-Every time you spawn or respawn, there's a 1% chance that a sweaty guy appears on your screen while birds chirp, staying up for the whole clip. Press **Ctrl+F4** to trigger it whenever you like. It only shows for you (`scripts/ui/bird_event.gd`, `assets/sweaty_guy.png`, `assets/birds_chirping.ogg`). These two files are the project's only binary assets. Godot imports them when the project is opened in the editor, so open the project once before running it headless or exporting it.
-
 ## Assumptions and choices not covered by the spec
 
 - **Sprint is on Shift.** The spec lists WASD, Ctrl, Space, F and E. Sliding needs a sprint, so a sprint key was added (there is also an "Always sprint" option).
