@@ -7,6 +7,28 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.13.0
+
+### Added
+- **Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up 1.5 times as high as a normal jump.
+- **Shadow quality setting** (Settings > Video): Low (70 m), Medium (130 m), High (220 m, the default) or Ultra (320 m with an 8K shadow map).
+
+### Changed
+- **Wider way onto the stairs:** the landings at each end of a flight are 2.6 m deep instead of 1.6 m. The stairs themselves are the same width.
+- **Graphics reach further:**
+  - Shadows use 4 splits and reach 220 m by default, up from 70 m, so distant shadows stay sharp.
+  - Furniture and small details show up to 140 m away instead of 75 m.
+  - Lamps light up to 60 m away instead of 40 m.
+  - The view distance slider now goes to 800 m.
+- **Cranes:** you can shoot (and see) through the crane mast's lattice. Only the bars themselves block you and your shots, instead of one solid block.
+- **The park** is laid out like a real park:
+  - two paved paths cross at a plaza with a fountain and flower beds
+  - benches, bins and lamp posts line the paths (the lamps light up at night)
+  - a row of trees runs round the edge, and trees and bushes are dotted over the lawns
+  - picnic tables with umbrellas on the open lawns
+  - the playground sits on a sandpit; the court and pond are where they were
+- **Lobby:** the Port box and Change Port button are gone, and so is the "port opened automatically" message. The lobby still warns you if players probably can't reach you.
+
 ## 0.12.1
 
 ### Changed

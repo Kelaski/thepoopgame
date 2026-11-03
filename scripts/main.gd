@@ -148,24 +148,6 @@ func host_game(port := 0) -> void:
 	show_lobby()
 
 
-## Lobby "Port" box: re-hosts on the new port (everyone connected is dropped and
-## has to rejoin with the new code).
-## Returns an error message, or "" on success.
-func change_port(port: int) -> String:
-	if port < 1024 or port > 65535:
-		return "Pick a port between 1024 and 65535."
-	if port == Net.hosted_port():
-		return ""
-	var old := Net.hosted_port()
-	var err: String = Net.host(port)
-	if err != "":
-		Net.host(old)  # the lobby screen stays up; its code updates when the lookups finish
-		return err
-	Settings.s("host_port", port)
-	show_lobby()
-	return ""
-
-
 ## Join with a code (or a plain IP / IP:PORT).
 func join_code(code: String) -> void:
 	var addr := JoinCode.parse(code)

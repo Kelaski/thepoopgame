@@ -19,6 +19,7 @@ const AIR_ACCEL := 19.2  # air strafing (was 16, +20%)
 const GRAVITY := 16.0
 const JUMP_V := 6.4
 const DJUMP_V := 7.0
+const BOUNCE_V := JUMP_V * 1.2247  # bounce pads: sqrt(1.5) x jump speed = 1.5x the jump height
 const WALLJUMP_BOOST := 2.5
 const SLOPE_ACCEL_RAMP := 0.6  # extra downhill acceleration per second spent on the slope
 const MAX_SLIDE_SPEED := 22.0
@@ -44,8 +45,8 @@ const MAX_GROUND_SPEED := 14.0
 const NET_INTERVAL := 1.0 / 30.0
 const DOOR_SLAM_SPEED := 5.5
 
-const MASK_FULL := 1 | 2 | 8 | 16
-const MASK_PHASE := 1 | 16
+const MASK_FULL := 1 | 2 | 8 | 16 | 32
+const MASK_PHASE := 1 | 16 | 32
 const MASK_PHASE_DOWN := 16
 const MASK_SHOT := 1 | 2 | 4 | 8 | 16
 
@@ -258,6 +259,20 @@ func _apply_team_look() -> void:
 	nameplate.modulate = tc.lightened(0.55)
 	nameplate.text = Net.name_of(peer_id)
 
+
+
+## Landing on a bounce pad (umbrella and awning tops) launches you up.
+func _check_bounce_pad() -> void:
+	for i in get_slide_collision_count():
+		var c := get_slide_collision(i)
+		var body := c.get_collider() as CollisionObject3D
+		if body and body.collision_layer & MapBuilder.L_BOUNCE and c.get_normal().y > 0.6:
+			velocity.y = BOUNCE_V
+			coyote = 0.0
+			dj_ready = true
+			Sfx.play("jump", -2.0, 1.25)
+			_on_moved()
+			return
 
 
 ## Fades this teammate's name out while it's near your crosshair.
@@ -754,6 +769,7 @@ func _physics_process(delta: float) -> void:
 		collision_mask = MASK_FULL
 
 	move_and_slide()
+	_check_bounce_pad()
 	if global_position.y < -25.0:
 		global_position = Vector3(global_position.x, 2.0, global_position.z)
 		velocity = Vector3.ZERO

@@ -216,6 +216,15 @@ script = ExtResource("5_mpnul")
 setting = "shadows"
 label_text = "Shadows"
 
+[node name="ShadowQuality" type="HBoxContainer" parent="Center/Panel/Content/Tabs/Video/VideoContent" unique_id=1867205541 instance=ExtResource("6_7g5uy")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("7_x7bog")
+setting = "shadow_quality"
+label_text = "Shadow quality (reach)"
+items = PackedStringArray("Low (70 m)", "Medium (130 m)", "High (220 m)", "Ultra (320 m)")
+values = [0, 1, 2, 3]
+
 [node name="InteriorLights" type="HBoxContainer" parent="Center/Panel/Content/Tabs/Video/VideoContent" unique_id=1739204415 instance=ExtResource("6_7g5uy")]
 layout_mode = 2
 theme_override_constants/separation = 12
@@ -239,7 +248,7 @@ script = ExtResource("3_80d4w")
 setting = "view_distance"
 label_text = "View distance (m)"
 min_value = 120.0
-max_value = 400.0
+max_value = 800.0
 step = 10.0
 format = "%.0f"
 

@@ -128,6 +128,7 @@ chat={
 3d_physics/layer_3="players"
 3d_physics/layer_4="doors"
 3d_physics/layer_5="ground_fence"
+3d_physics/layer_6="bounce_pads"
 
 [physics]
 
@@ -135,7 +136,7 @@ common/max_physics_steps_per_frame=4
 
 [rendering]
 
-lights_and_shadows/directional_shadow/size=2048
-lights_and_shadows/directional_shadow/soft_shadow_filter_quality=1
+lights_and_shadows/directional_shadow/size=4096
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=2
 environment/defaults/default_clear_color=Color(0.55, 0.72, 0.88, 1)
 anti_aliasing/quality/screen_space_aa=1

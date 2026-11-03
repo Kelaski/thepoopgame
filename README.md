@@ -26,7 +26,7 @@ The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** 
   - It looks up your public address (from `api.ipify.org`) to build the code.
   - It asks your router to open the port automatically with UPnP. If that isn't possible, forward the UDP port to your PC in your router's settings.
   - It warns you if your internet provider shares your address with other customers (CGNAT). Then nobody can reach you no matter what you forward, so someone else should host.
-- **Port:** UDP **27015** by default. You can change it in the lobby (the **Port** box and **Change Port**), for example to a port you've already forwarded. The game remembers it. Changing it restarts the lobby, so anyone already in has to rejoin with the new code.
+- **Port:** UDP **27015** (the `host_port` value in the settings file). The lobby only shows the join code, plus a note if something blocks players from reaching you.
 - **Firewall:** on Windows the game checks for its firewall rule when it opens. If the rule is missing, it asks for permission through a Windows administrator (UAC) prompt. Saying yes removes any old rule Windows made for the game (a dismissed "allow access" prompt leaves a *block* rule behind, which overrides allow rules) and allows incoming connections on every network type. If you said no, the lobby has an **Allow Through Firewall** button.
 - **Join:** click **Play Game**, type the code and press **Join**. A plain IP address (or `IP:PORT`) also works in the code box.
 - You can't join your own code from the PC or network that's hosting, because most home routers don't loop the connection back. Test with a friend on another network.
@@ -92,8 +92,8 @@ The map itself (ground, roads, grass and buildings) always uses its built-in col
 Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu and sky colours change instantly. Team colours apply when the next match loads. Colours are personal and don't affect other players.
 
 Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch,
-FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows, interior lights (off / low / high), bloom,
-view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, and an FPS counter.
+FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows, shadow quality (Low 70 m / Medium 130 m / High 220 m / Ultra 320 m), interior lights (off / low / high), bloom,
+view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, and an FPS counter.
 
 ## Rules
 
@@ -176,7 +176,7 @@ The minimap zooms to fit either way. Sizes are defined in `MapData.SIZES` (`scri
 
 The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.
 A fence with tall invisible collision surrounds it.
-Every object has collision (furniture, props, tree trunks, lamps, the crane parts and so on) except anything leafy. Tree crowns, potted plants and bushes are visual only: you can walk and shoot through them, but they block sight. Flat floor markings and the bleacher steps (a smooth ramp covers them) have no collision either.
+Every object has collision (furniture, props, tree trunks, lamps and so on) except anything leafy. Cranes block you and your shots only where there's a bar: you can shoot through the gaps in the mast's lattice. Tree crowns, potted plants and bushes are visual only: you can walk and shoot through them, but they block sight. Flat floor markings and the bleacher steps (a smooth ramp covers them) have no collision either.
 Teammates' names float above their heads (`NAMEPLATE_SCALE` in `scripts/player/player.gd`). A name fades out while you aim near it, so it never covers a fight (`NAMEPLATE_FADE_NEAR` / `NAMEPLATE_FADE_FAR`).
 
 | # | Building | Floors |
@@ -196,9 +196,9 @@ Teammates' names float above their heads (`NAMEPLATE_SCALE` in `scripts/player/p
 | 16 | Golden Rapids Casino (slots, card tables, bars) | 5 |
 | 17 | Water Treatment Center (tanks, pipes, pumps) | 1 × 7 m |
 | 18 | Public Library (bookshelves, reading tables) | 2 |
-| 19 | Park (basketball court, pond, playground tower, trees) | outdoor |
+| 19 | Park (paths, fountain plaza, basketball court, pond, playground, picnic tables, trees) | outdoor |
 
-Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end. Each lane is 2.85 m wide, with a 1.6 m landing at each end of every flight (`STAIR_W` and `STAIR_LANDING` in `scripts/map/map_builder.gd`).
+Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end. Each lane is 2.85 m wide, with a 2.6 m landing at each end of every flight, so the way onto the stairs is roomy (`STAIR_W` and `STAIR_LANDING` in `scripts/map/map_builder.gd`).
 
 **Time of day:** each match starts at a random Morning, Afternoon, Evening or Night. After each round, the host picks a different one, and everyone's sun, sky, fog and ambient light blend into it over 10 seconds. The presets are the `TIMES` table in `scripts/world/world.gd`. Street lamps light up in the evening and at night.
 Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**):
@@ -213,23 +213,27 @@ Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**
 - **Open squares:** a few big tree planters, bench pairs, kiosks and dumpsters.
 - **Kept clear:** nothing is placed in front of a building door, on a spawn zone or on a Tag spot.
 
+**The park** is laid out like a real one: two paved paths crossing at a fountain plaza with flower beds, benches, bins and lamp posts along the paths, a row of trees round the edge, the basketball court, a playground on a sandpit, the pond, and picnic tables with umbrellas on the lawns.
+
+**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up 1.5 times as high as a jump.
+
 Six tower cranes hang planks or sheet metal between rooftops as bridges: Warehouse–School, Apartments–Meridian Tower, Meridian Tower–Casino, the two Tenements, Theater–Bank, and Water Treatment–Library. Crates on each roof help you climb onto them.
 The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).
 
 ## Performance notes
 
 - All static geometry for a building is drawn with a few `MultiMeshInstance3D`s (one draw call each) and one shared toon material.
-- Furniture is in a separate MultiMesh with a 75 m visibility range.
+- Furniture and small details are in a separate MultiMesh with a 140 m visibility range.
 - Collision uses shape owners on one `StaticBody3D` per layer per building instead of thousands of nodes. Box shapes are shared by size.
 - There are no textures and no imported assets. Sounds are synthesized at startup.
-- The renderer is kept simple: toon shading, one directional light with 2-split shadows (can be turned off), no SSAO/SSR/GI.
-- **Interior lights:** lamps are real `OmniLight3D`s without shadows that fade out beyond about 40 m (22 m on Low), so only nearby ones are drawn. A large map has about 450 to 650. The **Interior lights** setting (Off / Low / High) thins them.
+- The renderer is kept simple: toon shading, one directional light with 4-split shadows reaching up to 320 m (**Shadow quality** sets the reach and shadow map size), no SSAO/SSR/GI.
+- **Interior lights:** lamps are real `OmniLight3D`s without shadows that fade out beyond about 60 m (30 m on Low), so only nearby ones are drawn. A large map has about 450 to 650. The **Interior lights** setting (Off / Low / High) thins them.
 - **Glowing parts:** these are drawn unshaded and over-bright in their own MultiMeshes, so the **Bloom** setting only picks them up, not sunlit walls.
 - The **Render scale**, **Shadows**, **MSAA** and **View distance** settings are the main performance controls.
 
 ## Networking model
 
-ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015 by default (the host can change it). The host opens the port with UPnP when it can.
+ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015. The host opens the port with UPnP when it can.
 A joining player sends their version number, and the host turns away anyone on a different version, or anyone who doesn't register within 5 s (older builds).
 Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
 Shooting is resolved on the shooter's client, and the server validates every hit (alive, enemy team, not spawn-protected, damage clamped to the weapon maximum) before applying damage.
@@ -274,11 +278,12 @@ Edit them in the Godot editor. The next match uses your changes.
   - `Collision` (layer 2): walls and furniture. Phantom can pass through, and the sniper can pierce one.
   - `FloorCollision` (layer 1): floors.
   - `SolidCollision` (layer 16): solid ground.
+  - `BounceCollision` (layer 32): a bounce pad, like the umbrella and awning tops.
   - A part with no shape is decoration you can walk through.
 - **Metadata** (shown in the Inspector under Metadata):
   - `slot`: a colour filled in by the game, such as `body` on cars, `leaf` on tree crowns, `main` on sofas and tables, or `blanket` on beds. `slot_darken` / `slot_lighten` shade it.
   - `slot_choices`: a list of colours. One is picked at random for each placement, as with kiosk awnings, arcade cabinets and books.
-  - `batch`: `static` or `detail`. Detail parts are hidden beyond 75 m, like the furniture.
+  - `batch`: `static` or `detail`. Detail parts are hidden beyond 140 m, like the furniture.
   - `night_only` (on an `OmniLight3D`): the light only shines in the evening and at night, like the street lamps.
   - `glow`: true for parts that light up (bulbs, screens, neon, headlights). They're drawn unshaded and bright enough to bloom.
 - **Lights:** an `OmniLight3D` in a template becomes a real light wherever the piece is placed. Its colour, energy and range are used, and shadows stay off. The lamp scenes in `assets/furniture/decor/` have one each.
@@ -287,7 +292,8 @@ Edit them in the Godot editor. The next match uses your changes.
   - Street props face their local +Z away from the road.
   - Furniture is sometimes turned 90°.
   - **Decor:** wall pieces have their origin on the wall face at floor level and stick out along +Z into the room. Floor pieces against a wall have their back at Z = 0. Ceiling lights hang down from their origin on the ceiling. The rug is centred on its origin.
-  - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/map_builder.gd`.  - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
+  - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/map_builder.gd`.
+  - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
 - **Code-side randomness:** sizes such as crates, bushes and tree heights are still random in code.
 
 The parts are named `Part0`, `Part1` and so on, in build order. Rename them freely. Only the meshes, shapes, colours and metadata matter.
@@ -310,7 +316,7 @@ Buildings are put together from the pieces in `assets/building/`. Each piece's c
 
 **Interior walls:** `wall_interior` (a 1 × 1 m piece, stretched) and `wall_interior_door` (the door jambs of a 2 m partition module).
 
-You can reshape the inside of a module freely: move the jambs, change the window shape, or add trim. Keep its outer size, because the pieces are placed edge to edge. The grid size, storey module height and stair step are constants at the top of `scripts/map/map_builder.gd` (`MODULE`, `MODULE_H`, `STAIR_RUN`, `STAIR_RISE`). Building pieces are always drawn, unlike furniture, which fades out beyond 75 m.
+You can reshape the inside of a module freely: move the jambs, change the window shape, or add trim. Keep its outer size, because the pieces are placed edge to edge. The grid size, storey module height and stair step are constants at the top of `scripts/map/map_builder.gd` (`MODULE`, `MODULE_H`, `STAIR_RUN`, `STAIR_RISE`). Building pieces are always drawn, unlike furniture, which fades out beyond 140 m.
 
 ## Editing the UI
 

@@ -38,7 +38,7 @@ const ACTIONS := [
 const DEFAULTS := {
 	"player_name": "Player",
 	"last_code": "",  # last join code you used
-	"host_port": 27015,  # UDP port you host on (changeable in the lobby)
+	"host_port": 27015,  # UDP port you host on (no longer changeable in the lobby; edit settings to change)
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
 	"map_random": true,   # host: a new random city every match (false = the classic city)
@@ -57,6 +57,7 @@ const DEFAULTS := {
 	"max_fps": 144,
 	"render_scale": 1.0,
 	"shadows": true,
+	"shadow_quality": 2,  # 0 low, 1 medium, 2 high, 3 ultra (see World.SHADOW_QUALITY)
 	"interior_lights": 2,  # 0 off, 1 low (every other lamp, shorter reach), 2 high
 	"bloom": true,
 	"msaa": 0,

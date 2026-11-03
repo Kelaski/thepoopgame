@@ -1,6 +1,6 @@
 class_name Lobby
 extends Control
-## Lobby (assets/ui/lobby.tscn). The host sees the join code, port, map size and
+## Lobby (assets/ui/lobby.tscn). The host sees the join code, map size and
 ## city choice and can start the match; everyone picks a team and a loadout.
 ## The team rosters are filled in from the network roster.
 
@@ -18,11 +18,10 @@ var main
 
 func _ready() -> void:
 	var host := multiplayer.is_server()
-	for n: Control in [%Codes, %CopyButton, %PortLabel, %PortEdit, %ChangePortButton, %MapPick, %CityPick, %PortStatus, %StartButton, %ShuffleButton]:
+	for n: Control in [%Codes, %CopyButton, %MapPick, %CityPick, %PortStatus, %StartButton, %ShuffleButton]:
 		n.visible = host
 	%Waiting.visible = not host
 	%FirewallButton.visible = host and not Net.firewall_allowed()
-	%PortEdit.text = str(Net.hosted_port())
 	var pick: OptionButton = %MapPick
 	pick.clear()
 	for sz in MapData.SIZE_ORDER:
@@ -56,17 +55,6 @@ func _on_copy_pressed() -> void:
 	if Net.online_code != "":
 		DisplayServer.clipboard_set(Net.online_code)
 		%PortStatus.text = "Copied %s. %s" % [Net.online_code, Net.port_status]
-
-
-## Changing the port re-hosts the lobby, so anyone already here has to rejoin.
-func _on_change_port_pressed() -> void:
-	var err: String = main.change_port(int(%PortEdit.text))
-	if err != "" and is_instance_valid(self):
-		%PortStatus.text = err
-
-
-func _on_port_submitted(_t: String) -> void:
-	_on_change_port_pressed()
 
 
 func _on_firewall_pressed() -> void:

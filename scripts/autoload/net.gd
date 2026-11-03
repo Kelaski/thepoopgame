@@ -236,15 +236,11 @@ func _refresh_status() -> void:
 	elif addr == "":
 		lines.append("Couldn't look up your public address. Check your internet connection.")
 	match _upnp_state:
-		0:
-			lines.append("Opening UDP port %d on your router..." % _host_port)
 		1:
 			if _upnp_ip != "" and public_ip != "" and _upnp_ip != public_ip:
-				lines.append("Your router opened port %d, but your internet provider shares your address with other customers (CGNAT), so players probably can't reach you. Ask your provider for a public IP, or let someone else host." % _host_port)
-			else:
-				lines.append("Port %d opened on your router automatically." % _host_port)
+				lines.append("Your internet provider shares your address with other customers (CGNAT), so players probably can't reach you. Ask your provider for a public IP, or let someone else host.")
 		-1:
-			lines.append("%s Forward UDP port %d to this PC in your router's settings (or change the port below to one you've already forwarded)." % [_upnp_msg, _host_port])
+			lines.append("%s Forward UDP port %d to this PC in your router's settings." % [_upnp_msg, _host_port])
 	if not firewall_allowed():
 		lines.append("Windows Firewall may block players: accept the prompt, or press Allow Through Firewall.")
 	port_status = " ".join(PackedStringArray(lines))

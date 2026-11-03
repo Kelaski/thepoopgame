@@ -4,4 +4,4 @@ class_name GameVersion
 ##   major: big overhauls          minor: new features / gameplay changes
 ##   patch: fixes and small tweaks
 
-const CURRENT := "0.12.1"
+const CURRENT := "0.13.0"

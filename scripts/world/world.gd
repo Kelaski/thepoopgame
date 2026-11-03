@@ -28,6 +28,14 @@ const TIMES := [
 ]
 const TOD_BLEND_TIME := 10.0  # seconds to blend into a new time of day
 const GROUND_BOTTOM := Color("6f7f5a")
+## Shadow quality (Settings > Video): [splits, max distance in m, shadow map size].
+## More splits keep near shadows sharp while the far edge reaches further out.
+const SHADOW_QUALITY := [
+	[2, 70.0, 2048],    # Low
+	[4, 130.0, 4096],   # Medium
+	[4, 220.0, 4096],   # High
+	[4, 320.0, 8192],   # Ultra
+]
 var builder: MapBuilder
 var players := {}  # peer id -> Player
 var players_node: Node3D
@@ -118,8 +126,8 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-52.0, -38.0, 0.0)
 	sun.light_energy = 1.25
 	sun.light_color = Color("fff1dc")
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	sun.directional_shadow_max_distance = 70.0
+	sun.directional_shadow_blend_splits = true
+	sun.directional_shadow_fade_start = 0.9
 	sun.shadow_blur = 1.0
 	add_child(sun)
 	_tod = TIMES[clampi(Game.time_of_day, 0, TIMES.size() - 1)].duplicate()
@@ -207,6 +215,10 @@ func _apply_settings() -> void:
 		env.environment.glow_enabled = bool(Settings.g("bloom"))
 	if sun:
 		sun.shadow_enabled = bool(Settings.g("shadows"))
+		var sq: Array = SHADOW_QUALITY[clampi(int(Settings.g("shadow_quality")), 0, SHADOW_QUALITY.size() - 1)]
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if sq[0] == 4 else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		sun.directional_shadow_max_distance = sq[1]
+		RenderingServer.directional_shadow_atlas_set_size(sq[2], true)
 	_apply_lights()
 
 
@@ -219,7 +231,7 @@ func _apply_lights() -> void:
 	for i in builder.lights.size():
 		var l: OmniLight3D = builder.lights[i]
 		l.visible = q == 2 or (q == 1 and i % 2 == 0)
-		l.distance_fade_begin = 40.0 if q == 2 else 22.0
+		l.distance_fade_begin = 60.0 if q == 2 else 30.0
 	_apply_night_lights()
 
 

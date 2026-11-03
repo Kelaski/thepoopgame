@@ -18,6 +18,7 @@ const L_WALL := 2    # walls + furniture (Phantom can pass through; sniper can p
 const L_PLAYER := 4
 const L_DOOR := 8
 const L_SOLID := 16  # ground and boundary fence (never passable)
+const L_BOUNCE := 32 # bounce pads (umbrella and awning tops): landing on one launches you up
 const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
 const DOOR_SCENE := preload("res://assets/models/door.tscn")
 const DECOR := 0    # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them); foliage never collides
@@ -34,11 +35,11 @@ const MODULE_H := 4.0
 const STAIR_RUN := 0.8
 const STAIR_RISE := 0.5
 const STAIR_W := 5.8        # stairwell width across its two lanes (stair_segment is STAIR_W / 2 - 0.05 wide)
-const STAIR_LANDING := 1.6  # landing before and after each flight
+const STAIR_LANDING := 2.6  # landing before and after each flight: the way onto the stairs
 const ROOM_V := STAIR_W + 1.5  # rooms start this far in, leaving a corridor past the stairwell
 const ROOM_MODULES := 3  # interior rooms are 3 modules (6 m) wide
 const WINDOW_PIECES := ["building/wall_window_small", "building/wall_window_wide", "building/wall_window_tall"]
-const FURNITURE_VIS_RANGE := 75.0
+const FURNITURE_VIS_RANGE := 140.0
 const GLOW_BOOST := 3.0  # glowing parts are drawn with their brightest channel at this level, so they bloom
 
 const STYLES := {
@@ -112,6 +113,7 @@ var _glows: Array = []   # [kind, transform, colour, detail]: glowing parts
 var _floor_body: StaticBody3D
 var _wall_body: StaticBody3D
 var _solid_body: StaticBody3D
+var _bounce_body: StaticBody3D
 var _shape_cache := {}
 var _box_mesh: BoxMesh
 var _cyl_mesh: CylinderMesh
@@ -246,6 +248,11 @@ func _begin_chunk(nm: String) -> void:
 	_wall_body.collision_layer = L_WALL
 	_wall_body.collision_mask = 0
 	_chunk.add_child(_wall_body)
+	_bounce_body = StaticBody3D.new()
+	_bounce_body.name = "BouncePads"
+	_bounce_body.collision_layer = L_BOUNCE
+	_bounce_body.collision_mask = 0
+	_chunk.add_child(_bounce_body)
 	_boxes = []
 	_fboxes = []
 	_cyls = []
@@ -299,6 +306,8 @@ func _body_for(layer: int) -> StaticBody3D:
 		return _floor_body
 	if layer == L_WALL:
 		return _wall_body
+	if layer == L_BOUNCE:
+		return _bounce_body
 	return _solid_body
 
 
@@ -1607,59 +1616,182 @@ func _furnish_water(inner: Rect2, zones: Array) -> void:
 
 # ================================================================ park (19)
 
+const PATH_W := 2.6
+const PATH_COL := Color("cdbf9e")
+const PATH_EDGE := Color("a89a7a")
+const SAND := Color("e2cf98")
+
+
+## The park, laid out like a real city park (classic 37 x 44 m layout scaled to
+## this one; the court, playground and pond keep their size):
+## * two paved paths, north-south between the court and the pond and east-west
+##   below the playground, meeting at a round plaza with a fountain and flower beds
+## * benches and bins along the paths, and lamp posts that light up at night
+## * a row of trees round the edge (gaps where the paths come in), and trees and
+##   bushes dotted over the lawns
+## * picnic tables with umbrellas on the open lawns (the umbrella tops bounce you)
+## * the basketball court, the playground on a sandpit, and the pond
 func _build_park() -> void:
 	_detail = false  # park props are always drawn (no furniture draw distance)
 	var r := park_rect
 	var x0 := r.position.x
 	var z0 := r.position.y
-	# Layout positions are from the classic 37 x 44 m park, scaled to this one
-	# (the court, playground and pond keep their size).
 	var kx := r.size.x / 37.0
 	var kz := r.size.y / 44.0
 	box(Vector3(r.get_center().x, 0.02, r.get_center().y), Vector3(r.size.x, 0.04, r.size.y), GRASS, DECOR)
 	_label(park_name.to_upper(), Vector3(r.get_center().x, 3.0, r.end.y + 0.5), 0.0, 96, Color("d8f0c0"))
-	# Basketball court (left side)
+	# Basketball court (left), playground on a sandpit (top left), pond (bottom right)
 	var court := Rect2(x0 + 2.5 * kx, z0 + minf(13.0 * kz, r.size.y - 27.0), 14.0, 26.0)
 	var cc := court.get_center()
 	_prefab("props/park/basketball_court", _at(Vector3(cc.x, 0, cc.y)))  # with hoops and fence
-	# Playground tower (orange block on the sketch) - verticality
 	var pg := Rect2(x0 + 6.5 * kx - 4.0, z0 + 5.1 * kz - 2.6, 8.0, 5.2)
 	var pc := pg.get_center()
+	var sand := pg.grow(1.2)
+	box(Vector3(sand.get_center().x, 0.05, sand.get_center().y), Vector3(sand.size.x, 0.03, sand.size.y), SAND, DECOR)
 	_prefab("props/park/playground", _at(Vector3(pc.x, 0, pc.y)))
-	# Pond (blue blobs on the sketch) - shallow water, walkable
 	for blob in [[28.5, 28.5, 3.8], [27.0, 33.0, 3.6], [24.5, 36.5, 3.4], [26.0, 39.0, 2.6]]:
 		var p := Vector2(x0 + blob[0] * kx, z0 + blob[1] * kz)
 		cyl(Vector3(p.x, 0.05, p.y), blob[2] + 0.4, 0.06, Color("9a8a6a"), DECOR)
 		cyl(Vector3(p.x, 0.07, p.y), blob[2], 0.06, Color("3fa8e0"), DECOR)
-	# Trees and benches
 	var pond := Rect2(x0 + 20.0 * kx, z0 + 24.5 * kz, 12.0 * kx, 17.0 * kz)
-	var avoid := [court.grow(1.5), pg.grow(3.0), pond.grow(1.0)]
+
+	# Keep clear of the big pieces, the Tag and the spawn zones.
+	var avoid := [court.grow(1.0), sand.grow(0.8), pond.grow(0.8)]
 	for o in objectives:
-		avoid.append(Rect2(o.pos.x - 3.0, o.pos.z - 3.0, 6.0, 6.0))
+		avoid.append(Rect2(o.pos.x - 3.5, o.pos.z - 3.5, 7.0, 7.0))
+	for s: Vector3 in spawn_dots:
+		avoid.append(Rect2(s.x - 3.0, s.z - 3.0, 6.0, 6.0))
+
+	# Paths, and the plaza where they meet
+	var path_x := maxf(x0 + 19.5 * kx, court.end.x + 2.2)
+	var path_z := (sand.end.y + court.position.y) * 0.5
+	var cross := court.position.y - sand.end.y >= PATH_W + 1.0
+	var paths := [Rect2(path_x - PATH_W * 0.5, z0, PATH_W, r.size.y)]
+	if cross:
+		paths.append(Rect2(x0, path_z - PATH_W * 0.5, r.size.x, PATH_W))
+	for pr: Rect2 in paths:
+		_park_path(pr)
+	var plaza := Vector2(path_x, path_z if cross else z0 + r.size.y * 0.25)
+	var plaza_r := 4.2
+	if not _hits_any(Rect2(plaza - Vector2.ONE * 2.4, Vector2(4.8, 4.8)), avoid.slice(3), 0.0):
+		cyl(Vector3(plaza.x, 0.06, plaza.y), plaza_r, 0.04, PATH_COL, DECOR)
+		_prefab("props/park/fountain", _at(Vector3(plaza.x, 0, plaza.y)))
+		# Flower beds on the plaza's diagonals, turned to follow it round
+		for i in 4:
+			var a := PI * 0.25 + i * PI * 0.5
+			var d := Vector2(cos(a), sin(a))
+			var fp := plaza + d * (plaza_r + 1.4)
+			var fr := Rect2(fp - Vector2(1.3, 1.3), Vector2(2.6, 2.6))
+			if r.grow(-0.5).encloses(fr) and not _hits_any(fr, avoid, 0.0):
+				_prefab("props/park/flower_bed", _at(Vector3(fp.x, 0, fp.y), _yaw_x(Vector3(-d.y, 0, d.x))))
+		avoid.append(Rect2(plaza - Vector2.ONE * (plaza_r + 2.2), Vector2.ONE * (plaza_r + 2.2) * 2.0))
+	var path_keep := []
+	for pr: Rect2 in paths:
+		path_keep.append(pr.grow(0.4))
+
+	# Along both sides of each path: benches (some with a bin) and lamp posts
+	for pi in paths.size():
+		var pr: Rect2 = paths[pi]
+		var others := path_keep.duplicate()
+		others.remove_at(pi)
+		var along_z: bool = pr.size.y > pr.size.x
+		var length: float = pr.size.y if along_z else pr.size.x
+		var n := int(length / 7.0)
+		for i in n:
+			var t := (i + 0.5) * length / n
+			for side: float in [-1.0, 1.0]:
+				var off := PATH_W * 0.5 + 0.55
+				var c := Vector2(pr.get_center().x + side * off, pr.position.y + t) if along_z else Vector2(pr.position.x + t, pr.get_center().y + side * off)
+				var away := Vector3(side, 0, 0) if along_z else Vector3(0, 0, side)
+				var foot := Rect2(c - Vector2(0.9, 0.9), Vector2(1.8, 1.8))
+				if not r.grow(-0.8).has_point(c) or _hits_any(foot, avoid, 0.0) or _hits_any(foot, others, 0.0):
+					continue
+				if (i + (1 if side > 0.0 else 0)) % 2 == 0:
+					_prefab("props/park/bench", _at(Vector3(c.x, 0, c.y), _yaw_to(away)))
+					if i % 2 == 0:
+						var bin := c + (Vector2(0, 1.4) if along_z else Vector2(1.4, 0))
+						_prefab("props/street/bin", _at(Vector3(bin.x, 0, bin.y)))
+				else:
+					_prefab("props/street/lamp", _at(Vector3(c.x, 0, c.y), _yaw_to(away)))
+				avoid.append(foot)
+
+	# Picnic tables with umbrellas on the open lawns right of the main path
+	var spots := []
+	var lx := path_x + PATH_W * 0.5 + 1.0
+	var lw := r.end.x - lx - 1.5
+	var lawns := [Rect2(lx, z0 + 1.5, lw, path_z - PATH_W * 0.5 - 1.0 - (z0 + 1.5)),
+		Rect2(lx, path_z + PATH_W * 0.5 + 1.0, lw, pond.position.y - 1.0 - (path_z + PATH_W * 0.5 + 1.0))]
+	for lawn: Rect2 in lawns:
+		if lawn.size.x < 3.4 or lawn.size.y < 3.4:
+			continue
+		var cols := maxi(1, int(lawn.size.x / 4.6))
+		var rows := maxi(1, int(lawn.size.y / 4.6))
+		for i in cols:
+			for j in rows:
+				spots.append(lawn.position + Vector2((i + 0.5) * lawn.size.x / cols, (j + 0.5) * lawn.size.y / rows))
+	var tables := 0
+	for sp: Vector2 in spots:
+		var foot := Rect2(sp - Vector2(1.7, 1.7), Vector2(3.4, 3.4))
+		if tables >= 6 or _hits_any(foot, avoid, 0.0) or _hits_any(foot, path_keep, 0.0):
+			continue
+		_prefab("props/park/picnic_umbrella", _at(Vector3(sp.x, 0, sp.y), rng.randf_range(-0.3, 0.3)))
+		avoid.append(foot)
+		tables += 1
+
+	# A row of trees round the edge, with gaps where the paths come in
+	var edge := r.grow(-1.6)
+	for side in 4:
+		var horizontal := side < 2
+		var length := edge.size.x if horizontal else edge.size.y
+		var n := maxi(1, int(length / 5.5))
+		for i in n + 1:
+			var t := float(i) / n
+			var p := Vector2(edge.position.x + t * edge.size.x, edge.position.y if side == 0 else edge.end.y) if horizontal else Vector2(edge.position.x if side == 2 else edge.end.x, edge.position.y + t * edge.size.y)
+			var foot := Rect2(p - Vector2(1.0, 1.0), Vector2(2.0, 2.0))
+			if _hits_any(foot, avoid, 0.0) or _hits_any(foot, path_keep, 1.2):
+				continue
+			_park_tree(p)
+			avoid.append(foot.grow(0.8))
+	# Trees and bushes dotted over the lawns
 	var placed := 0
 	var tries := 0
-	while placed < 34 and tries < 400:
+	while placed < 16 and tries < 300:
 		tries += 1
-		var p := Vector2(rng.randf_range(r.position.x + 1.5, r.end.x - 1.5), rng.randf_range(r.position.y + 1.5, r.end.y - 1.5))
-		var bad := false
-		for a: Rect2 in avoid:
-			if a.has_point(p):
-				bad = true
-		if bad:
+		var p := Vector2(rng.randf_range(r.position.x + 3.0, r.end.x - 3.0), rng.randf_range(r.position.y + 3.0, r.end.y - 3.0))
+		var foot := Rect2(p - Vector2(1.5, 1.5), Vector2(3.0, 3.0))
+		if _hits_any(foot, avoid, 0.0) or _hits_any(foot, path_keep, 0.5):
 			continue
-		avoid.append(Rect2(p.x - 2.5, p.y - 2.5, 5.0, 5.0))
+		avoid.append(foot.grow(1.0))
 		placed += 1
-		if placed % 4 == 0:
-			_prefab("props/park/bench", _at(Vector3(p.x, 0, p.y)))
-		elif placed % 4 == 1:
+		if placed % 3 == 0:
 			_bush(Vector3(p.x, 0, p.y))
 		else:
-			# Trunk (stretched to a random height) and crown.
-			var h := rng.randf_range(2.5, 3.5)
-			_prefab("props/nature/tree_trunk", _at(Vector3(p.x, 0, p.y), 0.0, Vector3(1, h, 1)))
-			var cr := rng.randf_range(1.6, 2.2)
-			_crown(Vector3(p.x, h + 1.0, p.y), cr, Color("4f8a3a").lerp(Color("7ab04a"), rng.randf()))
+			_park_tree(p)
+	# Bushes along the outside of the court fence
+	for i in 5:
+		var p := Vector2(court.position.x - 0.9, court.position.y + (i + 0.5) * court.size.y / 5.0)
+		if r.grow(-0.5).has_point(p) and not _hits_any(Rect2(p - Vector2.ONE * 0.6, Vector2.ONE * 1.2), avoid.slice(3), 0.0):
+			_bush(Vector3(p.x, 0, p.y))
 	_detail = true
+
+
+## A paved park path with a slightly darker kerb down each side (visual only).
+func _park_path(pr: Rect2) -> void:
+	var c := pr.get_center()
+	box(Vector3(c.x, 0.055, c.y), Vector3(pr.size.x, 0.03, pr.size.y), PATH_COL, DECOR)
+	var along_z := pr.size.y > pr.size.x
+	for s: float in [-1.0, 1.0]:
+		if along_z:
+			box(Vector3(c.x + s * (pr.size.x * 0.5 - 0.08), 0.06, c.y), Vector3(0.16, 0.04, pr.size.y), PATH_EDGE, DECOR)
+		else:
+			box(Vector3(c.x, 0.06, c.y + s * (pr.size.y * 0.5 - 0.08)), Vector3(pr.size.x, 0.04, 0.16), PATH_EDGE, DECOR)
+
+
+## Park tree: a trunk stretched to a random height and a leafy crown.
+func _park_tree(p: Vector2) -> void:
+	var h := rng.randf_range(2.5, 3.6)
+	_prefab("props/nature/tree_trunk", _at(Vector3(p.x, 0, p.y), 0.0, Vector3(1, h, 1)))
+	_crown(Vector3(p.x, h + 1.0, p.y), rng.randf_range(1.6, 2.3), Color("4f8a3a").lerp(Color("7ab04a"), rng.randf()))
 
 
 # ================================================================ cranes & rooftop bridges

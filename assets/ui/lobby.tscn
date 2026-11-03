@@ -67,24 +67,6 @@ text = "Waiting for the host to start the match."
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="PortLabel" type="Label" parent="Center/Panel/Content/SettingsRow" unique_id=2057762165]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "Port (UDP)"
-
-[node name="PortEdit" type="LineEdit" parent="Center/Panel/Content/SettingsRow" unique_id=1108314717]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 0)
-layout_mode = 2
-max_length = 5
-
-[node name="ChangePortButton" type="Button" parent="Center/Panel/Content/SettingsRow" unique_id=62237678]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(130, 44)
-layout_mode = 2
-text = "Change Port"
-
 [node name="FirewallButton" type="Button" parent="Center/Panel/Content/SettingsRow" unique_id=1570962904]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(210, 44)
@@ -242,8 +224,6 @@ theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 15
 
 [connection signal="pressed" from="Center/Panel/Content/Header/CopyButton" to="." method="_on_copy_pressed"]
-[connection signal="text_submitted" from="Center/Panel/Content/SettingsRow/PortEdit" to="." method="_on_port_submitted"]
-[connection signal="pressed" from="Center/Panel/Content/SettingsRow/ChangePortButton" to="." method="_on_change_port_pressed"]
 [connection signal="pressed" from="Center/Panel/Content/SettingsRow/FirewallButton" to="." method="_on_firewall_pressed"]
 [connection signal="item_selected" from="Center/Panel/Content/SettingsRow/MapPick" to="." method="_on_map_selected"]
 [connection signal="item_selected" from="Center/Panel/Content/SettingsRow/CityPick" to="." method="_on_city_selected"]
