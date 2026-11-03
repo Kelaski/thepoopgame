@@ -7,6 +7,16 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.2.1
+
+### Changed
+- **Team chat:** now **Right Shift + Enter**. Left Shift + Enter opens all chat.
+- **Ability key:** a Shift bind now means Left Shift only, so opening team chat no longer fires your addon.
+- **Version label:** the version is now shown in the bottom-left corner of every screen, including the menus, the lobby and matches. It used to be on the main menu only, in the bottom-right.
+- **Same version only:** the version check now also catches builds from before 0.2.0, which can't report a version:
+  - A player who hasn't registered within 5 s is told the host's version and disconnected.
+  - If you join a host on an older build, you get a message after about 6 s instead of an empty lobby.
+
 ## 0.2.0
 
 ### New

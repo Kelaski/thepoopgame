@@ -26,7 +26,7 @@ const ACTIONS := [
 	["scoreboard", "Scoreboard", "k", KEY_TAB],
 	["loadout", "Loadout Menu (while dead)", "k", KEY_B],
 	["spray", "Spray", "k", KEY_T],
-	["chat", "Chat (hold Shift for team chat)", "k", KEY_ENTER],
+	["chat", "Chat (hold Right Shift for team chat)", "k", KEY_ENTER],
 ]
 
 const DEFAULTS := {
@@ -268,6 +268,10 @@ func make_event(b: Array) -> InputEvent:
 		return m
 	var k := InputEventKey.new()
 	k.physical_keycode = b[1]
+	if b[1] == KEY_SHIFT:
+		# Right Shift is reserved for team chat (Right Shift + Enter), so a Shift
+		# bind (the ability key by default) only means Left Shift.
+		k.location = KEY_LOCATION_LEFT
 	return k
 
 
@@ -275,6 +279,8 @@ func bind_text(action: String) -> String:
 	var b: Array = binds.get(action, ["k", 0])
 	if b[0] == "m":
 		return MOUSE_NAMES.get(b[1], "Mouse %d" % b[1])
+	if b[1] == KEY_SHIFT:
+		return "Left Shift"
 	return OS.get_keycode_string(b[1])
 
 

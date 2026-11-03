@@ -34,14 +34,3 @@ func _ready() -> void:
 		m.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		m.custom_minimum_size.x = 380
 		v.add_child(m)
-
-	var ver := UiKit.label("v" + GameVersion.CURRENT, 14, UiKit.MUTED)
-	ver.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(ver)
-	ver.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	ver.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	ver.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	ver.offset_left = -12
-	ver.offset_right = -12
-	ver.offset_top = -8
-	ver.offset_bottom = -8

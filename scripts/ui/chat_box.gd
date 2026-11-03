@@ -1,7 +1,7 @@
 class_name ChatBox
 extends Control
-## Chat window (bottom-left). Enter = all chat, Shift + Enter = team chat (the chat
-## key is rebindable; team chat is always Shift + it).
+## Chat window (bottom-left). Enter = all chat, Right Shift + Enter = team chat (the
+## chat key is rebindable; team chat is always Right Shift + it).
 ## Typing "/" at the start shows command autocomplete: Tab completes,
 ## Up / Down choose, Enter sends, Esc cancels.
 ## Messages are shown as plain text in Labels (no BBCode), so nothing a player
@@ -13,6 +13,7 @@ const FADE_TIME := 10.0
 
 var typing := false
 var team_only := false
+var _rshift := false  # Right Shift held (Godot can't tell the two Shifts apart from the Enter event)
 
 var _col: VBoxContainer
 var _log: VBoxContainer
@@ -84,14 +85,18 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.pressed or event.echo:
+	if not (event is InputEventKey):
+		return
+	if event.keycode == KEY_SHIFT and event.location == KEY_LOCATION_RIGHT:
+		_rshift = event.pressed
+	if not event.pressed or event.echo:
 		return
 	if not typing:
 		if not Net.online or Game.ui_open:
 			return
 		if event.is_action("chat"):
-			# Shift + the chat key opens team chat (during a match).
-			_open(event.shift_pressed and Game.in_match)
+			# Right Shift + the chat key opens team chat (during a match).
+			_open(_rshift and Game.in_match)
 			get_viewport().set_input_as_handled()
 		return
 	match event.keycode:
@@ -111,6 +116,11 @@ func _input(event: InputEvent) -> void:
 				_sel = posmod(_sel + 1, _matches.size())
 				_show_suggestions()
 				get_viewport().set_input_as_handled()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_rshift = false  # the key-up never arrives if you alt-tab while holding it
 
 
 func _open(team: bool) -> void:

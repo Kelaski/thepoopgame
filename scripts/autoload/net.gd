@@ -20,6 +20,7 @@ const DEFAULT_PORT := 27015
 const MAX_PER_TEAM := 8
 const MAX_PLAYERS := 16
 const UPNP_TIMEOUT_MS := 2000
+const REGISTER_TIMEOUT := 5.0  # seconds a new connection has to register (and show its version)
 
 var lan_code := ""     # host: code for players on the same network
 var online_code := ""  # host: code for players anywhere (needs the port open)
@@ -247,6 +248,14 @@ func _on_connected() -> void:
 	register.rpc_id(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"), GameVersion.CURRENT)
 	upload_my_spray()
 	joined_ok.emit()
+	# Reverse check: a host on an older build never answers the registration.
+	get_tree().create_timer(REGISTER_TIMEOUT + 1.0).timeout.connect(_check_accepted.bind(multiplayer.multiplayer_peer))
+
+
+func _check_accepted(peer: MultiplayerPeer) -> void:
+	if online and multiplayer.multiplayer_peer == peer and not players.has(my_id()) and _reject_reason == "":
+		leave()
+		disconnected.emit("The host didn't accept you. They're probably on a different version (you're on %s)." % GameVersion.CURRENT)
 
 
 func _on_connection_failed() -> void:
@@ -278,8 +287,17 @@ func _drop_peer(id: int) -> void:
 		multiplayer.multiplayer_peer.disconnect_peer(id)
 
 
-func _on_peer_connected(_id: int) -> void:
-	pass  # Wait for the client to register.
+func _on_peer_connected(id: int) -> void:
+	# Wait for the client to register (which carries its version). Builds from
+	# before 0.2.0 can't register at all (different RPC), so anyone who hasn't
+	# registered in time is on another version and gets dropped.
+	if multiplayer.is_server():
+		get_tree().create_timer(REGISTER_TIMEOUT).timeout.connect(_check_registered.bind(id))
+
+
+func _check_registered(id: int) -> void:
+	if multiplayer.is_server() and not players.has(id) and id in multiplayer.get_peers():
+		_reject(id, "Couldn't join: you're probably on a different version. The host is on %s." % GameVersion.CURRENT)
 
 
 func _on_peer_disconnected(id: int) -> void:

@@ -35,6 +35,7 @@ func _ready() -> void:
 	var chat := ChatBox.new()
 	chat.name = "Chat"
 	ui_root.add_child(chat)
+	_add_version_label()
 	Net.joined_ok.connect(_on_joined)
 	Net.join_failed.connect(_on_join_failed)
 	Net.disconnected.connect(_on_disconnected)
@@ -43,6 +44,23 @@ func _ready() -> void:
 	Game.match_ended.connect(_on_match_ended)
 	if not _handle_cmdline():
 		show_main_menu()
+
+
+## Game version in the bottom-left corner of every screen (menus, lobby and
+## matches), on its own layer so menu backgrounds never cover it.
+func _add_version_label() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 11
+	add_child(layer)
+	var l := UiKit.outlined("v" + GameVersion.CURRENT, 12, UiKit.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(l)
+	l.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	l.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	l.offset_left = 6
+	l.offset_right = 6
+	l.offset_top = -3
+	l.offset_bottom = -3
 
 
 func _handle_cmdline() -> bool:

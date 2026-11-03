@@ -12,7 +12,7 @@ Everything (map, furniture, sounds, UI) is generated in code, so the repository 
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** (Run Project).
 
-The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** and **Quit**. Your player name is set in Customization. The game version is shown in the bottom-right corner (patch notes are in [CHANGELOG.md](CHANGELOG.md)).
+The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** and **Quit**. Your player name is set in Customization. The game version is shown in the bottom-left corner of every screen (patch notes are in [CHANGELOG.md](CHANGELOG.md)).
 
 ### Hosting / joining
 
@@ -23,7 +23,7 @@ The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** 
 - **Join:** click **Play Game**, type the code and press **Join**. A plain IP address (or `IP:PORT`) also works in the code box.
 - **Firewall:** on Windows the game asks for firewall access when it opens, so hosting works straight away. Allow it on private networks (and public ones if you host from those).
 - A code is just the host's address written in a short form, not a password, so only share it with people you want to play with.
-- Everyone must be on the same version. A player on a different version is told both version numbers and sent back to the menu.
+- Only players on the same version can play together. A player on a different version is told the host's version and sent back to the menu. This also covers builds from before 0.2.0, which can't report a version: the host drops anyone who hasn't registered within 5 s, and a client whose host never accepts it gives up after about 6 s.
 - The host chooses teams (or shuffles them) and clicks **START MATCH**. Players who join mid-match spawn in after the respawn timer.
 
 To test multiplayer on one machine, run two instances and join `127.0.0.1`.
@@ -41,14 +41,14 @@ Optional command-line flags (after `--`):
 | Jump / double jump (Skywalker) | Space |
 | Crouch / slide (crouch while sprinting) | Ctrl |
 | Lean left / right | Q / E |
-| Addon ability | Shift |
+| Addon ability | Left Shift |
 | Interact (doors) | F |
 | Fire / Aim | Mouse 1 / Mouse 2 |
 | Reload | R |
 | Scoreboard | Tab |
 | Loadout (while dead) | B |
 | Spray | T |
-| Chat (all / team) | Enter / Shift + Enter |
+| Chat (all / team) | Enter / Right Shift + Enter |
 | Pause / settings | Esc |
 
 There is no sprint key: moving forward is always a sprint. Aiming, crouching or holding a lean key slows you to a walk.
@@ -190,7 +190,7 @@ The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are t
 ## Networking model
 
 ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015. The host opens the port with UPnP when it can.
-A joining player sends their version number, and the host turns away anyone on a different version.
+A joining player sends their version number, and the host turns away anyone on a different version, or anyone who doesn't register within 5 s (older builds).
 Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
 Shooting is resolved on the shooter's client, and the server validates every hit (alive, enemy team, not spawn-protected, damage clamped to the weapon maximum) before applying damage.
 Round state, the timer, respawns, the Tag and health regeneration all run on the server.
@@ -221,7 +221,7 @@ scripts/
 
 ## Chat & commands
 
-- Press **Enter** for all chat or **Shift + Enter** for team chat. The chat key is rebindable, and team chat is always Shift + that key. Shift is also the default ability key, so pressing Shift + Enter in a match uses your addon as well. Chat works in the lobby and in matches; while you type, gameplay keys are ignored.
+- Press **Enter** for all chat or **Right Shift + Enter** for team chat. The chat key is rebindable, and team chat is always Right Shift + that key. A Shift bind (the ability key by default) only uses Left Shift, so team chat never fires your addon. Chat works in the lobby and in matches; while you type, gameplay keys are ignored.
 - Typing **/** at the start of a message opens command autocomplete: **Tab** completes, **Up/Down** choose, **Enter** sends, **Esc** cancels.
 - Commands: `/help` lists commands; `/kill` eliminates yourself (the normal respawn timer applies). New commands are added in `scripts/data/commands.gd`.
 - **Safety:** the server rate-limits chat (5 messages per 4 s) and caps messages at 200 characters. It strips control, zero-width and bidirectional-override characters, both before sending and when receiving. Player names get the same cleaning. Messages are displayed as plain text in Labels (never BBCode). Commands are matched against a fixed whitelist and run on the server; nothing anyone types is ever evaluated as code.
