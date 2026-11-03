@@ -1,0 +1,174 @@
+# Tag Rush
+
+A team-based, first-person objective shooter built in **Godot 4.3+ (GDScript only, no extra plugins)**.
+Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and the team holding it
+has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
+
+Everything (map, furniture, sounds, UI) is generated in code, so the repository has no binary assets.
+
+## Running it
+
+1. Install [Godot 4.3 or newer](https://godotengine.org/download) (standard build, not .NET).
+2. Open Godot, choose **Import**, and select this folder's `project.godot`.
+3. Press **F5** (Run Project).
+
+### Hosting / joining
+
+- **Host:** type a name, then click **Host Game**. The lobby shows your LAN IP address(es). The default port is `7777`.
+- **Join:** enter the host's IP and port, then click **Join Game**.
+- For play over the internet, the host must forward **UDP port 7777** (or whatever port they chose) on their router.
+- The host chooses teams (or shuffles them) and clicks **START MATCH**. Players who join mid-match spawn in after the respawn timer.
+
+To test multiplayer on one machine, run two instances and join `127.0.0.1`.
+Optional command-line flags (after `--`):
+
+```
+--host  --join=IP[:PORT]  --name=NAME  --port=PORT  --autostart=N
+```
+
+## Controls (all rebindable in Settings > Keybinds)
+
+| Action | Default |
+|---|---|
+| Move | W A S D |
+| Jump / double jump (Skywalker) | Space |
+| Crouch / slide (sprint + crouch) | Ctrl |
+| Sprint | Shift |
+| Lean left / right | Q / C |
+| Addon | F |
+| Interact (doors) | E |
+| Fire / Aim | Mouse 1 / Mouse 2 |
+| Reload | R |
+| Scoreboard | Tab |
+| Loadout (while dead) | B |
+| Pause / settings | Esc |
+
+Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch, always-sprint,
+FOV (90–120, horizontal), brightness, fullscreen, V-Sync, FPS cap, render scale, MSAA, shadows,
+view distance, master/effects/UI volume, hitmarker sound, crosshair size and colour, and an FPS counter.
+
+## Rules
+
+- **Spawning:** at round start each team spawns at a random purple-dot spawn zone (the two zones are at least 70 m apart).
+  The objective is the red-dot location whose distance to the two teams is most even, with some randomness.
+  Players are frozen for a 5 s countdown, then everyone rushes.
+- **The Tag:** the first player to touch it becomes the **Runner**. Their team defends and the timer starts at 2:00.
+- **Dropping:** when the Runner dies, the Tag drops where they died and the timer pauses.
+  - An enemy picks it up: their team becomes the defenders, and the timer resumes from the value at the drop **+10 s**.
+  - A teammate picks it up: the timer resumes **+15 s**.
+  - The timer is capped at 2:00.
+- **Winning a round:** the timer reaches 0 while the Tag is held. The holding team wins. First to 4 wins the match.
+- **Runner self-defence:** every kill the Runner gets takes 5 s off their team's timer.
+- **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
+- **Health:** 100 HP. After 8 s without taking damage, health regenerates quickly (50 HP/s).
+- **Respawn:** after a 6 s timer, press **Jump (Space)** to respawn. Use the wait to change loadouts. Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
+  A spawn point is rejected if any living enemy has line of sight to it (or is within 12 m).
+  You get 3 s of spawn protection from the moment you spawn. Moving or shooting ends it early.
+- **Loadouts** (weapon and addon) can be changed in the lobby, or while dead (press **B**). Changes apply on respawn.
+- Friendly fire is off. Bullets pass through teammates.
+
+### Weapons (all hitscan)
+
+| Weapon | Damage | Rate | Sight | Notes |
+|---|---|---|---|---|
+| Assault Rifle | 33 body / 45 head | 9.5 rps | 1.5x holo | 30-round magazine |
+| SMG | 19 / 26 | 13 rps | 1.2x holo | 40-round magazine |
+| Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1.25 rps | 1.15x irons | 12° cone, 6 shells |
+| Sniper | 100 at any range | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready |
+| Spiked Bat | 45 per swing | 2.25 swings/s | none | 7 m reach, +10% move speed. A killing swing launches the victim's gun where you look (70 dmg) |
+
+### Addons
+
+| Addon | Effect |
+|---|---|
+| Hider | F: 18 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 7 s cooldown after it ends. |
+| Trackstar | Passive +15% speed. F: +35% for 6 s. 30 s cooldown from activation. |
+| Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
+| Stalker | See red ground trails behind every enemy, fading 15 m behind them. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
+| Phantom | F: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
+
+### Movement
+
+Snappy ground acceleration, sprint, crouch, and a momentum slide (sprint + crouch). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
+Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved.
+**Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
+Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off.
+**Leaning** (Q / C) peeks around corners. Your head hitbox moves with the lean, and walls limit how far you can lean.
+Doors swing open, away from you and at full speed, when you sprint or slide into them. **E** opens and closes them normally.
+
+## The map
+
+The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.
+A fence with tall invisible collision surrounds it.
+
+| # | Building | Floors |
+|---|---|---|
+| 1 | Warehouse (racks, crates, forklifts, mezzanine offices) | 2 × 6 m |
+| 2 | Swiftcurrent K-12 School (classrooms, desks, lockers, chalkboards) | 3 |
+| 3 | Rapids Arena, home of the Swiftcurrent Rapids (court, hoops, bleachers, scoreboard) | 1 × 11 m |
+| 4 | Movie Theater (seat rows, concessions) | 2 |
+| 5 | Bank (teller counters, desks, vault) | 2 |
+| 6–9 | Entertainment strip: Diner, Arcade, Nightclub, Bar | 1–2 |
+| 10 | Riverside Apartments (nice: beds, sofas, kitchens) | 5 |
+| 11 | Mall (shelving, clothes racks, kiosks) | 3 |
+| 12 | Motel 6 (rooms with beds, TVs) | 2 |
+| 13 | Eastside Tenements (run-down, gang A) | 4 |
+| 14 | Southside Tenements (run-down, rival gang) | 3 |
+| 15 | Meridian Tower (office cubicles) | 5 |
+| 16 | Golden Rapids Casino (slots, card tables, bars) | 5 |
+| 17 | Water Treatment Center (tanks, pipes, pumps) | 1 × 7 m |
+| 18 | Public Library (bookshelves, reading tables) | 2 |
+| 19 | Park (basketball court, pond, playground tower, trees) | outdoor |
+
+Buildings are at most 5 storeys. Each has a two-lane ramp stairwell from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
+Exterior doors are on the ground floor, open windows of varied size and position are spread out on every floor (leaving long stretches of wall for wall running), and residential and school floors have corridors with rooms behind doors.
+The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).
+
+## Performance notes
+
+- All static geometry for a building is drawn with a few `MultiMeshInstance3D`s (one draw call each) and one shared toon material.
+- Furniture is in a separate MultiMesh with a 75 m visibility range.
+- Collision uses shape owners on one `StaticBody3D` per layer per building instead of thousands of nodes. Box shapes are shared by size.
+- There are no textures and no imported assets. Sounds are synthesized at startup.
+- The renderer is kept simple: toon shading, one directional light with 2-split shadows (can be turned off), no SSAO/SSR/GI.
+- The **Render scale**, **Shadows**, **MSAA** and **View distance** settings are the main performance controls.
+
+## Networking model
+
+ENet with the host as the authoritative server (peer 1, also a player).
+Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
+Shooting is resolved on the shooter's client, and the server validates every hit (alive, enemy team, not spawn-protected, damage clamped to the weapon maximum) before applying damage.
+Round state, the timer, respawns, the Tag and health regeneration all run on the server.
+
+## Project layout
+
+```
+project.godot
+scenes/main.tscn            # root scene (just runs scripts/main.gd)
+scripts/
+  main.gd                   # screen flow, overlays, mouse capture, cmdline flags
+  autoload/settings.gd      # settings + rebindable input map (user://settings.cfg)
+  autoload/sfx.gd           # procedural sounds
+  autoload/net.gd           # ENet host/join, roster, team/loadout requests
+  autoload/game.gd          # server-authoritative Tag game mode
+  data/weapons.gd           # weapon stats
+  data/addons.gd            # addon stats
+  map/map_data.gd           # layout transcribed from the sketch
+  map/map_builder.gd        # procedural city, interiors, furniture, spawn points
+  world/world.gd            # environment, players, Tag, FX, trails, heartbeat, respawn search
+  world/door.gd             # hinged doors
+  world/mats.gd             # shared materials / team colours
+  player/player.gd          # FPS controller, weapons, addons, netcode
+  ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
+```
+
+## Assumptions and choices not covered by the spec
+
+- **Sprint is on Shift.** The spec lists WASD, Ctrl, Space, F and E. Sliding needs a sprint, so a sprint key was added (there is also an "Always sprint" option).
+- **Reloading and magazine sizes** were added (R key), with the values above.
+- **Sniper:** inaccurate unless aimed. **Shotgun and sniper** pellets and rounds deal the same damage to the head (headshots still break Hider invisibility).
+- **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.
+- **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Bushes block sight but not bullets.
+- **Dropped-Tag timer:** the timer pauses while the Tag is on the ground. On pickup it resumes from the value at the drop +10 s (enemy) or +15 s (teammate), capped at 2:00.
+- **Phantom's** 23 s cooldown starts when the phase ends. Trackstar's 30 s cooldown starts at activation, as specified.
+- Skywalker's double jump and Stalker's trails are passive, so F does nothing for them.

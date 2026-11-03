@@ -1,0 +1,45 @@
+; Engine configuration file.
+; Open this folder with Godot 4.3+ (standard build, GDScript only).
+
+config_version=5
+
+[application]
+
+config/name="Tag Rush"
+config/description="Team-based objective FPS: grab the Tag, protect your Runner."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "Forward Plus")
+
+[autoload]
+
+Settings="*res://scripts/autoload/settings.gd"
+Sfx="*res://scripts/autoload/sfx.gd"
+Net="*res://scripts/autoload/net.gd"
+Game="*res://scripts/autoload/game.gd"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[layer_names]
+
+3d_physics/layer_1="interior_floors"
+3d_physics/layer_2="walls_furniture"
+3d_physics/layer_3="players"
+3d_physics/layer_4="doors"
+3d_physics/layer_5="ground_fence"
+
+[physics]
+
+common/physics_ticks_per_second=60
+common/max_physics_steps_per_frame=4
+
+[rendering]
+
+lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=1
+anti_aliasing/quality/screen_space_aa=1
+environment/defaults/default_clear_color=Color(0.55, 0.72, 0.88, 1)
