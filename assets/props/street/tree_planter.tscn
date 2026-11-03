@@ -1,0 +1,58 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tddyt"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6039216, 0.58431375, 0.5411765, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_mmu34"]
+size = Vector3(1.3, 0.5, 1.3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wyo8o"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.41960785, 0.2901961, 0.19607843, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_fwhj1"]
+top_radius = 0.12
+bottom_radius = 0.12
+radial_segments = 10
+rings = 1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_oqfiq"]
+size = Vector3(1.3, 0.5, 1.3)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_brg1v"]
+radius = 0.12
+
+[node name="TreePlanter" type="Node3D" unique_id=1362156740]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=982475014]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+material_override = SubResource("StandardMaterial3D_tddyt")
+mesh = SubResource("BoxMesh_mmu34")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=171850220]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+material_override = SubResource("StandardMaterial3D_wyo8o")
+mesh = SubResource("CylinderMesh_fwhj1")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1415765763]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=2069733135]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("BoxShape3D_oqfiq")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1067569245]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+shape = SubResource("CylinderShape3D_brg1v")

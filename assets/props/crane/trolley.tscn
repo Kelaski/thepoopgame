@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uvjnf"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2901961, 0.3137255, 0.3372549, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_jqa5j"]
+size = Vector3(0.6, 0.3, 0.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_2afs0"]
+size = Vector3(0.6, 0.3, 0.6)
+
+[node name="Trolley" type="Node3D" unique_id=1926257246]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=273724660]
+material_override = SubResource("StandardMaterial3D_uvjnf")
+mesh = SubResource("BoxMesh_jqa5j")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=896820490]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1773421520]
+shape = SubResource("BoxShape3D_2afs0")

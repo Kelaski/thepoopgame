@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_35rqj"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.27058825, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_e4n33"]
+size = Vector3(0.5, 0.4, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fpkne"]
+size = Vector3(0.5, 0.4, 0.5)
+
+[node name="Hook" type="Node3D" unique_id=627466417]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1309771097]
+material_override = SubResource("StandardMaterial3D_35rqj")
+mesh = SubResource("BoxMesh_e4n33")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1638075661]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1385462695]
+shape = SubResource("BoxShape3D_fpkne")

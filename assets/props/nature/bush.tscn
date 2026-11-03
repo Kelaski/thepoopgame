@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uy0d3"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.30980393, 0.5411765, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_3wlfa"]
+radius = 1.0
+height = 1.7
+radial_segments = 10
+rings = 5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pgyei"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3529412, 0.6039216, 0.27058825, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_aq8g3"]
+radius = 0.7
+height = 1.19
+radial_segments = 10
+rings = 5
+
+[node name="Bush" type="Node3D" unique_id=1583959525]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1049584022]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+material_override = SubResource("StandardMaterial3D_uy0d3")
+mesh = SubResource("SphereMesh_3wlfa")
+metadata/slot = "leaf"
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=2078103020]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.6, 0.3)
+material_override = SubResource("StandardMaterial3D_pgyei")
+mesh = SubResource("SphereMesh_aq8g3")

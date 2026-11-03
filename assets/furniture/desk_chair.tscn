@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1nqrq"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5411765, 0.3529412, 0.23529412, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_yaueq"]
+size = Vector3(1.4, 0.74, 0.7)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o71u0"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7607843, 0.6039216, 0.41960785, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_xdpkx"]
+size = Vector3(1.45, 0.04, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uvjnf"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2901961, 0.3137255, 0.3372549, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_vjddg"]
+size = Vector3(0.5, 0.46, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_jsb3j"]
+size = Vector3(0.5, 0.6, 0.06)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_24cqb"]
+size = Vector3(1.4, 0.74, 0.7)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hnpe4"]
+size = Vector3(1.45, 0.04, 0.75)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_x7one"]
+size = Vector3(0.5, 0.46, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mmx32"]
+size = Vector3(0.5, 0.6, 0.06)
+
+[node name="DeskChair" type="Node3D" unique_id=1886197088]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=57289683]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.37, 0)
+material_override = SubResource("StandardMaterial3D_1nqrq")
+mesh = SubResource("BoxMesh_yaueq")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=1914993175]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+material_override = SubResource("StandardMaterial3D_o71u0")
+mesh = SubResource("BoxMesh_xdpkx")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=1755921099]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.23, 0.75)
+material_override = SubResource("StandardMaterial3D_uvjnf")
+mesh = SubResource("BoxMesh_vjddg")
+
+[node name="Part3" type="MeshInstance3D" parent="." unique_id=1541545977]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.98)
+material_override = SubResource("StandardMaterial3D_uvjnf")
+mesh = SubResource("BoxMesh_jsb3j")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1801343236]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1713950612]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.37, 0)
+shape = SubResource("BoxShape3D_24cqb")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=681771711]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("BoxShape3D_hnpe4")
+
+[node name="Shape2" type="CollisionShape3D" parent="Collision" unique_id=1596832362]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.23, 0.75)
+shape = SubResource("BoxShape3D_x7one")
+
+[node name="Shape3" type="CollisionShape3D" parent="Collision" unique_id=228932302]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.98)
+shape = SubResource("BoxShape3D_mmx32")

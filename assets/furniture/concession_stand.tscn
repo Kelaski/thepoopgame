@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o71u0"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7607843, 0.6039216, 0.41960785, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_hecfc"]
+size = Vector3(2.6, 1.1, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xd5a5"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9098039, 0.8235294, 0.41568628, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_nqwp0"]
+size = Vector3(0.6, 0.4, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_t65wv"]
+size = Vector3(2.6, 1.1, 0.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_q8nrc"]
+size = Vector3(0.6, 0.4, 0.5)
+
+[node name="ConcessionStand" type="Node3D" unique_id=1480710761]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=685819127]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+material_override = SubResource("StandardMaterial3D_o71u0")
+mesh = SubResource("BoxMesh_hecfc")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=330021741]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+material_override = SubResource("StandardMaterial3D_xd5a5")
+mesh = SubResource("BoxMesh_nqwp0")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=498992328]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=600409326]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+shape = SubResource("BoxShape3D_t65wv")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1292169670]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+shape = SubResource("BoxShape3D_q8nrc")

@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tt8y1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9254902, 0.9019608, 0.85490197, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_y5322"]
+size = Vector3(2.6, 0.9, 0.65)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hrx1t"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.54901963, 0.5803922, 0.6039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_0pifv"]
+size = Vector3(0.8, 1.9, 0.7)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1ryhb"]
+size = Vector3(2.6, 0.9, 0.65)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_b2m4q"]
+size = Vector3(0.8, 1.9, 0.7)
+
+[node name="Kitchen" type="Node3D" unique_id=526838193]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1084769168]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_tt8y1")
+mesh = SubResource("BoxMesh_y5322")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=2077990012]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0.95, 0)
+material_override = SubResource("StandardMaterial3D_hrx1t")
+mesh = SubResource("BoxMesh_0pifv")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1609326122]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1218186779]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("BoxShape3D_1ryhb")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1337515350]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0.95, 0)
+shape = SubResource("BoxShape3D_b2m4q")

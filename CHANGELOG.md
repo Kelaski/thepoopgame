@@ -7,6 +7,16 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.7.0
+
+Third step of moving the game's models into editable scenes.
+
+### Changed
+- **Map props and furniture:** all 82 are now template scenes you can edit in Godot, in `assets/props/` (vehicles, street furniture, trees, park, arena, water works, cranes) and `assets/furniture/`.
+- **How they load:** when a map loads, each scene is read once and batched into the map exactly as before, so performance doesn't change.
+- **Same map:** checked against the old code on all three sizes with four seeds each. Every mesh is identical, and the collision shapes match to within 1 cm.
+- **Random colours:** colour slots and random colour choices (car paint, awnings, arcade cabinets, books and so on) are set in the scenes as metadata.
+
 ## 0.6.0
 
 Second step of moving the game's models into editable scenes.

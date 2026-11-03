@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3bhmv"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6039216, 0.6392157, 0.65882355, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_xin6o"]
+size = Vector3(2.4, 0.4, 1.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_d8lqs"]
+size = Vector3(2.4, 0.4, 1.2)
+
+[node name="LoadMetal" type="Node3D" unique_id=449727975]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1288791479]
+material_override = SubResource("StandardMaterial3D_3bhmv")
+mesh = SubResource("BoxMesh_xin6o")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1180211474]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=375068807]
+shape = SubResource("BoxShape3D_d8lqs")

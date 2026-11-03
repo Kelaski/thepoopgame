@@ -1,0 +1,87 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0i01h"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.24705882, 0.43529412, 0.65882355, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_sook7"]
+size = Vector3(26, 0.5, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tt8y1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9254902, 0.9019608, 0.85490197, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_7paed"]
+size = Vector3(26, 1, 0.9)
+
+[sub_resource type="BoxMesh" id="BoxMesh_m756s"]
+size = Vector3(26, 1.5, 0.9)
+
+[sub_resource type="BoxMesh" id="BoxMesh_54kdq"]
+size = Vector3(26, 2, 0.9)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gkoom"]
+size = Vector3(26, 2.5, 0.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_x4rrk"]
+size = Vector3(26, 2.5, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_x50rb"]
+size = Vector3(26, 0.2, 5.147815)
+
+[node name="Bleachers" type="Node3D" unique_id=700327610]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1121978308]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 9.45)
+material_override = SubResource("StandardMaterial3D_0i01h")
+mesh = SubResource("BoxMesh_sook7")
+metadata/batch = "static"
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=1045726000]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 10.35)
+material_override = SubResource("StandardMaterial3D_tt8y1")
+mesh = SubResource("BoxMesh_7paed")
+metadata/batch = "static"
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=461138876]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 11.25)
+material_override = SubResource("StandardMaterial3D_0i01h")
+mesh = SubResource("BoxMesh_m756s")
+metadata/batch = "static"
+
+[node name="Part3" type="MeshInstance3D" parent="." unique_id=1721603665]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 12.15)
+material_override = SubResource("StandardMaterial3D_tt8y1")
+mesh = SubResource("BoxMesh_54kdq")
+metadata/batch = "static"
+
+[node name="Part4" type="MeshInstance3D" parent="." unique_id=1305450470]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 13.05)
+material_override = SubResource("StandardMaterial3D_0i01h")
+mesh = SubResource("BoxMesh_gkoom")
+metadata/batch = "static"
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=641113088]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=659807527]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 13.65)
+shape = SubResource("BoxShape3D_x4rrk")
+
+[node name="FloorCollision" type="StaticBody3D" parent="." unique_id=368435756]
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="FloorCollision" unique_id=381289272]
+transform = Transform3D(1, 0, 0, 0, 0.8741573, 0.4856429, 0, -0.4856429, 0.8741573, 0, 1.15, 11.25)
+shape = SubResource("BoxShape3D_x50rb")

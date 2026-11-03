@@ -1,0 +1,65 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_np3ji"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.22745098, 0.3529412, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1kk6p"]
+top_radius = 0.32
+bottom_radius = 0.32
+height = 1.0
+radial_segments = 10
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uvjnf"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2901961, 0.3137255, 0.3372549, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_uyuiy"]
+top_radius = 0.35
+bottom_radius = 0.35
+height = 0.06
+radial_segments = 10
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_ylsn8"]
+height = 1.0
+radius = 0.32
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_6g6v4"]
+height = 0.06
+radius = 0.35
+
+[node name="Bin" type="Node3D" unique_id=1641257256]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1104517147]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+material_override = SubResource("StandardMaterial3D_np3ji")
+mesh = SubResource("CylinderMesh_1kk6p")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=867584626]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.02, 0)
+material_override = SubResource("StandardMaterial3D_uvjnf")
+mesh = SubResource("CylinderMesh_uyuiy")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=2112493633]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1653320157]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("CylinderShape3D_ylsn8")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=724174136]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.02, 0)
+shape = SubResource("CylinderShape3D_6g6v4")

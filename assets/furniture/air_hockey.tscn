@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yui1c"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.18431373, 0.43529412, 0.65882355, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_445k4"]
+size = Vector3(1.2, 0.9, 2.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tt8y1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9254902, 0.9019608, 0.85490197, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_a6y6d"]
+size = Vector3(1.1, 0.02, 2.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_81ayn"]
+size = Vector3(1.2, 0.9, 2.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_uwkgk"]
+size = Vector3(1.1, 0.02, 2.1)
+
+[node name="AirHockey" type="Node3D" unique_id=336517601]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=863485324]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_yui1c")
+mesh = SubResource("BoxMesh_445k4")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=978304970]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0)
+material_override = SubResource("StandardMaterial3D_tt8y1")
+mesh = SubResource("BoxMesh_a6y6d")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1059169835]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=579621447]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("BoxShape3D_81ayn")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=337615047]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0)
+shape = SubResource("BoxShape3D_uwkgk")

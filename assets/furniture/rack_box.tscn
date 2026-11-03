@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bujwm"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7058824, 0.5411765, 0.3529412, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_u18ve"]
+size = Vector3(0.9, 1, 0.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gk3wd"]
+size = Vector3(0.9, 1, 0.9)
+
+[node name="RackBox" type="Node3D" unique_id=909754692]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1348162059]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+material_override = SubResource("StandardMaterial3D_bujwm")
+mesh = SubResource("BoxMesh_u18ve")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=910061403]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=2118856053]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("BoxShape3D_gk3wd")

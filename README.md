@@ -5,8 +5,8 @@ Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and 
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
 Models are being moved from code into Godot scenes you can open and edit in the editor:
-- **Done:** the player, the five weapons, doors, the Tag and the spray decal, in `assets/models/` (see **Editing models** below).
-- **Still built in code:** the map, its props and furniture, and the UI. They're moving over in the next updates.
+- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), and all 82 map props and furniture items (`assets/props/`, `assets/furniture/`). See **Editing models** and **Editing props** below.
+- **Still built in code:** building walls, floors and stairs, and the UI. They're moving over in the next updates. The ground, roads, road markings and boundary fence are generated from the layout and stay in code.
 - **Always in code:** sounds and music are synthesized.
 
 The only binary files are the easter egg's image and sound in `assets/` (see Easter egg below).
@@ -241,6 +241,38 @@ Open these in the Godot editor. Changes show up in game the next time a match lo
 - **Thrown gun:** the gun a killing bat swing launches is now the victim's actual weapon model.
 - **Effect materials:** bullet tracers and impacts use `assets/materials/fx_tracers.tres`, and the Stalker trails use `fx_trails.tres`.
 
+## Editing props
+
+Every prop and piece of furniture on the map is a template scene:
+- `assets/props/vehicles/`: car, taxi, van, bus.
+- `assets/props/street/`: lamp, trees, benches, bins, hydrant, mailbox, bus shelter, kiosk, dumpster.
+- `assets/props/nature/`: tree crown, trunk, bush.
+- `assets/props/park/`, `arena/`, `water/`: the basketball court, playground, bleachers, scoreboard, tanks and pumps.
+- `assets/props/crane/`: footing, mast, braces, the crane top, hook and loads, and `beam`, the stretched piece used for cables, jibs and bridge decks.
+- `assets/furniture/`: 40 items, from desks and beds to slot machines.
+
+Edit them in the Godot editor. The next match uses your changes.
+
+**How they're used:** the map places thousands of these, so they aren't added as nodes. When a map loads, each scene is read once and stamped into the same batched meshes and collision as before, so performance doesn't change (`scripts/map/prefabs.gd`). That puts some limits on what a template can contain:
+- **Meshes:** `BoxMesh`, `CylinderMesh` and `SphereMesh` parts. A part's colour is its material's albedo colour.
+- **Collision:** `CollisionShape3D` boxes and cylinders inside a `StaticBody3D`. The body's collision layer decides how a shape collides:
+  - `Collision` (layer 2): walls and furniture. Phantom can pass through, and the sniper can pierce one.
+  - `FloorCollision` (layer 1): floors.
+  - `SolidCollision` (layer 16): solid ground.
+  - A part with no shape is decoration you can walk through.
+- **Metadata** (shown in the Inspector under Metadata):
+  - `slot`: a colour filled in by the game, such as `body` on cars, `leaf` on tree crowns, `main` on sofas and tables, or `blanket` on beds. `slot_darken` / `slot_lighten` shade it.
+  - `slot_choices`: a list of colours. One is picked at random for each placement, as with kiosk awnings, arcade cabinets and books.
+  - `batch`: `static` or `detail`. Detail parts are hidden beyond 75 m, like the furniture.
+- **Placement:**
+  - Props are placed on the ground at their origin.
+  - Street props face their local +Z away from the road.
+  - Furniture is sometimes turned 90°.
+  - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
+- **Code-side randomness:** sizes such as crates, bushes and tree heights are still random in code.
+
+The parts are named `Part0`, `Part1` and so on, in build order. Rename them freely. Only the meshes, shapes, colours and metadata matter.
+
 ## Project layout
 
 ```
@@ -258,7 +290,8 @@ scripts/
   data/join_code.gd         # join codes <-> IP address and port
   map/map_data.gd           # classic layout transcribed from the sketch, map sizes
   map/city_gen.gd           # random city layouts (one per match, from a seed)
-  map/map_builder.gd        # procedural city, interiors, furniture, spawn points
+  map/map_builder.gd        # procedural city, interiors, where props and furniture go, spawn points
+  map/prefabs.gd            # reads prop / furniture scenes and batches them into the map
   world/world.gd            # environment, players, Tag, FX, trails, heartbeat, respawn search
   world/door.gd             # hinged doors
   world/mats.gd             # shared materials / team colours
@@ -266,6 +299,7 @@ scripts/
   player/weapon_model.gd    # weapon scene root: muzzle, glint point, first/third-person setup
 assets/models/              # player, weapon, door, Tag, spray decal, muzzle flash and glint scenes
 assets/materials/           # shared materials (.tres)
+assets/props/, assets/furniture/   # map prop and furniture template scenes
   ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
 ```
 

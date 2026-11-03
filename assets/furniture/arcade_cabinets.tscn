@@ -1,0 +1,87 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1jpa8"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3529412, 0.23921569, 0.5411765, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_0baar"]
+size = Vector3(0.75, 1.9, 0.75)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mtn40"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.43529412, 0.8392157, 1, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_xvhgu"]
+size = Vector3(0.55, 0.45, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_a2eb6"]
+size = Vector3(0.75, 1.9, 0.75)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0urfq"]
+size = Vector3(0.55, 0.45, 0.04)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_csnde"]
+size = Vector3(0.75, 1.9, 0.75)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tlsqb"]
+size = Vector3(0.55, 0.45, 0.04)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1jwrd"]
+size = Vector3(0.75, 1.9, 0.75)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_k5hu0"]
+size = Vector3(0.55, 0.45, 0.04)
+
+[node name="ArcadeCabinets" type="Node3D" unique_id=630639615]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=722836900]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.95, 0)
+material_override = SubResource("StandardMaterial3D_1jpa8")
+mesh = SubResource("BoxMesh_0baar")
+metadata/slot_choices = PackedColorArray(0.3529412, 0.23921569, 0.5411765, 1, 0.18431373, 0.43529412, 0.65882355, 1, 0.7529412, 0.27058825, 0.22745098, 1)
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=1291635895]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.35, -0.39)
+material_override = SubResource("StandardMaterial3D_mtn40")
+mesh = SubResource("BoxMesh_xvhgu")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=520314303]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.95, 0)
+material_override = SubResource("StandardMaterial3D_1jpa8")
+mesh = SubResource("BoxMesh_a2eb6")
+metadata/slot_choices = PackedColorArray(0.3529412, 0.23921569, 0.5411765, 1, 0.18431373, 0.43529412, 0.65882355, 1, 0.7529412, 0.27058825, 0.22745098, 1)
+
+[node name="Part3" type="MeshInstance3D" parent="." unique_id=455095253]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.35, -0.39)
+material_override = SubResource("StandardMaterial3D_mtn40")
+mesh = SubResource("BoxMesh_0urfq")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=622282136]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1054253323]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0.95, 0)
+shape = SubResource("BoxShape3D_csnde")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=925602414]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 1.35, -0.39)
+shape = SubResource("BoxShape3D_tlsqb")
+
+[node name="Shape2" type="CollisionShape3D" parent="Collision" unique_id=934516400]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0.95, 0)
+shape = SubResource("BoxShape3D_1jwrd")
+
+[node name="Shape3" type="CollisionShape3D" parent="Collision" unique_id=1470076634]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 1.35, -0.39)
+shape = SubResource("BoxShape3D_k5hu0")

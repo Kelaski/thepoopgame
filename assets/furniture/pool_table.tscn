@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4t2ra"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.35686275, 0.22745098, 0.16078432, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_2cyps"]
+size = Vector3(1.4, 0.9, 2.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_r5ppr"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.18431373, 0.47843137, 0.27058825, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_7cs86"]
+size = Vector3(1.25, 0.03, 2.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jtafy"]
+size = Vector3(1.4, 0.9, 2.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_lh2p5"]
+size = Vector3(1.25, 0.03, 2.3)
+
+[node name="PoolTable" type="Node3D" unique_id=2146716298]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=917822151]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+material_override = SubResource("StandardMaterial3D_4t2ra")
+mesh = SubResource("BoxMesh_2cyps")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=1421108935]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0)
+material_override = SubResource("StandardMaterial3D_r5ppr")
+mesh = SubResource("BoxMesh_7cs86")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1636052423]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=534912484]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+shape = SubResource("BoxShape3D_jtafy")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=349487356]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0)
+shape = SubResource("BoxShape3D_lh2p5")

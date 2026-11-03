@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tt8y1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9254902, 0.9019608, 0.85490197, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_nq2ud"]
+size = Vector3(2.4, 2.2, 1.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_35rqj"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.27058825, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_jdqgh"]
+size = Vector3(2.8, 0.12, 2.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gmitp"]
+size = Vector3(2.4, 2.2, 1.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_f8ihx"]
+size = Vector3(2.8, 0.12, 2.4)
+
+[node name="Kiosk" type="Node3D" unique_id=417113105]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=2080410884]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+material_override = SubResource("StandardMaterial3D_tt8y1")
+mesh = SubResource("BoxMesh_nq2ud")
+
+[node name="Part1" type="MeshInstance3D" parent="." unique_id=1002821990]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+material_override = SubResource("StandardMaterial3D_35rqj")
+mesh = SubResource("BoxMesh_jdqgh")
+metadata/slot_choices = PackedColorArray(0.7529412, 0.27058825, 0.22745098, 1, 0.24705882, 0.43529412, 0.65882355, 1, 0.2901961, 0.5411765, 0.3529412, 1)
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=666540450]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=790965380]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+shape = SubResource("BoxShape3D_gmitp")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=886664377]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+shape = SubResource("BoxShape3D_f8ihx")
