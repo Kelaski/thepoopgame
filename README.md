@@ -5,8 +5,8 @@ Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and 
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
 Models are being moved from code into Godot scenes you can open and edit in the editor:
-- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), and all 82 map props and furniture items (`assets/props/`, `assets/furniture/`). See **Editing models** and **Editing props** below.
-- **Still built in code:** building walls, floors and stairs, and the UI. They're moving over in the next updates. The ground, roads, road markings and boundary fence are generated from the layout and stay in code.
+- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), all 82 map props and furniture items (`assets/props/`, `assets/furniture/`), and the 16 modular building pieces (`assets/building/`). See **Editing models**, **Editing props** and **Editing buildings** below.
+- **Still built in code:** the UI, which is moving over in the next update. The ground, roads, road markings and boundary fence are generated from the layout and stay in code.
 - **Always in code:** sounds and music are synthesized.
 
 The only binary files are the easter egg's image and sound in `assets/` (see Easter egg below).
@@ -191,8 +191,12 @@ Teammates' names float above their heads in small text (`NAMEPLATE_SCALE` in `sc
 | 18 | Public Library (bookshelves, reading tables) | 2 |
 | 19 | Park (basketball court, pond, playground tower, trees) | outdoor |
 
-Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane ramp stairwell from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
-Exterior doors are on the ground floor, open windows of varied size and position are spread out on every floor (leaving long stretches of wall for wall running), and residential and school floors have corridors with rooms behind doors.
+Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
+Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**):
+- **Grid:** every building's footprint snaps to the grid around its centre, moving each wall by at most 0.5 m.
+- **Walls:** each storey's walls are a row of 2 m modules. A module is solid, has the building's window style (small, wide or tall), or is a door on the ground floor.
+- **Windows:** never at the ends of a wall or next to a door, and less likely right after another window, which leaves long solid stretches for wall running. Windows are open gaps you can shoot and jump through.
+- **Rooms:** residential and school floors have a corridor with 6 m rooms behind doors.
 **Streets** look like a busy city:
 - **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses), with about half the spots taken. Every vehicle, on the road or in a car park, is at least 1.4 m from every other one (front, back and side to side), so you can always slide between two cars. The two lanes are staggered rather than side by side.
 - **Junctions:** kept clear, with zebra crossings.
@@ -273,6 +277,26 @@ Edit them in the Godot editor. The next match uses your changes.
 
 The parts are named `Part0`, `Part1` and so on, in build order. Rename them freely. Only the meshes, shapes, colours and metadata matter.
 
+## Editing buildings
+
+Buildings are put together from the pieces in `assets/building/`. Each piece's colours come from the building's style through colour slots: `wall`, `trim`, or `color` for floors, stairs and interior walls.
+
+**Wall modules:** these are 2 m wide (local X, centred), 4 m tall from their base and 0.3 m thick.
+- `wall_solid`: a plain wall.
+- `wall_window_small`, `wall_window_wide`, `wall_window_tall`: the three window styles. Each building uses one of them.
+- `wall_door`: a 1.7 × 2.45 m gap that a door fills in game.
+- `wall_filler`: 1 m tall, stretched on top of the module for storeys taller than 4 m.
+- `corner_post`, `trim_band`, `parapet`: corners, the band along each storey, and the roof edge.
+
+**Floors and stairs:**
+- `floor_slab` and `floor_finish`: 1 × 1 m pieces, stretched to each floor slab and the ground-floor finish.
+- `stair_segment`: one step of the ramp, rising 0.5 m over 0.8 m. A storey is its height ÷ 0.5 segments.
+- `stair_divider` and `rail_section`: the wall between the two stair lanes and the railing round the stair hole.
+
+**Interior walls:** `wall_interior` (a 1 × 1 m piece, stretched) and `wall_interior_door` (the door jambs of a 2 m partition module).
+
+You can reshape the inside of a module freely: move the jambs, change the window shape, or add trim. Keep its outer size, because the pieces are placed edge to edge. The grid size, storey module height and stair step are constants at the top of `scripts/map/map_builder.gd` (`MODULE`, `MODULE_H`, `STAIR_RUN`, `STAIR_RISE`). Building pieces are always drawn, unlike furniture, which fades out beyond 75 m.
+
 ## Project layout
 
 ```
@@ -300,6 +324,7 @@ scripts/
 assets/models/              # player, weapon, door, Tag, spray decal, muzzle flash and glint scenes
 assets/materials/           # shared materials (.tres)
 assets/props/, assets/furniture/   # map prop and furniture template scenes
+assets/building/            # modular building pieces
   ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
 ```
 

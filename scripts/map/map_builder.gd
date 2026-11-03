@@ -26,6 +26,15 @@ const WALL_T := 0.3
 const SLAB_T := 0.3
 const DOOR_W := 1.7
 const DOOR_H := 2.45
+# Modular buildings (assets/building): walls are made of MODULE-wide pieces that
+# are MODULE_H tall, so building sides are a whole number of modules plus a
+# WALL_T corner at each end. Stairs are STAIR_RUN x STAIR_RISE segments.
+const MODULE := 2.0
+const MODULE_H := 4.0
+const STAIR_RUN := 0.8
+const STAIR_RISE := 0.5
+const ROOM_MODULES := 3  # interior rooms are 3 modules (6 m) wide
+const WINDOW_PIECES := ["building/wall_window_small", "building/wall_window_wide", "building/wall_window_tall"]
 const FURNITURE_VIS_RANGE := 75.0
 
 const STYLES := {
@@ -135,9 +144,12 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE, seed := 0) -> void:
 	_dumpsters = layout.dumpsters
 	for p in layout.parking:
 		_lots.append(MapData.px_rect([p.position.x, p.position.y, p.end.x, p.end.y]))
-	# Only buildings that fit entirely inside the fence are built.
+	# Only buildings that fit entirely inside the fence are built. Every building
+	# is snapped to the module grid first (see snap_rect_px).
 	var excluded: Array = []
-	for b in layout.buildings:
+	for src in layout.buildings:
+		var b: Array = src.duplicate()
+		b[3] = snap_rect_px(src[3])
 		var br := MapData.px_rect(b[3])
 		if bounds.encloses(br):
 			_active.append(b)
@@ -796,10 +808,35 @@ func _subtract(a: Rect2, h: Rect2) -> Array:
 	return out
 
 
-func _slab(r: Rect2, y_top: float, col: Color, layer: int) -> void:
-	box(Vector3(r.get_center().x, y_top - SLAB_T * 0.5, r.get_center().y), Vector3(r.size.x, SLAB_T, r.size.y), col, layer)
+## A slab piece (building/floor_slab, 1 x 1 m) stretched over r with its top at y.
+func _slab(r: Rect2, y_top: float, col: Color) -> void:
+	_prefab("building/floor_slab", _rect_xf(r, y_top), {"color": col})
 
 
+static func _rect_xf(r: Rect2, y: float) -> Transform3D:
+	return Transform3D(Basis.from_scale(Vector3(r.size.x, 1.0, r.size.y)), Vector3(r.get_center().x, y, r.get_center().y))
+
+
+## Number of MODULE-wide wall modules along one side of a building.
+static func _modules_along(length: float) -> int:
+	return maxi(1, roundi((length - WALL_T * 2.0) / MODULE))
+
+
+## Snaps a building rect (sketch pixels) to the module grid around its centre:
+## each side becomes n modules plus a corner post at each end (moves each wall by
+## at most half a module).
+static func snap_rect_px(r: Array) -> Array:
+	var c := Vector2((r[0] + r[2]) * 0.5, (r[1] + r[3]) * 0.5)
+	var s := Vector2(r[2] - r[0], r[3] - r[1]) * MapData.SCALE
+	var w := (maxi(3, roundi((s.x - WALL_T * 2.0) / MODULE)) * MODULE + WALL_T * 2.0) / MapData.SCALE
+	var h := (maxi(3, roundi((s.y - WALL_T * 2.0) / MODULE)) * MODULE + WALL_T * 2.0) / MapData.SCALE
+	return [c.x - w * 0.5, c.y - h * 0.5, c.x + w * 0.5, c.y + h * 0.5]
+
+
+## Buildings are assembled from the modular pieces in assets/building: wall
+## modules (solid, windows, door), fillers for tall storeys, corner posts, trim
+## bands, parapets, floor slabs, stair segments, dividers, rails and interior
+## walls. The building's style colours fill the pieces' colour slots.
 func _build_building(b: Array) -> void:
 	var bid: int = b[0]
 	var bname: String = b[1]
@@ -821,7 +858,7 @@ func _build_building(b: Array) -> void:
 	var umax := inner.size.x if _ax else inner.size.y
 	var vmax := inner.size.y if _ax else inner.size.x
 	_umax = umax
-	var run := fh * 1.6
+	var run := fh * 1.6  # = (fh / STAIR_RISE) segments of STAIR_RUN
 	var S := run + 2.4
 	# Stairwells: one at the start of the long axis, and a second one at the far
 	# end whenever the building is long enough.
@@ -842,37 +879,46 @@ func _build_building(b: Array) -> void:
 		if r.has_point(Vector2(o.pos.x, o.pos.z)):
 			obj_here.append(o.pos)
 
-	# --- Interior room layout (corridor + rooms) for residential/school buildings
+	# --- Interior room layout (corridor + rooms) for residential/school buildings:
+	# rooms of ROOM_MODULES modules (the last one takes any spare), door in the middle.
 	var room_floors := []
 	if type in ["motel", "school"]:
 		room_floors = range(floors)
 	elif type in ["apartments", "rundown", "rundown2"]:
 		room_floors = range(1, floors)
 	var can_rooms := vmax - 6.5 >= 4.5
-	var nrooms := maxi(1, int(umax / 6.0))
-	var rw := umax / nrooms
+	var nmod := roundi(umax / MODULE)
+	var nrooms := maxi(1, nmod / ROOM_MODULES)
+	var room_walls := []  # u of the walls between rooms
+	var room_doors := []  # module index of each room's door
+	for i in nrooms:
+		var m0 := i * ROOM_MODULES
+		var m1 := nmod if i == nrooms - 1 else m0 + ROOM_MODULES
+		room_doors.append((m0 + m1 - 1) / 2)
+		if i > 0:
+			room_walls.append(m0 * MODULE)
 	var rooms_on_ground := can_rooms and 0 in room_floors
 
-	# --- Exterior doors (ground floor)
-	var door_spots := []  # [side, t]
+	# --- Exterior doors (ground floor), each in a whole wall module
+	var door_spots := []  # [side, t, module]
 	for side in 4:
 		var horizontal := side < 2
-		var a0 := x0 if horizontal else z0 + WALL_T
-		var a1 := x1 if horizontal else z1 - WALL_T
-		var length := a1 - a0
-		if length < 5.0:
+		var a0 := (x0 if horizontal else z0) + WALL_T
+		var n := _modules_along((x1 - x0) if horizontal else (z1 - z0))
+		if n < 3:
 			continue
 		for frac: float in [0.5, 0.3, 0.7, 0.2, 0.8]:
-			var t: float = a0 + length * frac
+			var slot := clampi(int(frac * n), 1, n - 2)
+			var t: float = a0 + (slot + 0.5) * MODULE
 			var clear := _door_clear_rect(side, t, x0, z0, x1, z1)
-			if rooms_on_ground and _door_hits_rooms(side, t, x0, z0, x1, z1, nrooms, rw, umax):
+			if rooms_on_ground and _door_hits_rooms(side, t, x0, z0, x1, z1, room_walls, umax):
 				continue
 			if not _hits_any(clear, stairs, 0.4):
-				door_spots.append([side, t])
+				door_spots.append([side, t, slot])
 				break
 
-	# --- Floors / roof
-	box(Vector3(inner.get_center().x, 0.015, inner.get_center().y), Vector3(inner.size.x, 0.03, inner.size.y), st.floor, DECOR)
+	# --- Floors / roof (slabs around the stair holes)
+	_prefab("building/floor_finish", _rect_xf(inner, 0.0), {"color": st.floor})
 	for k in range(1, floors + 1):
 		var y := k * fh
 		var is_roof := k == floors
@@ -884,9 +930,9 @@ func _build_building(b: Array) -> void:
 				next.append_array(_subtract(pc, hole))
 			pieces = next
 		for piece: Rect2 in pieces:
-			_slab(piece, y, st.roof if is_roof else st.floor, L_FLOOR)
+			_slab(piece, y, st.roof if is_roof else st.floor)
 
-	# --- Stair ramps, lane divider and hole railing (for every stairwell)
+	# --- Stair segments, lane divider and hole railing (for every stairwell)
 	for fl: bool in flips:
 		_flip = fl
 		_build_stairwell(floors, fh, run, top, st)
@@ -916,32 +962,33 @@ func _build_building(b: Array) -> void:
 		room_forbid.append(_uv_rect(0, 4.5, umax, 6.5))
 		# partition line (v = 6.5) and cross walls
 		room_forbid.append(_uv_rect(0, 6.0, umax, 7.0))
-		for i in range(1, nrooms):
-			room_forbid.append(_uv_rect(i * rw - 0.5, 6.5, i * rw + 0.5, vmax))
-		for i in nrooms:
-			var dc := (i + 0.5) * rw
+		for cu: float in room_walls:
+			room_forbid.append(_uv_rect(cu - 0.5, 6.5, cu + 0.5, vmax))
+		for dm: int in room_doors:
+			var dc := (dm + 0.5) * MODULE
 			room_forbid.append(_uv_rect(dc - 1.3, 4.8, dc + 1.3, 8.2))
+		var partition := {"color": st.trim.lerp(WHITE, 0.6)}
+		var cross := {"color": st.wall.lerp(WHITE, 0.5)}
+		var u_yaw := 0.0 if _ax else -PI * 0.5   # walls running along u
+		var v_yaw := -PI * 0.5 if _ax else 0.0   # walls running along v
 		for k in room_floors:
 			var y0: float = k * fh
 			var h := fh - SLAB_T
-			var openings := []
-			for i in nrooms:
-				openings.append([(i + 0.5) * rw, DOOR_W - 0.1, 0.0, DOOR_H])
-			# Partition along u at v = 6.5
-			if _ax:
-				_wall_side(true, _o.y + 6.5, _o.x, _o.x + umax, y0, h, _shift(openings, _o.x), st.trim.lerp(WHITE, 0.6), 0.15)
-			else:
-				_wall_side(false, _o.x + 6.5, _o.y, _o.y + umax, y0, h, _shift(openings, _o.y), st.trim.lerp(WHITE, 0.6), 0.15)
-			for i in range(1, nrooms):
-				var cu := i * rw
-				if _ax:
-					_wall_side(false, _o.x + cu, _o.y + 6.5, _o.y + vmax, y0, h, [], st.wall.lerp(WHITE, 0.5), 0.15)
+			# Partition along u at v = 6.5: one module per MODULE, doors in the room middles.
+			for m in nmod:
+				var p := _uv((m + 0.5) * MODULE, 6.5)
+				var at := Vector3(p.x, y0, p.y)
+				if m in room_doors:
+					_prefab("building/wall_interior_door", _at(at, u_yaw), partition)
+					_prefab("building/wall_interior", _at(at + Vector3(0, DOOR_H, 0), u_yaw, Vector3(MODULE, h - DOOR_H, 1)), partition)
+					var along: float = (_o.x if _ax else _o.y) + (m + 0.5) * MODULE
+					_make_door(_ax, (_o.y if _ax else _o.x) + 6.5, along, y0, st.door, DOOR_W - 0.1)
 				else:
-					_wall_side(true, _o.y + cu, _o.x + 6.5, _o.x + vmax, y0, h, [], st.wall.lerp(WHITE, 0.5), 0.15)
-			for i in nrooms:
-				var dc: float = (i + 0.5) * rw
-				var along: float = (_o.x if _ax else _o.y) + dc
-				_make_door(_ax, (_o.y if _ax else _o.x) + 6.5, along, y0, st.door, DOOR_W - 0.1)
+					_prefab("building/wall_interior", _at(at, u_yaw, Vector3(MODULE, h, 1)), partition)
+			# Walls between rooms, from the partition to the outer wall.
+			for cu: float in room_walls:
+				var p := _uv(cu, (6.5 + vmax) * 0.5)
+				_prefab("building/wall_interior", _at(Vector3(p.x, y0, p.y), v_yaw, Vector3(vmax - 6.5, h, 1)), cross)
 
 	# --- Furnish every storey (and specials)
 	for k in floors:
@@ -976,117 +1023,96 @@ func _hits_any(r: Rect2, rects: Array, grow: float) -> bool:
 	return false
 
 
+## World direction of the stairwell's +u axis (u runs along the building's long
+## side; the second stairwell is mirrored).
+func _u_dir() -> Vector3:
+	var s := -1.0 if _flip else 1.0
+	return Vector3(s, 0, 0) if _ax else Vector3(0, 0, s)
+
+
+## Two-lane stairwell: each storey is fh / STAIR_RISE stair segments, alternating
+## lanes (lane A climbs towards +u, lane B back towards -u), with a divider between
+## the lanes and a rail along the open edge of the stair hole.
 func _build_stairwell(floors: int, fh: float, run: float, top: float, st: Dictionary) -> void:
-	var theta := atan2(fh, run)
-	var ramp_len := sqrt(run * run + fh * fh) + 0.2
-	var flip_sgn := -1.0 if _flip else 1.0
+	var steps := {"color": st.trim.lerp(st.floor, 0.5)}
+	var trim := {"color": st.trim}
+	var ud := _u_dir()
+	var u_yaw := _yaw_x(ud)
+	var segs := roundi(fh / STAIR_RISE)
+	var rails := roundi(run / STAIR_RUN)
 	for k in floors:
 		var h0 := k * fh
 		var lane_a := k % 2 == 0
 		var vc := 1.25 if lane_a else 3.75
-		var sgn := 1.0 if lane_a else -1.0
-		var um := 1.2 + run * 0.5
-		var hm := h0 + fh * 0.5
-		var cu := um + sgn * sin(theta) * SLAB_T * 0.5
-		var cy := hm - cos(theta) * SLAB_T * 0.5
-		var p := _uv(cu, vc)
-		var rot: Basis
-		var size: Vector3
-		if _ax:
-			rot = Basis(Vector3(0, 0, 1), sgn * flip_sgn * theta)
-			size = Vector3(ramp_len, SLAB_T, 2.45)
-		else:
-			rot = Basis(Vector3(1, 0, 0), -sgn * flip_sgn * theta)
-			size = Vector3(2.45, SLAB_T, ramp_len)
-		box(Vector3(p.x, cy, p.y), size, st.trim.lerp(st.floor, 0.5), L_FLOOR, false, rot)
+		for i in segs:
+			var u := 1.2 + STAIR_RUN * i if lane_a else 1.2 + run - STAIR_RUN * i
+			var p := _uv(u, vc)
+			_prefab("building/stair_segment", _at(Vector3(p.x, h0 + STAIR_RISE * i, p.y), _yaw_x(ud if lane_a else -ud)), steps)
 		# Divider between the two lanes for this storey
-		var dv := _uv_rect(1.2, 2.45, 1.2 + run, 2.55)
-		box(Vector3(dv.get_center().x, h0 + fh * 0.5, dv.get_center().y), Vector3(maxf(dv.size.x, 0.1), fh - SLAB_T, maxf(dv.size.y, 0.1)), st.trim, L_WALL)
+		var dp := _uv(1.2 + run * 0.5, 2.5)
+		_prefab("building/stair_divider", _at(Vector3(dp.x, h0, dp.y), u_yaw, Vector3(run, fh - SLAB_T, 1)), trim)
 		# Railing on the open edge of the hole (upper floors)
 		if k >= 1:
-			var rail := _uv_rect(1.2, 5.0, 1.2 + run, 5.12)
-			box(Vector3(rail.get_center().x, h0 + 0.55, rail.get_center().y), Vector3(maxf(rail.size.x, 0.12), 1.1, maxf(rail.size.y, 0.12)), st.trim, L_WALL)
-	# Roof railing around the stair hole
-	var roof_rail := _uv_rect(1.2, 5.0, 1.2 + run, 5.12)
-	box(Vector3(roof_rail.get_center().x, top + 0.55, roof_rail.get_center().y), Vector3(maxf(roof_rail.size.x, 0.12), 1.1, maxf(roof_rail.size.y, 0.12)), st.trim, L_WALL)
+			_stair_rail(h0, rails, u_yaw, trim)
+	_stair_rail(top, rails, u_yaw, trim)  # around the roof hole
 
 
-## Exterior walls with doors and irregular windows (about half as many as a
-## regular grid, with varied position and size) so there is plenty of solid
-## wall to run along.
+func _stair_rail(y: float, count: int, yaw: float, cols: Dictionary) -> void:
+	for j in count:
+		var p := _uv(1.2 + STAIR_RUN * (j + 0.5), 5.06)
+		_prefab("building/rail_section", _at(Vector3(p.x, y, p.y), yaw), cols)
+
+
+## Exterior walls: on every storey each MODULE slot of each side gets a wall
+## module: a door (ground floor), one of the building's window style, or solid.
+## Windows skip the end slots and the slots next to doors, and are rarer right
+## after another window, so there's plenty of solid wall to run along. Storeys
+## taller than MODULE_H get a filler on top; a trim band runs along each storey,
+## corner posts fill the corners and a parapet runs round the roof.
 func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: float, x1: float, z1: float, door_spots: Array, st: Dictionary) -> void:
 	var top := floors * fh
-	var win_every := 7.2
-	if type in ["warehouse", "water", "sports"]:
-		win_every = 12.0
-	for k in floors:
-		var y0 := k * fh
-		for side in 4:
-			var horizontal := side < 2
-			var fixed: float
-			if side == 0:
-				fixed = z0 + WALL_T * 0.5
-			elif side == 1:
-				fixed = z1 - WALL_T * 0.5
-			elif side == 2:
-				fixed = x0 + WALL_T * 0.5
-			else:
-				fixed = x1 - WALL_T * 0.5
-			var a0 := x0 if horizontal else z0 + WALL_T
-			var a1 := x1 if horizontal else z1 - WALL_T
-			var openings := []
-			var side_doors := []
-			if k == 0:
-				for ds in door_spots:
-					if ds[0] == side:
-						side_doors.append(ds[1])
-						openings.append([ds[1], DOOR_W, 0.0, DOOR_H])
-			# Windows
-			var win_bottom := 0.8
-			var win_top := fh - 0.55
-			if fh >= 6.0:
-				win_bottom = fh - 4.4
-				win_top = fh - 0.7
-			var length := a1 - a0
-			var n := maxi(1, int(length / win_every))
-			var slot := length / n
-			for i in n:
-				if rng.randf() < 0.2:
-					continue
-				var w := rng.randf_range(1.2, 2.2)
-				var t := a0 + (i + 0.5) * slot + rng.randf_range(-0.3, 0.3) * maxf(0.0, slot - w)
-				var bottom := win_bottom + rng.randf_range(-0.2, 0.5)
-				var top_w := maxf(bottom + 1.2, win_top - rng.randf_range(0.0, 0.6))
-				var ok := t - w * 0.5 - a0 > 0.8 and a1 - t - w * 0.5 > 0.8
-				for dt in side_doors:
-					if absf(t - dt) < w * 0.5 + 1.4:
-						ok = false
-				if ok:
-					openings.append([t, w, bottom, top_w])
-			_wall_side(horizontal, fixed, a0, a1, y0, fh, openings, st.wall)
-			# Trim band at each storey
-			var band_c := Vector3((a0 + a1) * 0.5, y0 + fh - 0.12, fixed) if horizontal else Vector3(fixed, y0 + fh - 0.12, (a0 + a1) * 0.5)
-			var band_out := -0.04 if (side == 0 or side == 2) else 0.04
-			if horizontal:
-				band_c.z += band_out
-				box(band_c, Vector3(length, 0.28, WALL_T + 0.04), st.trim, DECOR)
-			else:
-				band_c.x += band_out
-				box(band_c, Vector3(WALL_T + 0.04, 0.28, length), st.trim, DECOR)
-			if k == 0:
-				for dt in side_doors:
-					_make_door(horizontal, fixed, dt, 0.0, st.door)
-	# Roof parapet
+	var p_win := 0.2 if type in ["warehouse", "water", "sports"] else 0.35
+	var window: String = WINDOW_PIECES[rng.randi() % WINDOW_PIECES.size()]
+	var cols := {"wall": st.wall, "trim": st.trim}
 	for side in 4:
 		var horizontal := side < 2
 		var fixed: float = [z0 + WALL_T * 0.5, z1 - WALL_T * 0.5, x0 + WALL_T * 0.5, x1 - WALL_T * 0.5][side]
-		var a0 := x0 if horizontal else z0 + WALL_T
-		var a1 := x1 if horizontal else z1 - WALL_T
-		_wall_side(horizontal, fixed, a0, a1, top, 1.1, [], st.trim)
+		var a0 := (x0 if horizontal else z0) + WALL_T
+		var n := _modules_along((x1 - x0) if horizontal else (z1 - z0))
+		var yaw := 0.0 if horizontal else -PI * 0.5
+		var door_slots := []
+		for ds in door_spots:
+			if ds[0] == side:
+				door_slots.append(ds[2])
+		for k in floors:
+			var y0 := k * fh
+			var last_window := false
+			for i in n:
+				var t := a0 + (i + 0.5) * MODULE
+				var at := Vector3(t, y0, fixed) if horizontal else Vector3(fixed, y0, t)
+				var piece := "building/wall_solid"
+				var near_door := k == 0 and ((i - 1) in door_slots or (i + 1) in door_slots)
+				if k == 0 and i in door_slots:
+					piece = "building/wall_door"
+				elif i > 0 and i < n - 1 and not near_door and rng.randf() < p_win * (0.4 if last_window else 1.0):
+					piece = window
+				last_window = piece == window
+				_prefab(piece, _at(at, yaw), cols)
+				if fh > MODULE_H:
+					_prefab("building/wall_filler", _at(at + Vector3(0, MODULE_H, 0), yaw, Vector3(1, fh - MODULE_H, 1)), cols)
+				_prefab("building/trim_band", _at(at + Vector3(0, fh - 0.26, 0), yaw), cols)
+				if k == floors - 1:
+					_prefab("building/parapet", _at(Vector3(at.x, top, at.z), yaw), cols)
+		for slot: int in door_slots:
+			_make_door(horizontal, fixed, a0 + (slot + 0.5) * MODULE, 0.0, st.door)
+	for c: Vector2 in [Vector2(x0, z0), Vector2(x1, z0), Vector2(x0, z1), Vector2(x1, z1)]:
+		var cx := c.x + (WALL_T * 0.5 if c.x == x0 else -WALL_T * 0.5)
+		var cz := c.y + (WALL_T * 0.5 if c.y == z0 else -WALL_T * 0.5)
+		_prefab("building/corner_post", _at(Vector3(cx, 0, cz), 0.0, Vector3(1, top + 1.1, 1)), cols)
 
 
 ## True if an exterior door at (side, t) would be blocked by interior room walls.
-func _door_hits_rooms(side: int, t: float, x0: float, z0: float, x1: float, z1: float, nrooms: int, rw: float, umax: float) -> bool:
+func _door_hits_rooms(side: int, t: float, x0: float, z0: float, x1: float, z1: float, room_walls: Array, umax: float) -> bool:
 	var p: Vector2
 	if side < 2:
 		p = Vector2(t, z0 if side == 0 else z1)
@@ -1095,19 +1121,12 @@ func _door_hits_rooms(side: int, t: float, x0: float, z0: float, x1: float, z1: 
 	var u := (p.x - _o.x) if _ax else (p.y - _o.y)
 	var v := (p.y - _o.y) if _ax else (p.x - _o.x)
 	if v > 6.5:
-		for i in range(1, nrooms):
-			if absf(u - i * rw) < 1.4:
+		for cu: float in room_walls:
+			if absf(u - cu) < 1.4:
 				return true
 	if absf(v - 6.5) < 1.4 and (u < 0.5 or u > umax - 0.5):
 		return true
 	return false
-
-
-func _shift(openings: Array, off: float) -> Array:
-	var out := []
-	for o in openings:
-		out.append([o[0] + off, o[1], o[2], o[3]])
-	return out
 
 
 func _door_clear_rect(side: int, t: float, x0: float, z0: float, x1: float, z1: float) -> Rect2:
@@ -1120,37 +1139,6 @@ func _door_clear_rect(side: int, t: float, x0: float, z0: float, x1: float, z1: 
 			return Rect2(x0, t - 1.4, 2.8, 2.8)
 		_:
 			return Rect2(x1 - 2.8, t - 1.4, 2.8, 2.8)
-
-
-## One wall line with rectangular openings: [centre, width, bottom, top] (relative to y0).
-func _wall_side(horizontal: bool, fixed: float, a: float, bb: float, y0: float, h: float, openings: Array, col: Color, thick := WALL_T) -> void:
-	openings.sort_custom(func(p, q): return p[0] < q[0])
-	var cur := a
-	for o in openings:
-		var oa: float = maxf(o[0] - o[1] * 0.5, cur)
-		var ob: float = minf(o[0] + o[1] * 0.5, bb)
-		if ob <= oa:
-			continue
-		if oa > cur + 0.01:
-			_wall_piece(horizontal, fixed, cur, oa, y0, y0 + h, col, thick)
-		if o[2] > 0.01:
-			_wall_piece(horizontal, fixed, oa, ob, y0, y0 + o[2], col, thick)
-		if o[3] < h - 0.01:
-			_wall_piece(horizontal, fixed, oa, ob, y0 + o[3], y0 + h, col, thick)
-		cur = ob
-	if bb > cur + 0.01:
-		_wall_piece(horizontal, fixed, cur, bb, y0, y0 + h, col, thick)
-
-
-func _wall_piece(horizontal: bool, fixed: float, a: float, bb: float, ya: float, yb: float, col: Color, thick: float) -> void:
-	var length := bb - a
-	var hgt := yb - ya
-	if length < 0.02 or hgt < 0.02:
-		return
-	if horizontal:
-		box(Vector3((a + bb) * 0.5, (ya + yb) * 0.5, fixed), Vector3(length, hgt, thick), col, L_WALL)
-	else:
-		box(Vector3(fixed, (ya + yb) * 0.5, (a + bb) * 0.5), Vector3(thick, hgt, length), col, L_WALL)
 
 
 ## Doors are exactly the size of their opening (w must match the opening width),

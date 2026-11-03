@@ -7,6 +7,17 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.8.0
+
+Fourth step of moving the game's models into editable scenes: buildings.
+
+### Changed
+- **Modular buildings:** buildings are now assembled from 16 pieces in `assets/building/`: wall modules (solid, three window styles, door), fillers, corner posts, trim bands, parapets, floor slabs, stair segments, stair dividers, rails and interior walls. Edit a piece and every building uses it.
+- **2 m grid:** every building snaps to it around its centre, so walls move by at most 0.5 m.
+- **Windows:** each building has one window style (small, wide or tall) in whole 2 m slots, instead of random widths. They're still kept off wall ends and away from doors, with long solid stretches for wall running.
+- **Stairs:** ramps are made of 0.8 m × 0.5 m segments at the same slope as before. A player-sized test body climbed the first flight in every multi-storey building on three test maps (34 stairwells).
+- **Rooms:** apartment, motel, school and tenement rooms are now 6 m wide (three modules), with the door in the middle module.
+
 ## 0.7.0
 
 Third step of moving the game's models into editable scenes.

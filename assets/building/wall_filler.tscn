@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_onwj0"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7254902, 0.64705884, 0.5411765, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_o1tm6"]
+size = Vector3(2, 1, 0.3)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rn0bl"]
+size = Vector3(2, 1, 0.3)
+
+[node name="WallFiller" type="Node3D" unique_id=1739435151]
+
+[node name="Mesh0" type="MeshInstance3D" parent="." unique_id=1021889183]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+material_override = SubResource("StandardMaterial3D_onwj0")
+mesh = SubResource("BoxMesh_o1tm6")
+metadata/slot = "wall"
+metadata/batch = "static"
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1928640257]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=2116133991]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("BoxShape3D_rn0bl")
