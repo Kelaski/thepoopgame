@@ -31,15 +31,21 @@ const DATA := {
 	},
 	"bat": {
 		"name": "Spiked Bat",
-		"desc": "45 dmg per swing, 2.25 swings/s, 7m reach. 150 HP and +10% move speed while equipped. A killing swing launches the victim's gun (70 dmg).",
-		"dmg": 45.0, "rps": 2.25, "zoom": 1.0, "reach": 7.0,
+		"desc": "35 dmg per swing, x1.35 for every m/s you're moving above your sprint speed (slide or grapple into people). 2.25 swings/s, 7m reach. 150 HP and +10% move speed while equipped. A killing swing launches the victim's gun (70 dmg).",
+		"dmg": 35.0, "rps": 2.25, "zoom": 1.0, "reach": 7.0,
 		"mag": 0, "reload": 0.0, "hip": 0.0, "ads": 0.0, "range": 7.0, "kick": 0.0,
 	},
 }
 
 const MAX_DAMAGE := {
-	"ar": 45.0, "smg": 26.0, "shotgun": 195.0, "sniper": 150.0, "bat": 45.0, "thrown": 70.0,
+	"ar": 45.0, "smg": 26.0, "shotgun": 195.0, "sniper": 150.0, "bat": 300.0, "thrown": 70.0,
 }
+
+# Spiked Bat momentum damage: 35 at or below your sprint speed, multiplied by 1.35
+# for every m/s above it (compounding), capped at BAT_MAX_DAMAGE.
+const BAT_SPEED_FACTOR := 1.35
+const BAT_MAX_DAMAGE := 300.0
+const BAT_SPEED_SLACK := 2.5  # server: extra m/s allowed over the attacker's last known speed
 
 const THROWN_DAMAGE := 70.0
 const BAT_SPEED_MULT := 1.10
@@ -49,6 +55,11 @@ const DEFAULT_MAX_HP := 100.0
 
 static func max_hp(weapon_id: String) -> float:
 	return BAT_MAX_HP if weapon_id == "bat" else DEFAULT_MAX_HP
+
+
+static func bat_damage(speed: float, sprint_speed: float) -> float:
+	var over := maxf(0.0, speed - sprint_speed)
+	return minf(float(DATA.bat.dmg) * pow(BAT_SPEED_FACTOR, over), BAT_MAX_DAMAGE)
 
 
 static func display_name(id: String) -> String:

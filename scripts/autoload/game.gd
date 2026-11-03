@@ -440,6 +440,14 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 	if world.players.has(victim) and world.players[victim].is_protected():
 		return
 	damage = clampf(damage, 0.0, Weapons.MAX_DAMAGE.get(weapon, 50.0))
+	if weapon == "bat" and world.players.has(shooter):
+		# Momentum damage is checked against the attacker's last known speed (with
+		# some slack for latency). The lowest possible sprint speed is assumed, which
+		# only ever allows more damage, never less.
+		var sp: Player = world.players[shooter]
+		var v: Vector3 = sp.velocity if sp.is_local else sp.net_vel
+		var spd := Vector2(v.x, v.z).length() + Weapons.BAT_SPEED_SLACK
+		damage = minf(damage, Weapons.bat_damage(spd, Player.SPRINT * Weapons.BAT_SPEED_MULT))
 	hp[victim] = hp.get(victim, 100.0) - damage
 	_last_hit[victim] = _now
 	if hp[victim] <= 0.0:

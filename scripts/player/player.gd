@@ -1137,12 +1137,14 @@ func _try_fire() -> void:
 				_acc(hits, h.id, dmg, h.head)
 		"bat":
 			swing_t = 1.0
+			# Momentum damage: faster than your sprint speed hits harder.
+			var bat_dmg := Weapons.bat_damage(Vector2(velocity.x, velocity.z).length(), SPRINT * _speed_mult())
 			for off: Vector2 in [Vector2.ZERO, Vector2(0.06, 0.0), Vector2(-0.06, 0.0), Vector2(0.0, -0.08)]:
 				var dir := (-b.z + b.x * off.x + b.y * off.y).normalized()
 				var res := _hitscan(origin, dir, w.reach, 0, false)
 				if not res.hits.is_empty():
 					var h: Dictionary = res.hits[0]
-					_acc(hits, h.id, w.dmg, h.head)
+					_acc(hits, h.id, bat_dmg, h.head)
 					Sfx.play("bat_hit", -2.0)
 					break
 	for id in hits:

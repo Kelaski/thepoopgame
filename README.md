@@ -102,7 +102,7 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 | SMG | 19 / 26, 12 / 19 beyond 18 m | 13 rps | 1.2x holo | 40-round magazine |
 | Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1 rps | 1.15x irons | 12° cone, 6 shells |
 | Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready |
-| Spiked Bat | 45 per swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
+| Spiked Bat | 35 per swing, ×1.35 for every m/s you're moving above your own sprint speed (compounding: +1 m/s 47, +2 64, +3 86, +4 116, +5 157; capped at 300). Measured from your horizontal speed when you swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
 
 ### Addons
 
