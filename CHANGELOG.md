@@ -7,6 +7,12 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.12.1
+
+### Changed
+- **Teammate names:** six times bigger, so they're easy to read at a distance.
+- **Names fade at the crosshair:** a teammate's name fades almost completely while you aim near it (within about 10°), and comes back as you look away. It never covers a fight.
+
 ## 0.12.0
 
 ### Added

@@ -177,7 +177,7 @@ The minimap zooms to fit either way. Sizes are defined in `MapData.SIZES` (`scri
 The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.
 A fence with tall invisible collision surrounds it.
 Every object has collision (furniture, props, tree trunks, lamps, the crane parts and so on) except anything leafy. Tree crowns, potted plants and bushes are visual only: you can walk and shoot through them, but they block sight. Flat floor markings and the bleacher steps (a smooth ramp covers them) have no collision either.
-Teammates' names float above their heads in small text (`NAMEPLATE_SCALE` in `scripts/player/player.gd`).
+Teammates' names float above their heads (`NAMEPLATE_SCALE` in `scripts/player/player.gd`). A name fades out while you aim near it, so it never covers a fight (`NAMEPLATE_FADE_NEAR` / `NAMEPLATE_FADE_FAR`).
 
 | # | Building | Floors |
 |---|---|---|

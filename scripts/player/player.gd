@@ -64,7 +64,13 @@ const VM_ADS := Vector3(0.0, -0.135, -0.36)
 const VM_ADS_HOLO := Vector3(0.0, -0.118, -0.3)
 const VM_ADS_IRONS := Vector3(0.0, -0.08, -0.3)
 const GLINT_MIN_DOT := 0.6  # sniper glint shows when they aim within ~53 degrees of you
-const NAMEPLATE_SCALE := 0.15  # teammate name size vs the original (0.1 was too small; +50%)
+const NAMEPLATE_SCALE := 0.9  # teammate name size vs the original (0.15, then six times bigger)
+# Teammate names fade while you aim near them, so they never cover a fight:
+# fully faded within NAMEPLATE_FADE_NEAR degrees of the crosshair, back to full
+# beyond NAMEPLATE_FADE_FAR.
+const NAMEPLATE_FADE_NEAR := 10.0
+const NAMEPLATE_FADE_FAR := 18.0
+const NAMEPLATE_MIN_ALPHA := 0.12
 
 const WEAPON_SCENES := {
 	"ar": preload("res://assets/models/weapons/ar.tscn"),
@@ -251,6 +257,20 @@ func _apply_team_look() -> void:
 	nameplate.pixel_size = 0.0015 * NAMEPLATE_SCALE
 	nameplate.modulate = tc.lightened(0.55)
 	nameplate.text = Net.name_of(peer_id)
+
+
+
+## Fades this teammate's name out while it's near your crosshair.
+func _fade_nameplate(delta: float) -> void:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var to := nameplate.global_position - cam.global_position
+	var ang := rad_to_deg((-cam.global_basis.z).angle_to(to))
+	var k := clampf((ang - NAMEPLATE_FADE_NEAR) / (NAMEPLATE_FADE_FAR - NAMEPLATE_FADE_NEAR), 0.0, 1.0)
+	var target := lerpf(NAMEPLATE_MIN_ALPHA, 1.0, k)
+	nameplate.modulate.a = lerpf(nameplate.modulate.a, target, clampf(delta * 12.0, 0.0, 1.0))
+	nameplate.outline_modulate.a = 0.9 * nameplate.modulate.a
 
 
 func _build_viewmodel() -> void:
@@ -898,6 +918,7 @@ func _remote_update(delta: float) -> void:
 	nameplate.visible = alive and Game.in_match and Net.team_of(me) == team
 	if nameplate.visible:
 		nameplate.text = ("[TAG] " if Game.holder == peer_id else "") + Net.name_of(peer_id)
+		_fade_nameplate(delta)
 	if not alive:
 		body_root.visible = false
 		return
