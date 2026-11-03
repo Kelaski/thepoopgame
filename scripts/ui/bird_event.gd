@@ -1,17 +1,19 @@
 class_name BirdEvent
 extends CanvasLayer
 ## Rare easter egg: the sweaty guy pops up on screen for 2 seconds with birds chirping.
-## While in a match there is a 1% chance every ROLL_INTERVAL seconds, and Ctrl+F4
-## triggers it at any time. Local only (other players don't see it).
+## Every time you spawn in or respawn there is a 1% chance; Ctrl+F4 triggers it at
+## any time. Local only (other players don't see it).
 
 const IMAGE_PATH := "res://assets/sweaty_guy.png"
+const SOUND_PATH := "res://assets/birds_chirping.ogg"
 const SHOW_TIME := 2.0
 const CHANCE := 0.01
-const ROLL_INTERVAL := 30.0
+
+static var instance: BirdEvent
 
 var _rect: TextureRect
+var _audio: AudioStreamPlayer
 var _left := 0.0
-var _roll_acc := 0.0
 
 
 func _ready() -> void:
@@ -25,6 +27,30 @@ func _ready() -> void:
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_rect.visible = false
 	add_child(_rect)
+	_audio = AudioStreamPlayer.new()
+	_audio.bus = "UI"
+	_audio.stream = _load_sound()
+	add_child(_audio)
+	instance = self
+
+
+func _exit_tree() -> void:
+	if instance == self:
+		instance = null
+
+
+## Called whenever the local player spawns or respawns.
+static func roll() -> void:
+	if instance and randf() < CHANCE:
+		instance.trigger()
+
+
+func _load_sound() -> AudioStream:
+	if ResourceLoader.exists(SOUND_PATH):
+		var s = load(SOUND_PATH)
+		if s is AudioStream:
+			return s
+	return AudioStreamOggVorbis.load_from_file(ProjectSettings.globalize_path(SOUND_PATH))
 
 
 func _load_texture() -> Texture2D:
@@ -43,7 +69,8 @@ func _load_texture() -> Texture2D:
 func trigger() -> void:
 	_left = SHOW_TIME
 	_rect.visible = true
-	Sfx.play("birds", 0.0, 1.0, "UI")
+	if _audio.stream:
+		_audio.play()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -57,9 +84,4 @@ func _process(delta: float) -> void:
 		_left -= delta
 		if _left <= 0.0:
 			_rect.visible = false
-	if Game.in_match:
-		_roll_acc += delta
-		if _roll_acc >= ROLL_INTERVAL:
-			_roll_acc = 0.0
-			if randf() < CHANCE:
-				trigger()
+			_audio.stop()

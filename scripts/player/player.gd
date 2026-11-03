@@ -473,6 +473,8 @@ func respawn(pos: Vector3, protect: bool) -> void:
 		pitch = 0.0
 		rotation.y = yaw
 	set_alive(true)
+	if is_local:
+		BirdEvent.roll()  # 1% chance on every spawn / respawn
 
 
 func on_damaged(_head_hit: bool) -> void:
