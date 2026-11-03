@@ -1,11 +1,10 @@
 class_name MainMenu
 extends Control
+## Title screen: Host Game, Play Game, Settings, Customization, Quit.
+## Your player name is set in Customization; joining by code is under Play Game.
 
 var main
 var message := ""
-var _name: LineEdit
-var _ip: LineEdit
-var _port: LineEdit
 
 
 func _ready() -> void:
@@ -21,84 +20,28 @@ func _ready() -> void:
 	stripe.offset_bottom = -420
 	add_child(stripe)
 
-	var v := UiKit.centered_panel(self, Vector2(520, 0))
-	var title := UiKit.label("TAG RUSH", 64, UiKit.ACCENT, HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(title)
+	var v := UiKit.centered_panel(self, Vector2(420, 0))
+	v.add_child(UiKit.label("TAG RUSH", 64, UiKit.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
 	v.add_child(UiKit.label("Grab the Tag. Protect your Runner. First to 4 rounds.", 18, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 	v.add_child(HSeparator.new())
-
-	v.add_child(UiKit.label("Player name"))
-	_name = LineEdit.new()
-	_name.text = str(Settings.g("player_name"))
-	_name.max_length = 20
-	_name.text_changed.connect(func(t: String): Settings.s("player_name", t))
-	v.add_child(_name)
-
-	var row := UiKit.hbox(8)
-	var ipcol := UiKit.vbox(4)
-	ipcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ipcol.add_child(UiKit.label("Host IP address"))
-	_ip = LineEdit.new()
-	_ip.text = str(Settings.g("last_ip"))
-	_ip.placeholder_text = "e.g. 192.168.1.20"
-	ipcol.add_child(_ip)
-	row.add_child(ipcol)
-	var portcol := UiKit.vbox(4)
-	portcol.add_child(UiKit.label("Port"))
-	_port = LineEdit.new()
-	_port.text = str(Settings.g("port"))
-	_port.custom_minimum_size.x = 110
-	portcol.add_child(_port)
-	row.add_child(portcol)
-	v.add_child(row)
-
-	var size_names := []
-	for sz in MapData.SIZE_ORDER:
-		size_names.append(MapData.size_name(sz))
-	var cur_size := MapData.SIZE_ORDER.find(str(Settings.g("map_size")))
-	v.add_child(UiKit.option_row("Map size when hosting", size_names, cur_size if cur_size >= 0 else MapData.SIZE_ORDER.size() - 1, func(i): Settings.s("map_size", MapData.SIZE_ORDER[i])))
-	var btns := UiKit.hbox(10)
-	var host := UiKit.button("Host Game", _on_host, 200)
-	host.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var join := UiKit.button("Join Game", _on_join, 200)
-	join.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	btns.add_child(host)
-	btns.add_child(join)
-	v.add_child(btns)
-	var b2 := UiKit.hbox(10)
-	var quit := UiKit.button("Quit", func(): get_tree().quit(), 200)
-	quit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b2.add_child(quit)
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	for item in [["Music & Playlist", "open_music"], ["Customize Colours", "open_colors"], ["Crosshair Editor", "open_crosshair"], ["Spray", "open_spray"], ["Skybox", "open_skybox"], ["Settings", "open_settings"]]:
-		var b := UiKit.button(item[0], Callable(main, item[1]).bind(false), 200)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		grid.add_child(b)
-	v.add_child(grid)
-	v.add_child(b2)
-
+	v.add_child(UiKit.button("Host Game", func(): main.host_game()))
+	v.add_child(UiKit.button("Play Game", func(): main.show_join_menu()))
+	v.add_child(UiKit.button("Settings", func(): main.open_settings(false)))
+	v.add_child(UiKit.button("Customization", func(): main.open_customize(false)))
+	v.add_child(UiKit.button("Quit", func(): get_tree().quit()))
 	if message != "":
-		v.add_child(UiKit.label(message, 18, Color("ff7a6a"), HORIZONTAL_ALIGNMENT_CENTER))
-	var help := UiKit.label("Hosting: share your LAN IP (shown in the lobby). Over the internet, forward UDP port %s." % _port.text, 14, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	help.custom_minimum_size.x = 480
-	v.add_child(help)
+		var m := UiKit.label(message, 18, Color("ff7a6a"), HORIZONTAL_ALIGNMENT_CENTER)
+		m.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		m.custom_minimum_size.x = 380
+		v.add_child(m)
 
-
-func _port_value() -> int:
-	var p := int(_port.text)
-	return p if p > 0 and p < 65536 else Net.DEFAULT_PORT
-
-
-func _on_host() -> void:
-	main.host_game(_port_value())
-
-
-func _on_join() -> void:
-	var ip := _ip.text.strip_edges()
-	if ip == "":
-		ip = "127.0.0.1"
-	main.join_game(ip, _port_value())
+	var ver := UiKit.label("v" + GameVersion.CURRENT, 14, UiKit.MUTED)
+	ver.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ver)
+	ver.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	ver.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	ver.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	ver.offset_left = -12
+	ver.offset_right = -12
+	ver.offset_top = -8
+	ver.offset_bottom = -8

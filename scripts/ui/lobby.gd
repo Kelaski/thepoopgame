@@ -6,6 +6,8 @@ var _teams: Array = []
 var _start: Button
 var _status: Label
 var _map_label: Label
+var _codes: Label
+var _port_status: Label
 
 
 func _ready() -> void:
@@ -17,11 +19,18 @@ func _ready() -> void:
 	var v := UiKit.centered_panel(self, Vector2(820, 0))
 	v.add_child(UiKit.label("LOBBY", 40, UiKit.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
 	if multiplayer.is_server():
-		var ips: Array = Net.local_ips()
-		var txt := "Hosting on port %d. Friends join with: %s" % [int(Settings.g("port")), ", ".join(PackedStringArray(ips)) if not ips.is_empty() else "your IP address"]
-		var l := UiKit.label(txt, 16, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		v.add_child(l)
+		var code_row := UiKit.hbox(12)
+		code_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		_codes = UiKit.label("", 24, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		code_row.add_child(_codes)
+		code_row.add_child(UiKit.button("Copy Code", _copy_code, 140))
+		v.add_child(code_row)
+		_port_status = UiKit.label("", 15, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+		_port_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_port_status.custom_minimum_size.x = 760
+		v.add_child(_port_status)
+		Net.codes_changed.connect(_update_codes)
+		_update_codes()
 	else:
 		v.add_child(UiKit.label("Connected. Waiting for the host to start the match.", 16, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
 
@@ -80,6 +89,25 @@ const MAP_INFO := {
 	"medium": "Medium: School, Bank, Diner, Arcade, Meridian Tower, Casino and the park (about 130 x 135 m).",
 	"large": "Large: the whole city - 18 buildings and the park (200 x 170 m).",
 }
+
+
+## Online code for friends anywhere; LAN code for the same network (joining your
+## own public address from inside your network often doesn't work).
+func _update_codes() -> void:
+	var parts := []
+	if Net.online_code != "":
+		parts.append("Join code:  %s" % Net.online_code)
+	if Net.lan_code != "":
+		parts.append("LAN code:  %s" % Net.lan_code)
+	_codes.text = "      ".join(PackedStringArray(parts)) if not parts.is_empty() else "No network found"
+	_port_status.text = Net.port_status
+
+
+func _copy_code() -> void:
+	var code := Net.online_code if Net.online_code != "" else Net.lan_code
+	if code != "":
+		DisplayServer.clipboard_set(code)
+		_port_status.text = "Copied %s. %s" % [code, Net.port_status]
 
 
 func _on_map_size_changed(_size: String) -> void:

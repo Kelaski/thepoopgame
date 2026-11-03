@@ -26,14 +26,12 @@ const ACTIONS := [
 	["scoreboard", "Scoreboard", "k", KEY_TAB],
 	["loadout", "Loadout Menu (while dead)", "k", KEY_B],
 	["spray", "Spray", "k", KEY_T],
-	["chat", "Chat (all)", "k", KEY_ENTER],
-	["team_chat", "Chat (team)", "k", KEY_Y],
+	["chat", "Chat (hold Shift for team chat)", "k", KEY_ENTER],
 ]
 
 const DEFAULTS := {
 	"player_name": "Player",
-	"last_ip": "127.0.0.1",
-	"port": 7777,
+	"last_code": "",  # last join code you used
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
 	"addon": "trackstar",

@@ -17,6 +17,7 @@ const L_PLAYER := 4
 const L_DOOR := 8
 const L_SOLID := 16  # ground and boundary fence (never passable)
 const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
+const DECOR := 0     # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them), bushes
 
 const WALL_T := 0.3
 const SLAB_T := 0.3
@@ -264,14 +265,14 @@ func _cyl_shape(r: float, h: float) -> CylinderShape3D:
 	return c
 
 
-## Axis-aligned (or rotated) box. layer 0 = visual only.
+## Axis-aligned (or rotated) box. layer DECOR = visual only.
 func box(c: Vector3, s: Vector3, col: Color, layer := L_WALL, detail := false, rot := Basis.IDENTITY) -> void:
 	var vis := Transform3D(rot * Basis.from_scale(s), c)
 	if detail:
 		_fboxes.append([vis, col])
 	else:
 		_boxes.append([vis, col])
-	if layer != 0:
+	if layer != DECOR:
 		_add_shape(layer, _box_shape(s), Transform3D(rot, c))
 
 
@@ -281,12 +282,21 @@ func cyl(c: Vector3, r: float, h: float, col: Color, layer := L_WALL, detail := 
 		_fcyls.append([vis, col])
 	else:
 		_cyls.append([vis, col])
-	if layer != 0:
+	if layer != DECOR:
 		_add_shape(layer, _cyl_shape(r, h), Transform3D(Basis.IDENTITY, c))
 
 
-func sphere(c: Vector3, r: float, col: Color) -> void:
+## Squashed sphere (tree crowns, plants, bushes). Collides as a sphere that fits
+## inside it; bushes pass DECOR so you can walk through them.
+func sphere(c: Vector3, r: float, col: Color, layer := L_WALL) -> void:
 	_spheres.append([Transform3D(Basis.from_scale(Vector3(r, r * 0.85, r) * 2.0), c), col])
+	if layer != DECOR:
+		var key := "s%d" % roundi(r * 85.0)
+		if not _shape_cache.has(key):
+			var sh := SphereShape3D.new()
+			sh.radius = r * 0.85
+			_shape_cache[key] = sh
+		_add_shape(layer, _shape_cache[key], Transform3D(Basis.IDENTITY, c))
 
 
 func _label(text: String, pos: Vector3, yaw: float, size := 96, col := Color.WHITE) -> void:
@@ -320,19 +330,19 @@ func _build_ground() -> void:
 	# Playable ground (concrete / sidewalk)
 	box(Vector3(bc.x, -0.5, bc.y), Vector3(bounds.size.x + 4.0, 1.0, bounds.size.y + 4.0), CONCRETE, L_SOLID)
 	# Scenery ground outside the fence
-	box(Vector3(0, -0.53, 0), Vector3(700, 1.0, 700), Color("7f9a5a"), 0)
+	box(Vector3(0, -0.53, 0), Vector3(700, 1.0, 700), Color("7f9a5a"), DECOR)
 	# Roads with dashed centre lines
 	for r: Rect2 in road_rects:
-		box(Vector3(r.get_center().x, 0.012, r.get_center().y), Vector3(r.size.x, 0.024, r.size.y), ASPHALT, 0)
+		box(Vector3(r.get_center().x, 0.012, r.get_center().y), Vector3(r.size.x, 0.024, r.size.y), ASPHALT, DECOR)
 		var horizontal := r.size.x > r.size.y
 		var length := r.size.x if horizontal else r.size.y
 		var n := int(length / 6.0)
 		for i in n:
 			var t := (i + 0.5) * length / n
 			if horizontal:
-				box(Vector3(r.position.x + t, 0.03, r.get_center().y), Vector3(2.2, 0.02, 0.18), Color("e8c84a"), 0)
+				box(Vector3(r.position.x + t, 0.03, r.get_center().y), Vector3(2.2, 0.02, 0.18), Color("e8c84a"), DECOR)
 			else:
-				box(Vector3(r.get_center().x, 0.03, r.position.y + t), Vector3(0.18, 0.02, 2.2), Color("e8c84a"), 0)
+				box(Vector3(r.get_center().x, 0.03, r.position.y + t), Vector3(0.18, 0.02, 2.2), Color("e8c84a"), DECOR)
 	# Boundary fence: visual chain-link panels + tall invisible collision walls.
 	var fence_col := Color("55625a")
 	var post_col := Color("8c949a")
@@ -347,13 +357,13 @@ func _build_ground() -> void:
 		for i in n + 1:
 			var t := mid - length / 2.0 + i * length / n
 			var pc := Vector3(t, 1.75, fixed) if horizontal else Vector3(fixed, 1.75, t)
-			box(pc, Vector3(0.15, 3.5, 0.15), post_col, 0)
+			box(pc, Vector3(0.15, 3.5, 0.15), post_col, L_WALL)
 		var center := Vector3(mid, 1.6, fixed) if horizontal else Vector3(fixed, 1.6, mid)
 		var size := Vector3(length, 3.0, 0.06) if horizontal else Vector3(0.06, 3.0, length)
-		box(center, size, fence_col, 0)
+		box(center, size, fence_col, L_WALL)
 		var top := Vector3(mid, 3.45, fixed) if horizontal else Vector3(fixed, 3.45, mid)
 		var top_size := Vector3(length, 0.1, 0.12) if horizontal else Vector3(0.12, 0.1, length)
-		box(top, top_size, post_col, 0)
+		box(top, top_size, post_col, L_WALL)
 		var wall_c := Vector3(mid, 40, fixed + outward * 0.6) if horizontal else Vector3(fixed + outward * 0.6, 40, mid)
 		var wall_s := Vector3(length + 4.0, 80, 1.0) if horizontal else Vector3(1.0, 80, length + 4.0)
 		_add_shape(L_SOLID, _box_shape(wall_s), Transform3D(Basis.IDENTITY, wall_c))
@@ -402,7 +412,7 @@ func _build_street_props() -> void:
 				c2 = Vector2((r.end.x + 0.6) if far_side else (r.position.x - 0.6), r.position.y + t)
 			if not _in_building(c2, 0.5) and bounds.grow(-1.0).has_point(c2):
 				cyl(Vector3(c2.x, 2.75, c2.y), 0.14, 5.5, DARKMETAL, L_WALL)
-				box(Vector3(c2.x, 5.5, c2.y), Vector3(0.6, 0.18, 0.6), Color("fff2b0"), 0)
+				box(Vector3(c2.x, 5.5, c2.y), Vector3(0.6, 0.18, 0.6), Color("fff2b0"), L_WALL)
 			t += 12.0
 	# Dumpsters in alleys near the tenements and warehouse
 	for p in [[1480, 1560], [1820, 1580], [480, 120], [1300, 900], [420, 860], [1030, 1380]]:
@@ -451,24 +461,24 @@ func _scatter_clutter() -> void:
 				_p(c, rot, 0, 0.45, 0, 2.2, 0.9, 0.6, Color("c9c4b6"))
 			elif roll < 0.18:
 				for i in 3:
-					cyl(c + Vector3(i * 0.7 - 0.7, 0.35, 0), 0.18, 0.7, Color("e06a2a"), 0, false)
+					cyl(c + Vector3(i * 0.7 - 0.7, 0.35, 0), 0.18, 0.7, Color("e06a2a"), L_WALL, false)
 			else:
 				continue
 		elif roll < 0.18:
 			_bush(c)
 		elif roll < 0.30:
 			cyl(c + Vector3(0, 0.5, 0), 0.35, 1.0, Color("3a5a3a"), L_WALL, false)
-			cyl(c + Vector3(0, 1.02, 0), 0.38, 0.06, DARKMETAL, 0, false)
+			cyl(c + Vector3(0, 1.02, 0), 0.38, 0.06, DARKMETAL, L_WALL, false)
 		elif roll < 0.42:
 			_p(c, rot, 0, 0.85, 0, 3.2, 1.7, 0.9, Color("4f7a3a"))
 		elif roll < 0.52:
 			_p(c, rot, 0, 0.4, 0, 1.4, 0.8, 1.4, Color("8a8478"))
 			sphere(c + Vector3(0, 1.6, 0), 1.1, Color("5a9a45"))
-			cyl(c + Vector3(0, 1.0, 0), 0.1, 0.8, Color("6b4a32"), 0, false)
+			cyl(c + Vector3(0, 1.0, 0), 0.1, 0.8, Color("6b4a32"), L_WALL, false)
 		elif roll < 0.62:
 			_p(c, rot, 0, 0.37, 0, 1.6, 0.74, 0.8, Color("6a7a8a"))
-			_p(c, rot, 0, 0.23, 0.8, 0.45, 0.46, 0.45, DARKMETAL, 0)
-			_p(c, rot, 0, 0.23, -0.8, 0.45, 0.46, 0.45, DARKMETAL, 0)
+			_p(c, rot, 0, 0.23, 0.8, 0.45, 0.46, 0.45, DARKMETAL, L_WALL)
+			_p(c, rot, 0, 0.23, -0.8, 0.45, 0.46, 0.45, DARKMETAL, L_WALL)
 		elif roll < 0.70:
 			_p(c, rot, 0, 0.55, 0, 0.5, 1.1, 0.45, [Color("3f6fa8"), Color("c0453a"), Color("e0b13c")][rng.randi() % 3])
 		elif roll < 0.80:
@@ -477,12 +487,12 @@ func _scatter_clutter() -> void:
 			_p(c, rot, 0, 0.45, 0, 2.2, 0.9, 0.6, Color("c9c4b6"))
 		elif roll < 0.93:
 			_p(c, rot, 0, 1.25, -0.6, 3.2, 2.5, 0.06, Color("bfe3ef"))
-			_p(c, rot, 0, 2.55, 0, 3.4, 0.1, 1.5, DARKMETAL, 0)
+			_p(c, rot, 0, 2.55, 0, 3.4, 0.1, 1.5, DARKMETAL, L_WALL)
 			_p(c, rot, 0, 0.25, -0.3, 2.6, 0.5, 0.45, WOOD)
 		else:
 			_p(c, rot, 0, 0.45, 0, 1.6, 0.9, 1.0, WOOD)
-			_p(c, rot, 0, 2.3, 0, 2.4, 0.08, 2.4, [Color("c0453a"), Color("e0b13c"), Color("4f7fae")][rng.randi() % 3], 0)
-			cyl(c + Vector3(0, 1.35, 0), 0.05, 1.9, METAL, 0, false)
+			_p(c, rot, 0, 2.3, 0, 2.4, 0.08, 2.4, [Color("c0453a"), Color("e0b13c"), Color("4f7fae")][rng.randi() % 3], L_WALL)
+			cyl(c + Vector3(0, 1.35, 0), 0.05, 1.9, METAL, L_WALL, false)
 		placed.append(p)
 	_detail = true
 
@@ -490,8 +500,8 @@ func _scatter_clutter() -> void:
 ## Leafy bush: blocks sight but not bullets.
 func _bush(c: Vector3) -> void:
 	var r := rng.randf_range(0.9, 1.3)
-	sphere(c + Vector3(0, r * 0.75, 0), r, Color("4f8a3a").lerp(Color("6aa84f"), rng.randf()))
-	sphere(c + Vector3(r * 0.6, r * 0.6, r * 0.3), r * 0.7, Color("5a9a45"))
+	sphere(c + Vector3(0, r * 0.75, 0), r, Color("4f8a3a").lerp(Color("6aa84f"), rng.randf()), DECOR)
+	sphere(c + Vector3(r * 0.6, r * 0.6, r * 0.3), r * 0.7, Color("5a9a45"), DECOR)
 
 
 func _van(c: Vector3, along_x: bool, col: Color) -> void:
@@ -501,11 +511,11 @@ func _van(c: Vector3, along_x: bool, col: Color) -> void:
 	box(c + Vector3(0, 1.45, 0), size, col.lightened(0.15), L_WALL)
 	var off := Vector3(L * 0.38, 1.6, 0) if along_x else Vector3(0, 1.6, L * 0.38)
 	var win := Vector3(0.6, 0.5, W * 1.01) if along_x else Vector3(W * 1.01, 0.5, 0.6)
-	box(c + off, win, Color("9ec4d6"), 0)
+	box(c + off, win, Color("9ec4d6"), L_WALL)
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
 			var w_off := Vector3(sx * L * 0.32, 0.35, sz * W * 0.5) if along_x else Vector3(sz * W * 0.5, 0.35, sx * L * 0.32)
-			box(c + w_off, Vector3(0.7, 0.7, 0.25) if along_x else Vector3(0.25, 0.7, 0.7), BLACK, 0)
+			box(c + w_off, Vector3(0.7, 0.7, 0.25) if along_x else Vector3(0.25, 0.7, 0.7), BLACK, L_WALL)
 
 
 func _car(c: Vector3, along_x: bool, col: Color) -> void:
@@ -518,7 +528,7 @@ func _car(c: Vector3, along_x: bool, col: Color) -> void:
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
 			var off := Vector3(sx * L * 0.32, 0.35, sz * W * 0.5) if along_x else Vector3(sz * W * 0.5, 0.35, sx * L * 0.32)
-			box(c + off, Vector3(0.7, 0.7, 0.25) if along_x else Vector3(0.25, 0.7, 0.7), BLACK, 0)
+			box(c + off, Vector3(0.7, 0.7, 0.25) if along_x else Vector3(0.25, 0.7, 0.7), BLACK, L_WALL)
 
 
 ## True if p is inside (or within margin of) a building that exists on this map size.
@@ -639,7 +649,7 @@ func _build_building(b: Array) -> void:
 				break
 
 	# --- Floors / roof
-	box(Vector3(inner.get_center().x, 0.015, inner.get_center().y), Vector3(inner.size.x, 0.03, inner.size.y), st.floor, 0)
+	box(Vector3(inner.get_center().x, 0.015, inner.get_center().y), Vector3(inner.size.x, 0.03, inner.size.y), st.floor, DECOR)
 	for k in range(1, floors + 1):
 		var y := k * fh
 		var is_roof := k == floors
@@ -836,10 +846,10 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 			var band_out := -0.04 if (side == 0 or side == 2) else 0.04
 			if horizontal:
 				band_c.z += band_out
-				box(band_c, Vector3(length, 0.28, WALL_T + 0.04), st.trim, 0)
+				box(band_c, Vector3(length, 0.28, WALL_T + 0.04), st.trim, DECOR)
 			else:
 				band_c.x += band_out
-				box(band_c, Vector3(WALL_T + 0.04, 0.28, length), st.trim, 0)
+				box(band_c, Vector3(WALL_T + 0.04, 0.28, length), st.trim, DECOR)
 			if k == 0:
 				for dt in side_doors:
 					_make_door(horizontal, fixed, dt, 0.0, st.door)
@@ -1036,11 +1046,11 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 				_p(c, rot, 0, 0.8, 0.28, 2.8, 0.7, 0.12, Color("7a1f2a"))
 			else:
 				_p(c, rot, 0, 0.55, 0, 2.6, 1.1, 0.8, LIGHTWOOD)
-				_p(c, rot, 0, 1.3, 0, 0.6, 0.4, 0.5, Color("e8d26a"), 0)
+				_p(c, rot, 0, 1.3, 0, 0.6, 0.4, 0.5, Color("e8d26a"), L_WALL)
 		"bank":
 			if k == 0 and roll < 0.45:
 				_p(c, rot, 0, 0.55, 0, 3.2, 1.1, 0.8, DARKWOOD)
-				_p(c, rot, 0, 1.45, 0, 3.2, 0.7, 0.05, Color("bfe3ef"), 0)
+				_p(c, rot, 0, 1.45, 0, 3.2, 0.7, 0.05, Color("bfe3ef"), L_WALL)
 			elif roll < 0.85:
 				_desk_chair(c, rot)
 			else:
@@ -1060,19 +1070,19 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 			if roll < 0.6:
 				for s: float in [-0.8, 0.8]:
 					_p(c, rot, s, 0.95, 0, 0.75, 1.9, 0.75, [Color("5a3d8a"), Color("2f6fa8"), Color("c0453a")][rng.randi() % 3])
-					_p(c, rot, s, 1.35, -0.39, 0.55, 0.45, 0.04, SCREEN, 0)
+					_p(c, rot, s, 1.35, -0.39, 0.55, 0.45, 0.04, SCREEN, L_WALL)
 			elif roll < 0.8:
 				_p(c, rot, 0, 0.45, 0, 1.2, 0.9, 2.2, Color("2f6fa8"))
-				_p(c, rot, 0, 0.91, 0, 1.1, 0.02, 2.1, WHITE, 0)
+				_p(c, rot, 0, 0.91, 0, 1.1, 0.02, 2.1, WHITE, L_WALL)
 			else:
 				_p(c, rot, 0, 1.1, 0, 1.3, 2.2, 1.3, Color("e04fa6"))
-				_p(c, rot, 0, 1.5, 0, 1.2, 1.0, 1.2, Color("bfe3ef"), 0)
+				_p(c, rot, 0, 1.5, 0, 1.2, 1.0, 1.2, Color("bfe3ef"), L_WALL)
 		"club":
 			if k == 0 and roll < 0.3:
-				_p(c, rot, 0, 0.03, 0, 3.0, 0.04, 3.0, [Color("e04fa6"), Color("49d6e0"), Color("e0b13c")][rng.randi() % 3], 0)
+				_p(c, rot, 0, 0.03, 0, 3.0, 0.04, 3.0, [Color("e04fa6"), Color("49d6e0"), Color("e0b13c")][rng.randi() % 3], DECOR)
 			elif roll < 0.6:
 				_p(c, rot, 0, 0.55, 0, 2.6, 1.1, 0.7, BLACK)
-				_p(c, rot, 0, 1.11, 0, 2.6, 0.04, 0.7, Color("e04fa6"), 0)
+				_p(c, rot, 0, 1.11, 0, 2.6, 0.04, 0.7, Color("e04fa6"), L_WALL)
 			else:
 				_sofa(c, rot, Color("6a2a5a"))
 		"bar":
@@ -1082,7 +1092,7 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 					_pc(c, rot, s, 0.38, 0.75, 0.2, 0.75, BLACK)
 			elif roll < 0.7:
 				_p(c, rot, 0, 0.45, 0, 1.4, 0.9, 2.5, DARKWOOD)
-				_p(c, rot, 0, 0.91, 0, 1.25, 0.03, 2.3, FELT, 0)
+				_p(c, rot, 0, 0.91, 0, 1.25, 0.03, 2.3, FELT, L_WALL)
 			else:
 				_table_chairs(c, rot, WOOD)
 		"apartments":
@@ -1100,9 +1110,9 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 			if roll < 0.45:
 				_p(c, rot, 0, 0.8, 0, 3.0, 1.6, 0.9, WHITE)
 				for s: float in [0.5, 1.0, 1.5]:
-					_p(c, rot, 0, s, 0, 2.9, 0.12, 1.0, [RED, BLUE, GOLD, Color("4a8a5a")][rng.randi() % 4], 0)
+					_p(c, rot, 0, s, 0, 2.9, 0.12, 1.0, [RED, BLUE, GOLD, Color("4a8a5a")][rng.randi() % 4], L_WALL)
 			elif roll < 0.7:
-				_p(c, rot, 0, 1.4, 0, 2.0, 0.05, 0.05, METAL, 0)
+				_p(c, rot, 0, 1.4, 0, 2.0, 0.05, 0.05, METAL, L_WALL)
 				_p(c, rot, 0, 0.8, 0, 2.0, 1.3, 0.5, [Color("c27aa0"), Color("6a8ac2"), Color("e0b13c")][rng.randi() % 3])
 			elif roll < 0.85:
 				_p(c, rot, 0, 0.55, 0, 2.0, 1.1, 2.0, Color("4f8fbf"))
@@ -1115,7 +1125,7 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 				_p(c, rot, 1.3, 0.3, -0.8, 0.5, 0.6, 0.5, DARKWOOD)
 			else:
 				_p(c, rot, 0, 0.45, 0, 1.6, 0.9, 0.55, DARKWOOD)
-				_p(c, rot, 0, 1.15, 0, 0.9, 0.55, 0.12, BLACK, 0)
+				_p(c, rot, 0, 1.15, 0, 0.9, 0.55, 0.12, BLACK, L_WALL)
 		"rundown", "rundown2":
 			if roll < 0.3:
 				_p(c, rot, 0, 0.12, 0, 1.4, 0.24, 2.0, Color("b8b08a"))
@@ -1123,17 +1133,17 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 				_sofa(c, rot, Color("6a5a3a"))
 			elif roll < 0.8:
 				for i in rng.randi_range(2, 5):
-					box(c + Vector3(rng.randf_range(-1, 1), 0.3, rng.randf_range(-1, 1)), Vector3(0.6, 0.6, 0.6), Color("2a2a2a"), 0, true)
+					box(c + Vector3(rng.randf_range(-1, 1), 0.3, rng.randf_range(-1, 1)), Vector3(0.6, 0.6, 0.6), Color("2a2a2a"), L_WALL, true)
 				_crates(c)
 			else:
 				_p(c, rot, 0, 0.4, 0, 1.2, 0.8, 0.8, Color("6a5040"))
-				_p(c, rot, 0, 1.2, 1.3, 2.4, 1.6, 0.05, [Color("d64545"), Color("49d6e0"), Color("e0b13c")][rng.randi() % 3], 0)
+				_p(c, rot, 0, 1.2, 1.3, 2.4, 1.6, 0.05, [Color("d64545"), Color("49d6e0"), Color("e0b13c")][rng.randi() % 3], L_WALL)
 		"office":
 			if roll < 0.75:
 				for dx: float in [-0.9, 0.9]:
 					for dz: float in [-0.7, 0.7]:
 						_p(c, rot, dx, 0.37, dz, 1.6, 0.74, 0.75, WHITE)
-						_p(c, rot, dx, 0.95, dz * 0.6, 0.55, 0.38, 0.05, BLACK, 0)
+						_p(c, rot, dx, 0.95, dz * 0.6, 0.55, 0.38, 0.05, BLACK, L_WALL)
 				_p(c, rot, 0, 0.7, 0, 3.4, 1.4, 0.06, Color("7a8a9a"))
 				_p(c, rot, 0, 0.7, 0, 0.06, 1.4, 2.8, Color("7a8a9a"))
 			elif roll < 0.88:
@@ -1145,10 +1155,10 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 			if roll < 0.45:
 				for s: float in [-1.05, -0.35, 0.35, 1.05]:
 					_p(c, rot, s, 0.8, 0, 0.6, 1.6, 0.65, GOLD)
-					_p(c, rot, s, 1.2, -0.34, 0.45, 0.45, 0.04, Color("ff7a4a"), 0)
+					_p(c, rot, s, 1.2, -0.34, 0.45, 0.45, 0.04, Color("ff7a4a"), L_WALL)
 			elif roll < 0.75:
 				_pc(c, rot, 0, 0.42, 0, 1.2, 0.84, FELT)
-				_pc(c, rot, 0, 0.86, 0, 0.35, 0.05, GOLD, 0)
+				_pc(c, rot, 0, 0.86, 0, 0.35, 0.05, GOLD, L_WALL)
 			elif roll < 0.9:
 				_p(c, rot, 0, 0.45, 0, 2.2, 0.9, 1.2, FELT)
 			else:
@@ -1160,35 +1170,35 @@ func _furnish_cell(type: String, k: int, c: Vector3, rot: bool, fh: float) -> vo
 				_table_chairs(c, rot, LIGHTWOOD)
 			else:
 				_desk_chair(c, rot)
-				_p(c, rot, 0, 1.0, -0.2, 0.55, 0.4, 0.05, BLACK, 0)
+				_p(c, rot, 0, 1.0, -0.2, 0.55, 0.4, 0.05, BLACK, L_WALL)
 		_:
 			_crates(c)
 
 
 func _desk_chair(c: Vector3, rot: bool) -> void:
 	_p(c, rot, 0, 0.37, 0, 1.4, 0.74, 0.7, WOOD)
-	_p(c, rot, 0, 0.75, 0, 1.45, 0.04, 0.75, LIGHTWOOD, 0)
+	_p(c, rot, 0, 0.75, 0, 1.45, 0.04, 0.75, LIGHTWOOD, L_WALL)
 	_p(c, rot, 0, 0.23, 0.75, 0.5, 0.46, 0.5, DARKMETAL)
-	_p(c, rot, 0, 0.75, 0.98, 0.5, 0.6, 0.06, DARKMETAL, 0)
+	_p(c, rot, 0, 0.75, 0.98, 0.5, 0.6, 0.06, DARKMETAL, L_WALL)
 
 
 func _school_desk(c: Vector3, rot: bool) -> void:
 	_p(c, rot, 0, 0.35, -0.1, 0.7, 0.7, 0.5, LIGHTWOOD)
-	_p(c, rot, 0, 0.22, 0.35, 0.4, 0.44, 0.38, BLUE, 0)
+	_p(c, rot, 0, 0.22, 0.35, 0.4, 0.44, 0.38, BLUE, L_WALL)
 
 
 func _rack(c: Vector3, rot: bool) -> void:
 	_pshape(c, rot, 0, 1.8, 0, 3.4, 3.6, 1.1)
 	for sx: float in [-1.65, 1.65]:
 		for sz: float in [-0.5, 0.5]:
-			_p(c, rot, sx, 1.8, sz, 0.1, 3.6, 0.1, Color("d66a2a"), 0)
+			_p(c, rot, sx, 1.8, sz, 0.1, 3.6, 0.1, Color("d66a2a"), L_WALL)
 	for h: float in [0.15, 1.3, 2.45, 3.55]:
-		_p(c, rot, 0, h, 0, 3.4, 0.08, 1.1, Color("3a5a8a"), 0)
+		_p(c, rot, 0, h, 0, 3.4, 0.08, 1.1, Color("3a5a8a"), L_WALL)
 		if h < 3.0:
 			for s: float in [-1.0, 0.1, 1.1]:
 				if rng.randf() < 0.75:
 					var bh := rng.randf_range(0.5, 0.95)
-					_p(c, rot, s, h + 0.04 + bh * 0.5, 0, 0.9, bh, 0.9, CARDBOARD, 0)
+					_p(c, rot, s, h + 0.04 + bh * 0.5, 0, 0.9, bh, 0.9, CARDBOARD, L_WALL)
 
 
 func _crates(c: Vector3) -> void:
@@ -1204,36 +1214,36 @@ func _crates(c: Vector3) -> void:
 
 func _forklift(c: Vector3, rot: bool) -> void:
 	_p(c, rot, 0, 0.8, 0, 1.2, 1.3, 2.0, Color("e0b13c"))
-	_p(c, rot, 0, 1.9, 0.3, 1.1, 0.08, 1.2, DARKMETAL, 0)
+	_p(c, rot, 0, 1.9, 0.3, 1.1, 0.08, 1.2, DARKMETAL, L_WALL)
 	_p(c, rot, 0, 1.6, -1.05, 1.0, 3.0, 0.15, DARKMETAL)
-	_p(c, rot, 0, 0.12, -1.7, 0.9, 0.08, 1.2, DARKMETAL, 0)
+	_p(c, rot, 0, 0.12, -1.7, 0.9, 0.08, 1.2, DARKMETAL, L_WALL)
 
 
 func _sofa(c: Vector3, rot: bool, col: Color) -> void:
 	_p(c, rot, 0, 0.25, 0, 2.2, 0.5, 0.9, col)
-	_p(c, rot, 0, 0.7, 0.38, 2.2, 0.6, 0.18, col.darkened(0.15), 0)
+	_p(c, rot, 0, 0.7, 0.38, 2.2, 0.6, 0.18, col.darkened(0.15), L_WALL)
 	_p(c, rot, 0, 0.22, -1.1, 1.0, 0.44, 0.55, WOOD)
 
 
 func _bed(c: Vector3, rot: bool, blanket: Color) -> void:
 	_p(c, rot, 0, 0.25, 0, 1.6, 0.5, 2.1, DARKWOOD)
-	_p(c, rot, 0, 0.56, 0.2, 1.5, 0.14, 1.6, blanket, 0)
-	_p(c, rot, 0, 0.6, -0.75, 1.2, 0.18, 0.4, WHITE, 0)
-	_p(c, rot, 0, 0.7, -1.02, 1.6, 0.9, 0.08, DARKWOOD, 0)
+	_p(c, rot, 0, 0.56, 0.2, 1.5, 0.14, 1.6, blanket, L_WALL)
+	_p(c, rot, 0, 0.6, -0.75, 1.2, 0.18, 0.4, WHITE, L_WALL)
+	_p(c, rot, 0, 0.7, -1.02, 1.6, 0.9, 0.08, DARKWOOD, L_WALL)
 
 
 func _table_chairs(c: Vector3, rot: bool, col: Color) -> void:
 	_p(c, rot, 0, 0.37, 0, 1.6, 0.74, 0.9, col)
 	for s: float in [-1.0, 1.0]:
-		_p(c, rot, s * 0.45, 0.23, 0.75, 0.45, 0.46, 0.45, col.darkened(0.2), 0)
-		_p(c, rot, s * 0.45, 0.23, -0.75, 0.45, 0.46, 0.45, col.darkened(0.2), 0)
+		_p(c, rot, s * 0.45, 0.23, 0.75, 0.45, 0.46, 0.45, col.darkened(0.2), L_WALL)
+		_p(c, rot, s * 0.45, 0.23, -0.75, 0.45, 0.46, 0.45, col.darkened(0.2), L_WALL)
 
 
 func _bookshelf(c: Vector3, rot: bool) -> void:
 	for sz: float in [-0.45, 0.45]:
 		_p(c, rot, 0, 1.1, sz, 3.0, 2.2, 0.45, DARKWOOD)
 		for h: float in [0.35, 0.85, 1.35, 1.85]:
-			_p(c, rot, 0, h, sz - signf(sz) * 0.24, 2.8, 0.36, 0.02, [RED, BLUE, Color("4a8a5a"), GOLD][rng.randi() % 4], 0)
+			_p(c, rot, 0, h, sz - signf(sz) * 0.24, 2.8, 0.36, 0.02, [RED, BLUE, Color("4a8a5a"), GOLD][rng.randi() % 4], L_WALL)
 
 
 func _plant(c: Vector3) -> void:
@@ -1243,7 +1253,7 @@ func _plant(c: Vector3) -> void:
 
 func _vault(c: Vector3) -> void:
 	box(c + Vector3(0, 1.3, 0), Vector3(3.0, 2.6, 3.0), Color("7a8288"), L_WALL, true)
-	cyl(c + Vector3(0, 1.3, -1.55), 0.9, 0.12, Color("b0b8bc"), 0, true)
+	cyl(c + Vector3(0, 1.3, -1.55), 0.9, 0.12, Color("b0b8bc"), L_WALL, true)
 	box(c + Vector3(0, 2.75, 0), Vector3(1.0, 0.3, 0.6), GOLD, L_WALL, true)
 
 
@@ -1251,15 +1261,15 @@ func _furnish_sports(inner: Rect2, zones: Array) -> void:
 	var c := inner.get_center()
 	# Court
 	var court := Rect2(c.x - 14.0, c.y - 7.5, 28.0, 15.0)
-	box(Vector3(c.x, 0.04, c.y), Vector3(court.size.x, 0.04, court.size.y), Color("d9a768"), 0)
-	box(Vector3(c.x, 0.065, c.y), Vector3(0.12, 0.02, court.size.y), WHITE, 0)
-	cyl(Vector3(c.x, 0.065, c.y), 1.8, 0.02, Color("3f6fa8"), 0)
+	box(Vector3(c.x, 0.04, c.y), Vector3(court.size.x, 0.04, court.size.y), Color("d9a768"), DECOR)
+	box(Vector3(c.x, 0.065, c.y), Vector3(0.12, 0.02, court.size.y), WHITE, DECOR)
+	cyl(Vector3(c.x, 0.065, c.y), 1.8, 0.02, Color("3f6fa8"), DECOR)
 	for s: float in [-1.0, 1.0]:
 		var hx := c.x + s * 13.4
 		cyl(Vector3(hx + s * 0.6, 1.7, c.y), 0.1, 3.4, DARKMETAL, L_WALL)
 		box(Vector3(hx, 3.4, c.y), Vector3(0.08, 1.05, 1.8), WHITE, L_WALL)
-		cyl(Vector3(hx - s * 0.3, 3.05, c.y), 0.25, 0.04, Color("e06a2a"), 0)
-		box(Vector3(hx - s * 2.9, 0.065, c.y), Vector3(5.8, 0.02, 4.9), Color("3f6fa8"), 0)
+		cyl(Vector3(hx - s * 0.3, 3.05, c.y), 0.25, 0.04, Color("e06a2a"), L_WALL)
+		box(Vector3(hx - s * 2.9, 0.065, c.y), Vector3(5.8, 0.02, 4.9), Color("3f6fa8"), DECOR)
 	# Bleachers along both long sides (ramp collision + visual steps)
 	for s: float in [-1.0, 1.0]:
 		var z_edge := c.y + s * 9.0
@@ -1267,7 +1277,7 @@ func _furnish_sports(inner: Rect2, zones: Array) -> void:
 		for i in steps:
 			var zc := z_edge + s * (i * 0.9 + 0.45)
 			var hgt := (i + 1) * 0.5
-			box(Vector3(c.x, hgt * 0.5, zc), Vector3(26.0, hgt, 0.9), Color("3f6fa8") if i % 2 == 0 else WHITE, 0)
+			box(Vector3(c.x, hgt * 0.5, zc), Vector3(26.0, hgt, 0.9), Color("3f6fa8") if i % 2 == 0 else WHITE, DECOR)
 		var run := steps * 0.9
 		var rise := steps * 0.5
 		var th := atan2(rise, run)
@@ -1276,8 +1286,8 @@ func _furnish_sports(inner: Rect2, zones: Array) -> void:
 		_add_shape(L_FLOOR, _box_shape(Vector3(26.0, 0.2, sqrt(run * run + rise * rise))), Transform3D(rot, mid))
 		_add_shape(L_WALL, _box_shape(Vector3(26.0, rise, 0.3)), Transform3D(Basis.IDENTITY, Vector3(c.x, rise * 0.5, z_edge + s * (run + 0.15))))
 	# Scoreboard + banner
-	box(Vector3(c.x, 8.0, c.y), Vector3(3.0, 2.0, 3.0), BLACK, 0)
-	box(Vector3(c.x, 8.0, c.y), Vector3(3.05, 1.2, 3.05), Color("e0b13c"), 0)
+	box(Vector3(c.x, 8.0, c.y), Vector3(3.0, 2.0, 3.0), BLACK, L_WALL)
+	box(Vector3(c.x, 8.0, c.y), Vector3(3.05, 1.2, 3.05), Color("e0b13c"), L_WALL)
 	_label("SWIFTCURRENT RAPIDS", Vector3(c.x, 7.5, inner.position.y + 0.2), 0.0, 160, Color("9fd0ff"))
 	_label("SWIFTCURRENT RAPIDS", Vector3(c.x, 7.5, inner.end.y - 0.2), PI, 160, Color("9fd0ff"))
 	# Equipment & benches near the ends
@@ -1296,8 +1306,8 @@ func _furnish_water(inner: Rect2, zones: Array) -> void:
 		if _blocked(Rect2(p.x - 3, p.z - 3, 6, 6), zones):
 			continue
 		cyl(p + Vector3(0, 2.2, 0), 2.6, 4.4, Color("7fa8b8"), L_WALL, true)
-		cyl(p + Vector3(0, 4.45, 0), 2.7, 0.1, DARKMETAL, 0, true)
-		cyl(p + Vector3(0, 4.5, 0), 2.2, 0.06, Color("4a8ab0"), 0, true)
+		cyl(p + Vector3(0, 4.45, 0), 2.7, 0.1, DARKMETAL, L_WALL, true)
+		cyl(p + Vector3(0, 4.5, 0), 2.2, 0.06, Color("4a8ab0"), L_WALL, true)
 	# Pipes between tanks (low enough to vault over with a jump)
 	box(Vector3(c.x, 0.5, c.y), Vector3(inner.size.x - 14.0, 0.5, 0.5), Color("3f7fa8"), L_WALL, true)
 	box(Vector3(c.x + 2, 0.5, c.y + 6.8), Vector3(inner.size.x - 18.0, 0.5, 0.5), Color("3f7fa8"), L_WALL, true)
@@ -1316,19 +1326,19 @@ func _build_park() -> void:
 	var r := park_rect
 	var x0 := r.position.x
 	var z0 := r.position.y
-	box(Vector3(r.get_center().x, 0.02, r.get_center().y), Vector3(r.size.x, 0.04, r.size.y), GRASS, 0)
+	box(Vector3(r.get_center().x, 0.02, r.get_center().y), Vector3(r.size.x, 0.04, r.size.y), GRASS, DECOR)
 	_label(MapData.PARK_NAME.to_upper(), Vector3(r.get_center().x, 3.0, r.end.y + 0.5), 0.0, 96, Color("d8f0c0"))
 	# Basketball court (left side)
 	var court := Rect2(x0 + 2.5, z0 + 13.0, 14.0, 26.0)
 	var cc := court.get_center()
-	box(Vector3(cc.x, 0.05, cc.y), Vector3(court.size.x, 0.06, court.size.y), Color("c0703a"), 0)
-	box(Vector3(cc.x, 0.085, cc.y), Vector3(court.size.x, 0.02, 0.12), WHITE, 0)
-	cyl(Vector3(cc.x, 0.085, cc.y), 1.8, 0.02, WHITE, 0)
+	box(Vector3(cc.x, 0.05, cc.y), Vector3(court.size.x, 0.06, court.size.y), Color("c0703a"), DECOR)
+	box(Vector3(cc.x, 0.085, cc.y), Vector3(court.size.x, 0.02, 0.12), WHITE, DECOR)
+	cyl(Vector3(cc.x, 0.085, cc.y), 1.8, 0.02, WHITE, DECOR)
 	for s: float in [-1.0, 1.0]:
 		var hz := cc.y + s * 12.4
 		cyl(Vector3(cc.x, 1.7, hz + s * 0.6), 0.1, 3.4, DARKMETAL, L_WALL)
 		box(Vector3(cc.x, 3.4, hz), Vector3(1.8, 1.05, 0.08), WHITE, L_WALL)
-		cyl(Vector3(cc.x, 3.05, hz - s * 0.3), 0.25, 0.04, Color("e06a2a"), 0)
+		cyl(Vector3(cc.x, 3.05, hz - s * 0.3), 0.25, 0.04, Color("e06a2a"), L_WALL)
 	# Chain fence around the court with gaps
 	for s: float in [-1.0, 1.0]:
 		box(Vector3(cc.x, 1.2, court.position.y - 0.4 if s < 0 else court.end.y + 0.4), Vector3(court.size.x - 4.0, 2.4, 0.08), Color("55625a"), L_WALL)
@@ -1341,16 +1351,16 @@ func _build_park() -> void:
 	box(Vector3(pc.x, 2.5, pc.y), Vector3(3.2, 0.2, 2.4), Color("e0b13c"), L_FLOOR)
 	box(Vector3(pc.x, 5.0, pc.y), Vector3(3.6, 0.15, 2.8), Color("c0453a"), L_FLOOR)
 	for sx: float in [-1.0, 1.0]:
-		cyl(Vector3(pc.x + sx * 1.4, 3.1, pc.y + 1.0), 0.08, 1.0, Color("e06a2a"), 0)
-		cyl(Vector3(pc.x + sx * 1.4, 3.1, pc.y - 1.0), 0.08, 1.0, Color("e06a2a"), 0)
+		cyl(Vector3(pc.x + sx * 1.4, 3.1, pc.y + 1.0), 0.08, 1.0, Color("e06a2a"), L_WALL)
+		cyl(Vector3(pc.x + sx * 1.4, 3.1, pc.y - 1.0), 0.08, 1.0, Color("e06a2a"), L_WALL)
 	var th := atan2(2.5, 4.2)
 	box(Vector3(pc.x + 1.6 + 2.1, 1.25, pc.y), Vector3(5.0, 0.2, 1.2), Color("3f6fa8"), L_FLOOR, false, Basis(Vector3(0, 0, 1), -th))
 	box(Vector3(pc.x - 1.6 - 2.1, 1.25, pc.y), Vector3(5.0, 0.2, 1.2), Color("e06a2a"), L_FLOOR, false, Basis(Vector3(0, 0, 1), th))
 	# Pond (blue blobs on the sketch) - shallow water, walkable
 	for blob in [[1075, 620, 3.8], [1060, 665, 3.6], [1035, 700, 3.4], [1050, 725, 2.6]]:
 		var p := MapData.px(blob[0], blob[1])
-		cyl(Vector3(p.x, 0.05, p.y), blob[2] + 0.4, 0.06, Color("9a8a6a"), 0)
-		cyl(Vector3(p.x, 0.07, p.y), blob[2], 0.06, Color("3fa8e0"), 0)
+		cyl(Vector3(p.x, 0.05, p.y), blob[2] + 0.4, 0.06, Color("9a8a6a"), DECOR)
+		cyl(Vector3(p.x, 0.07, p.y), blob[2], 0.06, Color("3fa8e0"), DECOR)
 	# Trees and benches
 	var avoid := [court.grow(1.5), pg.grow(3.0), MapData.px_rect([990, 580, 1110, 750]).grow(1.0)]
 	for o in objectives:
@@ -1370,7 +1380,7 @@ func _build_park() -> void:
 		placed += 1
 		if placed % 4 == 0:
 			box(Vector3(p.x, 0.25, p.y), Vector3(1.8, 0.5, 0.6), WOOD, L_WALL)
-			box(Vector3(p.x, 0.7, p.y + 0.28), Vector3(1.8, 0.5, 0.08), WOOD, 0)
+			box(Vector3(p.x, 0.7, p.y + 0.28), Vector3(1.8, 0.5, 0.08), WOOD, L_WALL)
 		elif placed % 4 == 1:
 			_bush(Vector3(p.x, 0, p.y))
 		else:
@@ -1480,21 +1490,21 @@ func _bridge_deck(p0: Vector3, p1: Vector3, along_x: bool, material: String) -> 
 			var off := (float(i) - (boards - 1) * 0.5) * (width / boards)
 			var bsize := Vector3(length - rng.randf_range(0.0, 0.5), 0.12, width / boards - 0.05) if along_x else Vector3(width / boards - 0.05, 0.12, length - rng.randf_range(0.0, 0.5))
 			var boff := Vector3(0, 0, off) if along_x else Vector3(off, 0, 0)
-			box(center + boff, bsize, LIGHTWOOD.lerp(WOOD, rng.randf()), 0, false, rot)
+			box(center + boff, bsize, LIGHTWOOD.lerp(WOOD, rng.randf()), L_WALL, false, rot)
 		# Cross battens underneath
 		var n := int(length / 1.5)
 		for i in n:
 			var t := (float(i) + 0.5) / n - 0.5
 			var bpos := center + d.normalized() * (t * length) + rot * Vector3(0, -0.1, 0)
-			box(bpos, Vector3(0.12, 0.08, width + 0.1) if along_x else Vector3(width + 0.1, 0.08, 0.12), DARKWOOD, 0, false, rot)
+			box(bpos, Vector3(0.12, 0.08, width + 0.1) if along_x else Vector3(width + 0.1, 0.08, 0.12), DARKWOOD, L_WALL, false, rot)
 	else:
-		box(center, size, Color("9aa3a8"), 0, false, rot)
+		box(center, size, Color("9aa3a8"), L_WALL, false, rot)
 		var ribs := 6
 		for i in ribs:
 			var off := (float(i) - (ribs - 1) * 0.5) * (width / ribs)
 			var rsize := Vector3(length, 0.05, 0.06) if along_x else Vector3(0.06, 0.05, length)
 			var roff := Vector3(0, 0.09, off) if along_x else Vector3(off, 0.09, 0)
-			box(center + rot * roff, rsize, Color("7d868c"), 0, false, rot)
+			box(center + rot * roff, rsize, Color("7d868c"), L_WALL, false, rot)
 
 
 ## Thin box between two points (cables, slings).
@@ -1507,7 +1517,7 @@ func _strut(a: Vector3, b: Vector3, thick: float, col: Color) -> void:
 	var ref := Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT
 	var x := y.cross(ref).normalized()
 	var z := x.cross(y).normalized()
-	box((a + b) * 0.5, Vector3(thick, len_d, thick), col, 0, false, Basis(x, y, z))
+	box((a + b) * 0.5, Vector3(thick, len_d, thick), col, L_WALL, false, Basis(x, y, z))
 
 
 func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: String) -> void:
@@ -1520,7 +1530,7 @@ func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: Stri
 	_add_shape(L_WALL, _box_shape(Vector3(1.5, top_y - 1.0, 1.5)), Transform3D(Basis.IDENTITY, base + Vector3(0, (top_y + 1.0) * 0.5, 0)))
 	for cx: float in [-0.7, 0.7]:
 		for cz: float in [-0.7, 0.7]:
-			box(base + Vector3(cx, (top_y + 1.0) * 0.5, cz), Vector3(0.14, top_y - 1.0, 0.14), yellow, 0)
+			box(base + Vector3(cx, (top_y + 1.0) * 0.5, cz), Vector3(0.14, top_y - 1.0, 0.14), yellow, L_WALL)
 	var y := 2.0
 	while y < top_y - 1.0:
 		_strut(base + Vector3(-0.7, y, -0.7), base + Vector3(0.7, y + 1.4, -0.7), 0.07, yellow)
@@ -1529,22 +1539,22 @@ func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: Stri
 		_strut(base + Vector3(0.7, y, -0.7), base + Vector3(0.7, y + 1.4, 0.7), 0.07, yellow)
 		y += 1.4
 	# Slewing unit, cab, jib towards the bridge, counter-jib with weights
-	box(base + Vector3(0, top_y, 0), Vector3(2.0, 1.0, 2.0), yellow.darkened(0.2), 0)
-	box(base + Vector3(0, top_y + 0.2, 0) - out * 1.3, Vector3(1.2, 1.4, 1.2), Color("d8d2c8"), 0)
+	box(base + Vector3(0, top_y, 0), Vector3(2.0, 1.0, 2.0), yellow.darkened(0.2), L_WALL)
+	box(base + Vector3(0, top_y + 0.2, 0) - out * 1.3, Vector3(1.2, 1.4, 1.2), Color("d8d2c8"), L_WALL)
 	var jib_end := base - out * 11.0 + Vector3(0, top_y + 0.6, 0)
 	var cj_end := base + out * 6.0 + Vector3(0, top_y + 0.6, 0)
 	_strut(base + Vector3(0, top_y + 0.6, 0), jib_end, 0.7, yellow)
 	_strut(base + Vector3(0, top_y + 0.6, 0), cj_end, 0.6, yellow)
-	box(cj_end - out * 1.0 + Vector3(0, -0.6, 0), Vector3(1.6, 1.6, 1.6), Color("8a8478"), 0)
-	box(base + Vector3(0, top_y + 3.2, 0), Vector3(0.5, 4.0, 0.5), yellow, 0)
+	box(cj_end - out * 1.0 + Vector3(0, -0.6, 0), Vector3(1.6, 1.6, 1.6), Color("8a8478"), L_WALL)
+	box(base + Vector3(0, top_y + 3.2, 0), Vector3(0.5, 4.0, 0.5), yellow, L_WALL)
 	_strut(base + Vector3(0, top_y + 5.2, 0), jib_end, 0.05, DARKMETAL)
 	_strut(base + Vector3(0, top_y + 5.2, 0), cj_end, 0.05, DARKMETAL)
 	# Hook over the bridge with slings down to the deck
 	var hook_top := Vector3(mid.x, top_y + 0.2, mid.z)
 	var hook := Vector3(mid.x, maxf(p0.y, p1.y) + 3.5, mid.z)
-	box(Vector3(mid.x, top_y + 0.1, mid.z), Vector3(0.6, 0.3, 0.6), DARKMETAL, 0)
+	box(Vector3(mid.x, top_y + 0.1, mid.z), Vector3(0.6, 0.3, 0.6), DARKMETAL, L_WALL)
 	_strut(hook_top, hook, 0.06, DARKMETAL)
-	box(hook, Vector3(0.5, 0.4, 0.5), Color("c0453a"), 0)
+	box(hook, Vector3(0.5, 0.4, 0.5), Color("c0453a"), L_WALL)
 	var dir := (p1 - p0).normalized()
 	var span := p0.distance_to(p1)
 	var a_pt := mid - dir * span * 0.3
@@ -1555,9 +1565,9 @@ func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: Stri
 	var spare := base - out * 8.5 + Vector3(0, top_y - 4.0, 0)
 	_strut(Vector3(spare.x, top_y + 0.2, spare.z), spare + Vector3(0, 0.4, 0), 0.05, DARKMETAL)
 	if material == "planks":
-		box(spare, Vector3(2.4, 0.6, 1.0), LIGHTWOOD, 0)
+		box(spare, Vector3(2.4, 0.6, 1.0), LIGHTWOOD, L_WALL)
 	else:
-		box(spare, Vector3(2.4, 0.4, 1.2), Color("9aa3a8"), 0)
+		box(spare, Vector3(2.4, 0.4, 1.2), Color("9aa3a8"), L_WALL)
 
 
 # ================================================================ spawn points

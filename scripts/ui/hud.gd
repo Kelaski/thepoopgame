@@ -67,6 +67,7 @@ func _ready() -> void:
 
 	_crosshair = Crosshair.new()
 	add_child(_crosshair)
+	add_child(DamageIndicator.new())
 
 	# --- Top centre: score + timer, phase text, runner label
 	var top_col := UiKit.vbox(4)
@@ -448,7 +449,7 @@ func _process(delta: float) -> void:
 		var period := 1.0 / float(wd.rps)
 		_crosshair.cooldown = clampf(lp.fire_cd / period, 0.0, 1.0)
 		if lp.reloading > 0.0:
-			_crosshair.cooldown = clampf(lp.reloading / float(wd.reload), 0.0, 1.0)
+			_crosshair.cooldown = clampf(lp.reloading / lp.reload_time(), 0.0, 1.0)
 	else:
 		_crosshair.cooldown = 0.0
 

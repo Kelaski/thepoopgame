@@ -1,6 +1,10 @@
 extends Node
-## LAN / direct-IP multiplayer using ENet. The host is also a player (peer id 1).
+## Multiplayer using ENet. The host is also a player (peer id 1).
 ## The server owns the roster (names, teams, loadouts, K/D) and broadcasts it.
+##
+## Joining is by code (see JoinCode). When you host, the game asks your router to
+## open the port with UPnP and builds an online code from your public address;
+## a LAN code is always available for players on the same network.
 
 signal roster_changed
 signal joined_ok
@@ -8,10 +12,25 @@ signal join_failed(reason: String)
 signal disconnected(reason: String)
 signal chat_message(from_id: int, text: String, team_only: bool)
 signal spray_updated(id: int)
+signal codes_changed  # the UPnP lookup finished (online_code / port_status updated)
 
-const DEFAULT_PORT := 7777
+# 27015 is the usual Source / Steam game server port, so many routers and players
+# already have it open; when they don't, UPnP opens it.
+const DEFAULT_PORT := 27015
 const MAX_PER_TEAM := 8
 const MAX_PLAYERS := 16
+const UPNP_TIMEOUT_MS := 2000
+
+var lan_code := ""     # host: code for players on the same network
+var online_code := ""  # host: code for players anywhere (needs the port open)
+var port_status := ""  # host: what happened with the router, shown in the lobby
+var _upnp: UPNP = null  # router we opened the port on
+var _mapped_port := 0
+var _host_port := 0
+var _upnp_gen := 0
+var _upnp_thread: Thread = null
+var _close_thread: Thread = null
+var _reject_reason := ""
 
 var players := {}  # peer id -> {name, team, weapon, addon, kills, deaths}
 var sprays := {}   # peer id -> PackedByteArray (validated PNG)
@@ -32,6 +51,27 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	_request_firewall_access()
+
+
+func _exit_tree() -> void:
+	if _upnp_thread:
+		_upnp_thread.wait_to_finish()
+		_upnp_thread = null
+	_release_port()
+	if _close_thread:
+		_close_thread.wait_to_finish()
+
+
+## Windows asks for firewall access the first time a program listens for
+## connections. Listening for a moment at startup makes that prompt appear as soon
+## as the game opens, instead of in the middle of hosting.
+func _request_firewall_access() -> void:
+	if OS.get_name() != "Windows" or DisplayServer.get_name() == "headless":
+		return
+	var probe := PacketPeerUDP.new()
+	if probe.bind(DEFAULT_PORT) == OK:
+		probe.close()
 
 
 func my_id() -> int:
@@ -61,6 +101,16 @@ func host(port: int) -> String:
 	Game._set_map_size_local(str(Settings.g("map_size")))
 	roster_changed.emit()
 	upload_my_spray()
+	_host_port = port
+	var ips := local_ips()
+	lan_code = JoinCode.encode(ips[0], port) if not ips.is_empty() else ""
+	online_code = ""
+	port_status = "Opening port %d on your router..." % port
+	if _upnp_thread:
+		_upnp_thread.wait_to_finish()  # a previous lookup is still finishing (rare)
+	_upnp_gen += 1
+	_upnp_thread = Thread.new()
+	_upnp_thread.start(_upnp_open.bind(port, _upnp_gen))
 	return ""
 
 
@@ -73,10 +123,15 @@ func join(ip: String, port: int) -> String:
 	multiplayer.multiplayer_peer = peer
 	online = true
 	players.clear()
+	_reject_reason = ""
 	return ""
 
 
 func leave() -> void:
+	_release_port()
+	lan_code = ""
+	online_code = ""
+	port_status = ""
 	sprays.clear()
 	_spray_tex.clear()
 	_chat_times.clear()
@@ -88,12 +143,82 @@ func leave() -> void:
 	players.clear()
 
 
+## LAN addresses, most likely home-network ones (192.168.x / 10.x) first.
 func local_ips() -> Array:
 	var out := []
 	for ip in IP.get_local_addresses():
 		if ip.count(".") == 3 and not ip.begins_with("127.") and not ip.begins_with("169.254"):
 			out.append(ip)
+	out.sort_custom(func(a, b): return _lan_rank(a) < _lan_rank(b))
 	return out
+
+
+func _lan_rank(ip: String) -> int:
+	if ip.begins_with("192.168."):
+		return 0
+	if ip.begins_with("10."):
+		return 1
+	return 2
+
+
+# ------------------------------------------------------------ UPnP (router port)
+
+## Runs on a thread: finds the router, opens the port and asks for the public
+## address. Discovery can take a couple of seconds.
+func _upnp_open(port: int, gen: int) -> void:
+	var u := UPNP.new()
+	var res := {"ok": false, "ip": "", "msg": ""}
+	var err := u.discover(UPNP_TIMEOUT_MS, 2, "InternetGatewayDevice")
+	if err != UPNP.UPNP_RESULT_SUCCESS or u.get_gateway() == null or not u.get_gateway().is_valid_gateway():
+		res.msg = "Couldn't find your router (UPnP is off or unsupported)."
+	elif u.add_port_mapping(port, port, "Tag Rush", "UDP", 0) != UPNP.UPNP_RESULT_SUCCESS:
+		res.msg = "Your router refused to open port %d." % port
+	else:
+		res.ok = true
+		res.ip = u.query_external_address()
+	_upnp_done.call_deferred(u, port, res, gen)
+
+
+func _upnp_done(u: UPNP, port: int, res: Dictionary, gen: int) -> void:
+	if gen != _upnp_gen:
+		# A newer host() replaced this lookup (and already waited for its thread).
+		if res.ok:
+			_close_port_async(u, port)
+		return
+	_upnp_thread.wait_to_finish()
+	_upnp_thread = null
+	var still_hosting := is_server() and port == _host_port
+	if not res.ok:
+		if still_hosting:
+			port_status = "%s Friends on other networks need UDP port %d forwarded to this PC." % [res.msg, port]
+			codes_changed.emit()
+		return
+	if not still_hosting:
+		_close_port_async(u, port)  # left before the router answered
+		return
+	_upnp = u
+	_mapped_port = port
+	online_code = JoinCode.encode(str(res.ip), port)
+	if online_code == "":
+		port_status = "Port %d is open, but your router didn't report a public address." % port
+	else:
+		port_status = "Port %d opened on your router automatically." % port
+	codes_changed.emit()
+
+
+func _release_port() -> void:
+	if _upnp == null:
+		return
+	_close_port_async(_upnp, _mapped_port)
+	_upnp = null
+	_mapped_port = 0
+
+
+func _close_port_async(u: UPNP, port: int) -> void:
+	if _close_thread:
+		_close_thread.wait_to_finish()
+	_close_thread = Thread.new()
+	_close_thread.start(u.delete_port_mapping.bind(port, "UDP"))
 
 
 func team_count(team: int) -> int:
@@ -119,19 +244,38 @@ func name_of(id: int) -> String:
 # ------------------------------------------------------------ connection events
 
 func _on_connected() -> void:
-	register.rpc_id(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
+	register.rpc_id(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"), GameVersion.CURRENT)
 	upload_my_spray()
 	joined_ok.emit()
 
 
 func _on_connection_failed() -> void:
 	leave()
-	join_failed.emit("Could not connect to the server.")
+	join_failed.emit("Could not connect. Check the code, and that the host's port is open.")
 
 
 func _on_server_disconnected() -> void:
+	var reason := _reject_reason if _reject_reason != "" else "Lost connection to the host."
+	_reject_reason = ""
 	leave()
-	disconnected.emit("Lost connection to the host.")
+	disconnected.emit(reason)
+
+
+## Server tells a client why it's being turned away, just before disconnecting it.
+@rpc("authority", "reliable")
+func _rejected(reason: String) -> void:
+	_reject_reason = Sanitize.text(reason)
+
+
+func _reject(id: int, reason: String) -> void:
+	_rejected.rpc_id(id, reason)
+	# Give the message a moment to arrive before dropping the connection.
+	get_tree().create_timer(0.5).timeout.connect(_drop_peer.bind(id))
+
+
+func _drop_peer(id: int) -> void:
+	if multiplayer.is_server() and id in multiplayer.get_peers():
+		multiplayer.multiplayer_peer.disconnect_peer(id)
 
 
 func _on_peer_connected(_id: int) -> void:
@@ -154,12 +298,15 @@ func _on_peer_disconnected(id: int) -> void:
 # ------------------------------------------------------------------ roster RPCs
 
 @rpc("any_peer", "reliable")
-func register(pname: String, weapon: String, addon: String) -> void:
+func register(pname: String, weapon: String, addon: String, version: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
+	if version != GameVersion.CURRENT:
+		_reject(id, "Version mismatch: the host is on %s, you're on %s. Update to the same version." % [GameVersion.CURRENT, version.left(16)])
+		return
 	if players.size() >= MAX_PLAYERS:
-		multiplayer.multiplayer_peer.disconnect_peer(id)
+		_reject(id, "The lobby is full (%d players)." % MAX_PLAYERS)
 		return
 	_add_player(id, pname, weapon, addon)
 	_broadcast()

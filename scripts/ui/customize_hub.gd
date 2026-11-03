@@ -14,6 +14,12 @@ func _ready() -> void:
 	add_child(dim)
 	var v := UiKit.centered_panel(self, Vector2(420, 0))
 	v.add_child(UiKit.label("CUSTOMIZE", 34, UiKit.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
+	v.add_child(UiKit.label("Player name (used when you next host or join)", 15, UiKit.MUTED))
+	var name_edit := LineEdit.new()
+	name_edit.text = str(Settings.g("player_name"))
+	name_edit.max_length = 20
+	name_edit.text_changed.connect(func(t: String): Settings.s("player_name", t))
+	v.add_child(name_edit)
 	v.add_child(UiKit.button("Music & Playlist", func(): main.open_music(back_to_pause, true)))
 	v.add_child(UiKit.button("Colours", func(): main.open_colors(back_to_pause, true)))
 	v.add_child(UiKit.button("Crosshair Editor", func(): main.open_crosshair(back_to_pause, true)))

@@ -2,8 +2,9 @@ extends Node
 ## Root controller: screen flow (menu -> lobby -> match), overlays, mouse capture.
 ##
 ## Optional command-line flags (after "--"):
-##   --host            host immediately          --join=IP[:PORT]  join immediately
-##   --name=NAME       player name               --port=PORT       port to host / join
+##   --host            host immediately          --join=CODE       join immediately
+##   --name=NAME       player name               --port=PORT       port to host on
+##   (--join also takes IP or IP:PORT)
 ##   --autostart=N     host starts the match once N players are connected
 
 var ui_layer: CanvasLayer
@@ -47,7 +48,7 @@ func _ready() -> void:
 func _handle_cmdline() -> bool:
 	var host := false
 	var join_addr := ""
-	var port := int(Settings.g("port"))
+	var port := Net.DEFAULT_PORT
 	for a in OS.get_cmdline_user_args():
 		if a == "--host":
 			host = true
@@ -63,8 +64,7 @@ func _handle_cmdline() -> bool:
 		host_game(port)
 		return true
 	if join_addr != "":
-		var parts := join_addr.split(":")
-		join_game(parts[0], int(parts[1]) if parts.size() > 1 else port)
+		join_code(join_addr)
 		return true
 	return false
 
@@ -95,32 +95,48 @@ func show_lobby() -> void:
 	_set_screen(l)
 
 
-func show_connecting(ip: String, port: int) -> void:
+## "Play Game": enter a join code.
+func show_join_menu(message := "") -> void:
+	close_overlay()
+	var j := JoinMenu.new()
+	j.main = self
+	j.message = message
+	_set_screen(j)
+
+
+func show_connecting() -> void:
 	var c := Control.new()
 	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var v := UiKit.centered_panel(c, Vector2(420, 0))
-	v.add_child(UiKit.label("Connecting to %s:%d ..." % [ip, port], 22, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	v.add_child(UiKit.label("Connecting ...", 22, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	v.add_child(UiKit.button("Cancel", func(): leave_to_menu()))
 	_set_screen(c)
 
 
-func host_game(port: int) -> void:
+func host_game(port := Net.DEFAULT_PORT) -> void:
 	var err: String = Net.host(port)
 	if err != "":
 		show_main_menu(err)
 		return
-	Settings.s("port", port)
 	show_lobby()
+
+
+## Join with a code (or a plain IP / IP:PORT).
+func join_code(code: String) -> void:
+	var addr := JoinCode.parse(code)
+	if addr.is_empty():
+		show_join_menu("That isn't a valid join code.")
+		return
+	Settings.s("last_code", code.strip_edges().to_upper())
+	join_game(addr.ip, addr.port)
 
 
 func join_game(ip: String, port: int) -> void:
 	var err: String = Net.join(ip, port)
 	if err != "":
-		show_main_menu(err)
+		show_join_menu(err)
 		return
-	Settings.s("last_ip", ip, false)
-	Settings.s("port", port)
-	show_connecting(ip, port)
+	show_connecting()
 
 
 func leave_to_menu(message := "") -> void:

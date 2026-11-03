@@ -12,18 +12,25 @@ Everything (map, furniture, sounds, UI) is generated in code, so the repository 
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** (Run Project).
 
+The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** and **Quit**. Your player name is set in Customization. The game version is shown in the bottom-right corner (patch notes are in [CHANGELOG.md](CHANGELOG.md)).
+
 ### Hosting / joining
 
-- **Host:** type a name, then click **Host Game**. The lobby shows your LAN IP address(es). The default port is `7777`.
-- **Join:** enter the host's IP and port, then click **Join Game**.
-- For play over the internet, the host must forward **UDP port 7777** (or whatever port they chose) on their router.
+- **Host:** click **Host Game**. The lobby shows a **join code** to give your friends, with a **Copy Code** button.
+  - The game asks your router to open its port (UDP **27015**) automatically using UPnP, then builds an online code from your public address. The lobby says whether that worked.
+  - The **LAN code** is for players on the same network as you. Joining your own online code from inside your network often doesn't work on home routers, so use the LAN code there.
+  - If your router has UPnP turned off, friends on other networks need UDP port 27015 forwarded to your PC by hand.
+- **Join:** click **Play Game**, type the code and press **Join**. A plain IP address (or `IP:PORT`) also works in the code box.
+- **Firewall:** on Windows the game asks for firewall access when it opens, so hosting works straight away. Allow it on private networks (and public ones if you host from those).
+- A code is just the host's address written in a short form, not a password, so only share it with people you want to play with.
+- Everyone must be on the same version. A player on a different version is told both version numbers and sent back to the menu.
 - The host chooses teams (or shuffles them) and clicks **START MATCH**. Players who join mid-match spawn in after the respawn timer.
 
 To test multiplayer on one machine, run two instances and join `127.0.0.1`.
 Optional command-line flags (after `--`):
 
 ```
---host  --join=IP[:PORT]  --name=NAME  --port=PORT  --autostart=N
+--host  --join=CODE (or IP[:PORT])  --name=NAME  --port=PORT  --autostart=N
 ```
 
 ## Controls (all rebindable in Settings > Keybinds)
@@ -41,7 +48,7 @@ Optional command-line flags (after `--`):
 | Scoreboard | Tab |
 | Loadout (while dead) | B |
 | Spray | T |
-| Chat (all / team) | Enter / Y |
+| Chat (all / team) | Enter / Shift + Enter |
 | Pause / settings | Esc |
 
 There is no sprint key: moving forward is always a sprint. Aiming, crouching or holding a lean key slows you to a walk.
@@ -49,7 +56,7 @@ If you played an older version, the old default binds for lean right (C), addon 
 
 A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and has its own volume slider.
 
-### Custom music & playlist (Main menu → Music & Playlist, also in the lobby and pause menu)
+### Custom music & playlist (Customization → Music & Playlist, from the main menu, lobby or pause menu)
 
 - **Add Songs...** opens your system file picker. You can pick several songs at once.
 - Imported songs are copied into the game's own music folder (`user://music`), so the playlist keeps working even if you move or delete the originals. **Open Music Folder** shows that folder.
@@ -58,7 +65,7 @@ A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and 
 - In the playlist you can turn songs on and off, reorder them, preview them and remove them.
 - **Play during matches** chooses between the built-in beat, your playlist, or both. There's also a shuffle option. Use **Skip Song** in the pause menu to move on, and a "Now playing" toast shows each new song. Editing the playlist mid-match keeps the current song playing unless you disable or remove it.
 
-### Colour customization (Main menu → Customize Colours, also in the lobby and pause menu)
+### Colour customization (Customization → Colours, from the main menu, lobby or pause menu)
 
 You can recolour:
 - The menus: accent, panels, buttons, text and backdrop.
@@ -88,7 +95,8 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 - **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
 - **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s). Every kill gives you back 30 HP (up to your max).
 - **Minimap:** shows location names on the buildings and park. Its size is adjustable in Settings > HUD.
-- **Respawn:** after a 6 s timer, press **Jump (Space)** to respawn. Use the wait to change loadouts. Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
+- **Damage direction:** when you're shot, a red arc around the crosshair points at the shooter (up = in front of you, down = behind). It follows them as they move and fades after about 2 s.
+- **Respawn:** after a 6 s timer (7 s if your team is holding the Tag, the Runner included), press **Jump (Space)** to respawn. Use the wait to change loadouts. Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
   A spawn point is rejected if any living enemy has line of sight to it (or is within 12 m).
   You get 3 s of spawn protection from the moment you spawn. Moving or shooting ends it early.
 - **Loadouts** (weapon and addon) can be changed in the lobby, or while dead (press **B**). Changes apply on respawn.
@@ -104,12 +112,14 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 | Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready |
 | Spiked Bat | 35 per swing, ×1.1 for every m/s you're moving above your own sprint speed (compounding: +1 m/s 38.5, +2 42, +3 47, +5 56, +10 91, +14 133; capped at 300). Measured from your horizontal speed when you swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
 
+Every player holds a visible model of their weapon (the same model as your own first-person view), aimed up and down with where they're looking. When someone scopes in with the Sniper, their scope **glints**. The glint is brightest when they're aiming straight at you, shows only when they're looking within about 53° of you, and walls hide it.
+
 ### Addons
 
 | Addon | Effect |
 |---|---|
 | Hider | Shift: 15 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 12 s cooldown after it ends. |
-| Trackstar | Passive +15% speed. Shift: +35% for 6 s. 30 s cooldown from activation. |
+| Trackstar | Passive +15% speed and 25% faster reloads (reload time × 0.8). Shift: +35% for 6 s. 30 s cooldown from activation. |
 | Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
 | Stalker | See wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
 | Phantom | Shift: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
@@ -118,7 +128,7 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 ### Movement
 
 Snappy ground acceleration, sprinting by default (9 m/s forward; 5 m/s strafing, backwards or leaning; 2.8 m/s crouched), crouch, and a momentum slide (crouch while sprinting). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
-Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved.
+Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved (air acceleration 19.2 m/s², which steers you in the air without going past your current speed).
 **Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
 Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
 **Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
@@ -127,7 +137,7 @@ Doors fill their doorways exactly and swing open, away from you and at full spee
 
 ## Map sizes
 
-The host picks **Small**, **Medium** or **Large** before hosting (the main menu dropdown), in the lobby, or with the chat command `/map <small|medium|large>`. Using `/map` during a match restarts the match on the new map. The choice is shared with everyone, including players who join later. `/map` with no size shows the current one.
+The host picks **Small**, **Medium** or **Large** in the lobby (the last choice is remembered), or with the chat command `/map <small|medium|large>`. Using `/map` during a match restarts the match on the new map. The choice is shared with everyone, including players who join later. `/map` with no size shows the current one.
 
 | Size | Area | Buildings | Spawn zones | Tag spots | Rooftop bridges |
 |---|---|---|---|---|---|
@@ -141,6 +151,8 @@ Smaller sizes are cut-outs of the full city. Buildings that fit fully inside are
 
 The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.
 A fence with tall invisible collision surrounds it.
+Every object has collision: furniture, props, trees, lamps, the crane parts and so on. The exceptions are bushes (you can walk through them, but they block sight), flat floor markings and the bleacher steps, which a smooth ramp covers.
+Teammates' names float above their heads in small text.
 
 | # | Building | Floors |
 |---|---|---|
@@ -177,7 +189,8 @@ The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are t
 
 ## Networking model
 
-ENet with the host as the authoritative server (peer 1, also a player).
+ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015. The host opens the port with UPnP when it can.
+A joining player sends their version number, and the host turns away anyone on a different version.
 Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
 Shooting is resolved on the shooter's client, and the server validates every hit (alive, enemy team, not spawn-protected, damage clamped to the weapon maximum) before applying damage.
 Round state, the timer, respawns, the Tag and health regeneration all run on the server.
@@ -195,6 +208,8 @@ scripts/
   autoload/game.gd          # server-authoritative Tag game mode
   data/weapons.gd           # weapon stats
   data/addons.gd            # addon stats
+  data/game_version.gd      # version number (major.minor.patch)
+  data/join_code.gd         # join codes <-> IP address and port
   map/map_data.gd           # layout transcribed from the sketch
   map/map_builder.gd        # procedural city, interiors, furniture, spawn points
   world/world.gd            # environment, players, Tag, FX, trails, heartbeat, respawn search
@@ -206,7 +221,7 @@ scripts/
 
 ## Chat & commands
 
-- Press **Enter** for all chat or **Y** for team chat (both rebindable). Chat works in the lobby and in matches; while you type, gameplay keys are ignored.
+- Press **Enter** for all chat or **Shift + Enter** for team chat. The chat key is rebindable, and team chat is always Shift + that key. Shift is also the default ability key, so pressing Shift + Enter in a match uses your addon as well. Chat works in the lobby and in matches; while you type, gameplay keys are ignored.
 - Typing **/** at the start of a message opens command autocomplete: **Tab** completes, **Up/Down** choose, **Enter** sends, **Esc** cancels.
 - Commands: `/help` lists commands; `/kill` eliminates yourself (the normal respawn timer applies). New commands are added in `scripts/data/commands.gd`.
 - **Safety:** the server rate-limits chat (5 messages per 4 s) and caps messages at 200 characters. It strips control, zero-width and bidirectional-override characters, both before sending and when receiving. Player names get the same cleaning. Messages are displayed as plain text in Labels (never BBCode). Commands are matched against a fixed whitelist and run on the server; nothing anyone types is ever evaluated as code.

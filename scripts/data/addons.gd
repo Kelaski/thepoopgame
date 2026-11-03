@@ -12,7 +12,7 @@ const DATA := {
 	},
 	"trackstar": {
 		"name": "Trackstar",
-		"desc": "Passive +15% move speed. Ability key: +35% for 6s. 30s cooldown from activation.",
+		"desc": "Passive +15% move speed and 25% faster reloads. Ability key: +35% for 6s. 30s cooldown from activation.",
 		"active": true,
 	},
 	"skywalker": {
@@ -43,6 +43,7 @@ const TRACK_PASSIVE := 1.15
 const TRACK_ACTIVE := 1.35
 const TRACK_TIME := 6.0
 const TRACK_CD := 30.0
+const TRACK_RELOAD_MULT := 0.8  # reloads 25% faster (1 / 1.25 of the time)
 const PHANTOM_TIME := 2.0
 const PHANTOM_CD := 23.0
 const STALKER_TRAIL_TIME := 6.0  # seconds each piece of trail lingers

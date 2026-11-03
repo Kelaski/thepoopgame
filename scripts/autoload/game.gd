@@ -16,12 +16,14 @@ signal kill_event(killer: int, victim: int, weapon: String, head: bool)
 signal announce(text: String, color: Color)
 signal local_hit(damage: float, head: bool, killed: bool)
 signal local_damaged(hp: float)
+signal local_damaged_by(shooter: int, pos: Vector3)  # for the damage direction indicator
 
 enum Phase { LOBBY, PREROUND, RUSH, HELD, DROPPED, ROUND_END, MATCH_END }
 
 const ROUND_TIME := 120.0
 const ROUNDS_TO_WIN := 4
 const RESPAWN_TIME := 6.0
+const HOLDER_RESPAWN_PENALTY := 1.0  # extra respawn time for the team carrying the Tag
 const PREROUND_TIME := 5.0
 const ROUND_END_TIME := 6.0
 const MATCH_END_TIME := 10.0
@@ -316,10 +318,19 @@ func _server_round_won(team: int) -> void:
 	_push_state()
 
 
+## Respawn time for a player who just died: the team holding the Tag waits longer
+## (the Runner included, since their team had it when they died).
+func _respawn_time_for(id: int) -> float:
+	if holder != 0 and Net.team_of(id) == Net.team_of(holder):
+		return RESPAWN_TIME + HOLDER_RESPAWN_PENALTY
+	return RESPAWN_TIME
+
+
 func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
+	var respawn := _respawn_time_for(victim)
 	alive_ids[victim] = false
 	hp[victim] = 0.0
-	respawn_left[victim] = RESPAWN_TIME
+	respawn_left[victim] = respawn
 	_respawn_ready.erase(victim)
 	if Net.players.has(victim):
 		Net.players[victim].deaths += 1
@@ -332,7 +343,7 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
 	var victim_pos := Vector3.ZERO
 	if world.players.has(victim):
 		victim_pos = world.players[victim].global_position
-	_on_death.rpc(victim, killer, weapon, head, victim_pos)
+	_on_death.rpc(victim, killer, weapon, head, victim_pos, respawn)
 	if holder == victim:
 		_server_drop(victim_pos)
 	elif holder == killer and killer != victim and phase == Phase.HELD:
@@ -580,15 +591,17 @@ func _on_damage(victim: int, shooter: int, new_hp: float, damage: float, head: b
 		Sfx.play("hurt", -6.0)
 		if world and world.players.has(me):
 			world.players[me].on_damaged(head)
+		if world and world.players.has(shooter):
+			local_damaged_by.emit(shooter, world.players[shooter].global_position)
 	if shooter == me:
 		local_hit.emit(damage, head, false)
 
 
 @rpc("authority", "call_local", "reliable")
-func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos: Vector3) -> void:
+func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos: Vector3, respawn: float) -> void:
 	alive_ids[victim] = false
 	hp[victim] = 0.0
-	respawn_left[victim] = RESPAWN_TIME
+	respawn_left[victim] = respawn
 	var me := multiplayer.get_unique_id()
 	if world and world.players.has(victim):
 		world.players[victim].set_alive(false)

@@ -15,7 +15,7 @@ const CROUCH_SPEED := 2.8
 const ADS_MULT := 0.62
 const ACCEL := 60.0
 const DECEL := 45.0
-const AIR_ACCEL := 16.0
+const AIR_ACCEL := 19.2  # air strafing (was 16, +20%)
 const GRAVITY := 16.0
 const JUMP_V := 6.4
 const DJUMP_V := 7.0
@@ -61,6 +61,8 @@ const VM_HIP := Vector3(0.24, -0.24, -0.5)
 const VM_ADS := Vector3(0.0, -0.135, -0.36)
 const VM_ADS_HOLO := Vector3(0.0, -0.118, -0.3)
 const VM_ADS_IRONS := Vector3(0.0, -0.08, -0.3)
+const GLINT_MIN_DOT := 0.6  # sniper glint shows when they aim within ~53 degrees of you
+const NAMEPLATE_SCALE := 0.1  # teammate names are 10% of their old size (shrunk by 90%)
 
 static var _mesh_cache := {}
 
@@ -79,7 +81,10 @@ var capsule: CapsuleShape3D
 var probe_shape: CapsuleShape3D
 var body_root: Node3D
 var tag_mesh: MeshInstance3D
-var tp_gun: MeshInstance3D
+var tp_pivot: Node3D     # shoulder; pitched with where the player looks
+var tp_gun: Node3D       # the weapon everyone else sees you holding
+var _glint: Node3D       # sniper scope glint
+var _body_alpha := -1.0
 var nameplate: Label3D
 var head_col: CollisionShape3D
 var viewmodel: Node3D
@@ -283,7 +288,13 @@ func _build_body() -> void:
 	_add_part(body_root, _box(Vector3(0.32, 0.08, 0.06)), Vector3(0, 1.66, -0.22), Color("2a2a2e"))
 	_add_part(body_root, _box(Vector3(0.22, 0.2, 0.3)), Vector3(-0.15, 0.1, -0.03), Color("3a3030"))
 	_add_part(body_root, _box(Vector3(0.22, 0.2, 0.3)), Vector3(0.15, 0.1, -0.03), Color("3a3030"))
-	tp_gun = _add_part(body_root, _box(Vector3(0.09, 0.12, 0.65)), Vector3(0.24, 1.22, -0.42), Color("2f3236"))
+	tp_pivot = Node3D.new()
+	tp_pivot.position = Vector3(0, 1.35, 0)
+	body_root.add_child(tp_pivot)
+	tp_gun = Node3D.new()
+	tp_gun.position = Vector3(0.24, -0.12, -0.3)
+	tp_pivot.add_child(tp_gun)
+	_rebuild_tp_gun()
 	tag_mesh = MeshInstance3D.new()
 	tag_mesh.mesh = _sphere_mesh("tag", 0.28, 4, 2)
 	tag_mesh.material_override = Mats.glow(Mats.TAG_COLOR)
@@ -298,7 +309,7 @@ func _build_body() -> void:
 	nameplate.outline_render_priority = 9
 	nameplate.font_size = 30
 	nameplate.outline_size = 10
-	nameplate.pixel_size = 0.0015
+	nameplate.pixel_size = 0.0015 * NAMEPLATE_SCALE
 	nameplate.modulate = Mats.team_color(team).lightened(0.55)
 	nameplate.outline_modulate = Color(0, 0, 0, 0.9)
 	nameplate.position = Vector3(0, 2.2, 0)
@@ -323,43 +334,9 @@ func _rebuild_viewmodel() -> void:
 	viewmodel.add_child(vm_gun)
 	vm_muzzle = Node3D.new()
 	vm_gun.add_child(vm_muzzle)
-	var dark := Color("2f3236")
-	match weapon:
-		"ar":
-			_add_part(vm_gun, _box(Vector3(0.09, 0.13, 0.62)), Vector3(0, 0, -0.1), Color("4b5320"), false)
-			_add_part(vm_gun, _box(Vector3(0.07, 0.12, 0.22)), Vector3(0, -0.02, 0.28), dark, false)
-			_add_part(vm_gun, _box(Vector3(0.06, 0.2, 0.09)), Vector3(0, -0.15, -0.1), dark, false)
-			_add_part(vm_gun, _box(Vector3(0.035, 0.035, 0.3)), Vector3(0, 0.02, -0.55), dark, false)
-			_build_holo(0.07, 1.5)
-			vm_muzzle.position = Vector3(0, 0.02, -0.72)
-		"smg":
-			_add_part(vm_gun, _box(Vector3(0.08, 0.12, 0.42)), Vector3(0, 0, -0.05), Color("3a3a40"), false)
-			_add_part(vm_gun, _box(Vector3(0.05, 0.26, 0.07)), Vector3(0, -0.18, -0.08), dark, false)
-			_add_part(vm_gun, _box(Vector3(0.03, 0.03, 0.14)), Vector3(0, 0.02, -0.33), dark, false)
-			_build_holo(0.06, 1.2)
-			vm_muzzle.position = Vector3(0, 0.02, -0.42)
-		"shotgun":
-			_add_part(vm_gun, _box(Vector3(0.07, 0.07, 0.78)), Vector3(0, 0.03, -0.25), dark, false)
-			_add_part(vm_gun, _box(Vector3(0.09, 0.08, 0.24)), Vector3(0, -0.04, -0.3), Color("8a5a3c"), false)
-			_add_part(vm_gun, _box(Vector3(0.08, 0.12, 0.3)), Vector3(0, -0.02, 0.2), Color("8a5a3c"), false)
-			_add_part(vm_gun, _box(Vector3(0.02, 0.03, 0.02)), Vector3(0, 0.08, -0.6), Color("d6a83a"), false)
-			vm_muzzle.position = Vector3(0, 0.03, -0.66)
-		"sniper":
-			_add_part(vm_gun, _box(Vector3(0.07, 0.1, 0.95)), Vector3(0, 0, -0.2), Color("2f4f3a"), false)
-			_add_part(vm_gun, _box(Vector3(0.07, 0.07, 0.34)), Vector3(0, 0.1, -0.08), Color("1a1a1e"), false)
-			_add_part(vm_gun, _box(Vector3(0.07, 0.13, 0.26)), Vector3(0, -0.03, 0.35), Color("5b3a29"), false)
-			_add_part(vm_gun, _box(Vector3(0.03, 0.03, 0.3)), Vector3(0, 0.0, -0.8), dark, false)
-			vm_muzzle.position = Vector3(0, 0.0, -0.95)
-		"bat":
-			vm_gun.rotation_degrees = Vector3(-25, 0, -18)
-			_add_part(vm_gun, _box(Vector3(0.05, 0.05, 0.4)), Vector3(0, 0, 0.05), Color("3a2a20"), false)
-			_add_part(vm_gun, _box(Vector3(0.1, 0.1, 0.55)), Vector3(0, 0, -0.4), Color("b48a5a"), false)
-			for i in 6:
-				var z := -0.25 - i * 0.07
-				var side := 1.0 if i % 2 == 0 else -1.0
-				_add_part(vm_gun, _box(Vector3(0.14, 0.02, 0.02)), Vector3(side * 0.02, 0.0, z), Color("c0c4c8"), false)
-				_add_part(vm_gun, _box(Vector3(0.02, 0.14, 0.02)), Vector3(0.0, side * 0.02, z - 0.03), Color("c0c4c8"), false)
-			vm_muzzle.position = Vector3(0, 0, -0.7)
+	if weapon == "bat":
+		vm_gun.rotation_degrees = Vector3(-25, 0, -18)
+	vm_muzzle.position = _build_gun(vm_gun, weapon, true)
 	match weapon:
 		"ar", "smg":
 			_vm_ads = VM_ADS_HOLO
@@ -375,30 +352,107 @@ func _rebuild_viewmodel() -> void:
 	vm_muzzle.add_child(vm_flash)
 
 
+## The gun other players see you holding: the same model as your viewmodel, held at
+## the shoulder and pitched with where you're looking. The sniper gets a scope glint.
+func _rebuild_tp_gun() -> void:
+	if tp_gun == null:
+		return
+	for c in tp_gun.get_children():
+		c.queue_free()
+	_glint = null
+	_body_alpha = -1.0
+	# The bat rests on the shoulder; guns point where you look.
+	tp_gun.rotation_degrees = Vector3(70, 0, 0) if weapon == "bat" else Vector3.ZERO
+	_build_gun(tp_gun, weapon, false)
+	if weapon == "sniper":
+		_glint = Node3D.new()
+		_glint.position = Vector3(0, 0.1, -0.28)  # just in front of the scope lens
+		_glint.visible = false
+		var flare := MeshInstance3D.new()
+		flare.mesh = _quad_mesh("glint", Vector2(0.075, 0.075))
+		flare.material_override = _glint_material()
+		flare.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_glint.add_child(flare)
+		var streak := MeshInstance3D.new()
+		streak.mesh = _quad_mesh("glint_streak", Vector2(0.24, 0.012))
+		streak.material_override = _glint_material()
+		streak.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_glint.add_child(streak)
+		tp_gun.add_child(_glint)
+
+
+## Builds a weapon model under root. Used for both the first-person viewmodel and
+## the third-person gun, so every player's weapon looks the same to everyone.
+## Returns the muzzle position.
+func _build_gun(root: Node3D, w: String, first_person: bool) -> Vector3:
+	var sh := not first_person  # viewmodels don't cast shadows
+	var dark := Color("2f3236")
+	match w:
+		"ar":
+			_add_part(root, _box(Vector3(0.09, 0.13, 0.62)), Vector3(0, 0, -0.1), Color("4b5320"), sh)
+			_add_part(root, _box(Vector3(0.07, 0.12, 0.22)), Vector3(0, -0.02, 0.28), dark, sh)
+			_add_part(root, _box(Vector3(0.06, 0.2, 0.09)), Vector3(0, -0.15, -0.1), dark, sh)
+			_add_part(root, _box(Vector3(0.035, 0.035, 0.3)), Vector3(0, 0.02, -0.55), dark, sh)
+			_build_holo(root, 0.07, 1.5, first_person)
+			return Vector3(0, 0.02, -0.72)
+		"smg":
+			_add_part(root, _box(Vector3(0.08, 0.12, 0.42)), Vector3(0, 0, -0.05), Color("3a3a40"), sh)
+			_add_part(root, _box(Vector3(0.05, 0.26, 0.07)), Vector3(0, -0.18, -0.08), dark, sh)
+			_add_part(root, _box(Vector3(0.03, 0.03, 0.14)), Vector3(0, 0.02, -0.33), dark, sh)
+			_build_holo(root, 0.06, 1.2, first_person)
+			return Vector3(0, 0.02, -0.42)
+		"shotgun":
+			_add_part(root, _box(Vector3(0.07, 0.07, 0.78)), Vector3(0, 0.03, -0.25), dark, sh)
+			_add_part(root, _box(Vector3(0.09, 0.08, 0.24)), Vector3(0, -0.04, -0.3), Color("8a5a3c"), sh)
+			_add_part(root, _box(Vector3(0.08, 0.12, 0.3)), Vector3(0, -0.02, 0.2), Color("8a5a3c"), sh)
+			_add_part(root, _box(Vector3(0.02, 0.03, 0.02)), Vector3(0, 0.08, -0.6), Color("d6a83a"), sh)
+			return Vector3(0, 0.03, -0.66)
+		"sniper":
+			_add_part(root, _box(Vector3(0.07, 0.1, 0.95)), Vector3(0, 0, -0.2), Color("2f4f3a"), sh)
+			_add_part(root, _box(Vector3(0.07, 0.07, 0.34)), Vector3(0, 0.1, -0.08), Color("1a1a1e"), sh)
+			_add_part(root, _box(Vector3(0.07, 0.13, 0.26)), Vector3(0, -0.03, 0.35), Color("5b3a29"), sh)
+			_add_part(root, _box(Vector3(0.03, 0.03, 0.3)), Vector3(0, 0.0, -0.8), dark, sh)
+			return Vector3(0, 0.0, -0.95)
+		"bat":
+			_add_part(root, _box(Vector3(0.05, 0.05, 0.4)), Vector3(0, 0, 0.05), Color("3a2a20"), sh)
+			_add_part(root, _box(Vector3(0.1, 0.1, 0.55)), Vector3(0, 0, -0.4), Color("b48a5a"), sh)
+			for i in 6:
+				var z := -0.25 - i * 0.07
+				var side := 1.0 if i % 2 == 0 else -1.0
+				_add_part(root, _box(Vector3(0.14, 0.02, 0.02)), Vector3(side * 0.02, 0.0, z), Color("c0c4c8"), sh)
+				_add_part(root, _box(Vector3(0.02, 0.14, 0.02)), Vector3(0.0, side * 0.02, z - 0.03), Color("c0c4c8"), sh)
+			return Vector3(0, 0, -0.7)
+	return Vector3.ZERO
+
+
 ## Holographic sight on top of the gun. The window size and reticle reflect its
 ## magnification (AR 1.5x: larger window, ring + dot; SMG 1.2x: compact, dot only).
 ## Its centre sits at y = 0.118 so it lines up with the camera when aiming.
-func _build_holo(window: float, zoom: float) -> void:
+## The tiny reticle is only built for the first-person viewmodel.
+func _build_holo(root: Node3D, window: float, zoom: float, reticle: bool) -> void:
 	var cy := 0.118
 	var z := -0.06
 	var frame := Color("1a1a1e")
 	var h := window * 0.8
-	_add_part(vm_gun, _box(Vector3(0.05, 0.03, 0.11)), Vector3(0, 0.075, z), frame, false)
+	var sh := not reticle
+	_add_part(root, _box(Vector3(0.05, 0.03, 0.11)), Vector3(0, 0.075, z), frame, sh)
 	for sx: float in [-1.0, 1.0]:
-		_add_part(vm_gun, _box(Vector3(0.008, h + 0.012, 0.012)), Vector3(sx * window * 0.5, cy, z), frame, false)
-	_add_part(vm_gun, _box(Vector3(window + 0.008, 0.008, 0.012)), Vector3(0, cy + h * 0.5 + 0.004, z), frame, false)
+		_add_part(root, _box(Vector3(0.008, h + 0.012, 0.012)), Vector3(sx * window * 0.5, cy, z), frame, sh)
+	_add_part(root, _box(Vector3(window + 0.008, 0.008, 0.012)), Vector3(0, cy + h * 0.5 + 0.004, z), frame, sh)
 	var glass := MeshInstance3D.new()
 	glass.mesh = _box(Vector3(window, h, 0.002))
 	glass.material_override = Mats.glow(Color("9fe6ff"), 0.12)
 	glass.position = Vector3(0, cy, z)
 	glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	vm_gun.add_child(glass)
+	root.add_child(glass)
+	if not reticle:
+		return
 	var red := Mats.glow(Color("ff3b30"))
 	var dot := MeshInstance3D.new()
 	dot.mesh = _sphere_mesh("holo_dot", 0.0016, 6, 3)
 	dot.material_override = red
 	dot.position = Vector3(0, cy, z - 0.002)
-	vm_gun.add_child(dot)
+	root.add_child(dot)
 	if zoom >= 1.4:
 		# Ring reticle made of small segments.
 		var r := 0.011
@@ -409,24 +463,98 @@ func _build_holo(window: float, zoom: float) -> void:
 			seg.material_override = red
 			seg.position = Vector3(cos(a) * r, cy + sin(a) * r, z - 0.002)
 			seg.rotation.z = a + PI * 0.5
-			vm_gun.add_child(seg)
+			root.add_child(seg)
 
 
+static func _quad_mesh(key: String, s: Vector2) -> Mesh:
+	if not _mesh_cache.has(key):
+		var m := QuadMesh.new()
+		m.size = s
+		_mesh_cache[key] = m
+	return _mesh_cache[key]
+
+
+## Additive, camera-facing, constant screen size flare with a soft round falloff.
+## Drawn over everything; _update_glint hides it when a wall is in the way.
+static func _glint_material() -> Material:
+	if not _mesh_cache.has("glint_mat"):
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		var tex := GradientTexture2D.new()
+		tex.gradient = g
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(1.0, 0.5)
+		tex.width = 64
+		tex.height = 64
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		m.fixed_size = true
+		m.billboard_keep_scale = true  # _update_glint scales it
+		m.no_depth_test = true
+		m.render_priority = 5
+		m.albedo_texture = tex
+		m.albedo_color = Color(1.0, 0.96, 0.82)
+		_mesh_cache["glint_mat"] = m
+	return _mesh_cache["glint_mat"]
+
+
+## Body transparency (Hider / Phantom / spawn protection), applied to every part
+## including the held gun. Only touches the meshes when the value changes.
 func _set_body_alpha(alpha_transparency: float, vis: bool) -> void:
 	body_root.visible = vis
-	for c in body_root.get_children():
-		if c is GeometryInstance3D and c != tag_mesh:
-			c.transparency = alpha_transparency
+	if is_equal_approx(alpha_transparency, _body_alpha):
+		return
+	_body_alpha = alpha_transparency
+	_set_alpha_in(body_root, alpha_transparency)
+
+
+func _set_alpha_in(n: Node, a: float) -> void:
+	for c in n.get_children():
+		if c == tag_mesh or c == _glint:
+			continue
+		if c is GeometryInstance3D:
+			c.transparency = a
+		_set_alpha_in(c, a)
+
+
+## Sniper glint: a flare on the scope while this player is scoped in with the
+## sniper, brightest when they're looking straight at you. Hidden behind walls.
+func _update_glint() -> void:
+	if _glint == null:
+		return
+	var strength := 0.0
+	var view := get_viewport().get_camera_3d()
+	if view and alive and body_root.visible and (net_flags & F_ADS) != 0:
+		var gp := _glint.global_position
+		var to_cam := view.global_position - gp
+		var look := -(Basis(Vector3.UP, net_yaw) * Basis(Vector3.RIGHT, net_pitch)).z
+		strength = clampf((look.dot(to_cam.normalized()) - GLINT_MIN_DOT) / (1.0 - GLINT_MIN_DOT), 0.0, 1.0)
+		if strength > 0.0:
+			var q := PhysicsRayQueryParameters3D.create(view.global_position, gp, MapBuilder.MASK_WORLD)
+			if not get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+				strength = 0.0
+	_glint.visible = strength > 0.0
+	if _glint.visible:
+		var pulse := 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.012)
+		_glint.scale = Vector3.ONE * lerpf(0.45, 1.0, strength) * pulse
 
 
 # ================================================================ state changes
 
 func refresh_loadout() -> void:
+	var old_weapon := weapon
 	if Net.players.has(peer_id):
 		var info: Dictionary = Net.players[peer_id]
 		team = info.team
 		weapon = info.weapon
 		addon = info.addon
+	if weapon != old_weapon:
+		_rebuild_tp_gun()
 	if nameplate:
 		nameplate.text = Net.name_of(peer_id)
 	if is_local:
@@ -999,7 +1127,8 @@ func _remote_update(delta: float) -> void:
 	tag_mesh.visible = Game.holder == peer_id
 	if tag_mesh.visible:
 		tag_mesh.rotation.y += delta * 3.0
-	tp_gun.visible = true
+	tp_pivot.rotation.x = net_pitch
+	_update_glint()
 
 
 func _local_visuals(delta: float) -> void:
@@ -1069,8 +1198,13 @@ func _start_reload() -> void:
 	var mag := int(Weapons.DATA[weapon].mag)
 	if ammo >= mag:
 		return
-	reloading = float(Weapons.DATA[weapon].reload)
+	reloading = reload_time()
 	Sfx.play("reload", -6.0)
+
+
+## Trackstar reloads 25% faster.
+func reload_time() -> float:
+	return float(Weapons.DATA[weapon].reload) * (Addons.TRACK_RELOAD_MULT if addon == "trackstar" else 1.0)
 
 
 func _spread_dir(b: Basis, deg: float) -> Vector3:

@@ -1,6 +1,7 @@
 class_name ChatBox
 extends Control
-## Chat window (bottom-left). Enter = all chat, Y = team chat (both rebindable).
+## Chat window (bottom-left). Enter = all chat, Shift + Enter = team chat (the chat
+## key is rebindable; team chat is always Shift + it).
 ## Typing "/" at the start shows command autocomplete: Tab completes,
 ## Up / Down choose, Enter sends, Esc cancels.
 ## Messages are shown as plain text in Labels (no BBCode), so nothing a player
@@ -89,10 +90,8 @@ func _input(event: InputEvent) -> void:
 		if not Net.online or Game.ui_open:
 			return
 		if event.is_action("chat"):
-			_open(false)
-			get_viewport().set_input_as_handled()
-		elif event.is_action("team_chat") and Game.in_match:
-			_open(true)
+			# Shift + the chat key opens team chat (during a match).
+			_open(event.shift_pressed and Game.in_match)
 			get_viewport().set_input_as_handled()
 		return
 	match event.keycode:
