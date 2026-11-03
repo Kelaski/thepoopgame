@@ -116,6 +116,8 @@ var _o := Vector2.ZERO
 var _flip := false   # mirror u (second stairwell at the far end)
 var _umax := 0.0
 var _forbid: Array = []
+var _wall_slots: Array = []   # [inner face point at floor level, inward normal, storey] per solid wall module
+var _occupied: Array = []     # Rect2: furniture cells used on the storey being furnished
 # Furniture-style props use the "detail" MultiMesh (with a visibility range) inside
 # buildings; outdoor clutter must stay visible from anywhere, so it turns this off.
 var _detail := true
@@ -939,6 +941,7 @@ func _build_building(b: Array) -> void:
 	_flip = false
 
 	# --- Exterior walls
+	_wall_slots = []
 	_build_exterior_walls(type, floors, fh, x0, z0, x1, z1, door_spots, st)
 
 	# --- Signs
@@ -990,21 +993,32 @@ func _build_building(b: Array) -> void:
 				var p := _uv(cu, (6.5 + vmax) * 0.5)
 				_prefab("building/wall_interior", _at(Vector3(p.x, y0, p.y), v_yaw, Vector3(vmax - 6.5, h, 1)), cross)
 
-	# --- Furnish every storey (and specials)
+	# --- Furnish every storey (and specials), then decorate
+	var floor_zones := []
+	var floor_cells := []
+	var floor_walls := []
 	for k in floors:
 		var y := k * fh
 		var zones: Array = _forbid.duplicate()
+		var walls := []
 		if k == 0:
 			zones.append_array(obj_forbid)
 		if k in room_floors and can_rooms:
 			zones.append_array(room_forbid)
+			walls.append(_uv_rect(0, 6.3, umax, 6.7))
+			for cu: float in room_walls:
+				walls.append(_uv_rect(cu - 0.2, 6.5, cu + 0.2, vmax))
+		floor_zones.append(zones)
+		floor_walls.append(walls)
+		_occupied = []
 		if type == "sports":
 			_furnish_sports(inner, zones)
-			continue
-		if type == "water":
+		elif type == "water":
 			_furnish_water(inner, zones)
-			continue
-		_furnish_floor(type, k, inner, y, fh, zones)
+		else:
+			_furnish_floor(type, k, inner, y, fh, zones)
+		floor_cells.append(_occupied)
+	_decorate_interior(type, floors, fh, inner, stairs, door_spots, floor_zones, floor_cells, floor_walls)
 
 	# --- Respawn candidates on every floor + roof
 	for k in floors + 1:
@@ -1097,6 +1111,9 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 				elif i > 0 and i < n - 1 and not near_door and rng.randf() < p_win * (0.4 if last_window else 1.0):
 					piece = window
 				last_window = piece == window
+				if piece == "building/wall_solid":
+					var inward: Vector3 = [Vector3.BACK, Vector3.FORWARD, Vector3.RIGHT, Vector3.LEFT][side]
+					_wall_slots.append([at + inward * WALL_T * 0.5, inward, k])
 				_prefab(piece, _at(at, yaw), cols)
 				if fh > MODULE_H:
 					_prefab("building/wall_filler", _at(at + Vector3(0, MODULE_H, 0), yaw, Vector3(1, fh - MODULE_H, 1)), cols)
@@ -1161,6 +1178,115 @@ func _make_door(horizontal: bool, fixed: float, t: float, y0: float, col: Color,
 		_door_pts.append(Vector2(centre.x, centre.z))
 
 
+# ================================================================ interior decor
+
+## Decor theme per building type (scenes in assets/furniture/decor/):
+## [ceiling light, wall pieces, floor pieces against the walls, rug on each storey]
+const THEME_DECOR := {
+	"warehouse": ["industrial_lamp", ["safety_sign", "fire_extinguisher", "wall_pipes"], ["pallet_stack", "trash_can"], false],
+	"school": ["ceiling_panel", ["bulletin_board", "wall_clock", "poster", "whiteboard"], ["vending_machine", "trash_can", "water_cooler"], false],
+	"theater": ["pendant_lamp", ["movie_poster", "curtain", "wall_lamp"], ["trash_can"], false],
+	"bank": ["ceiling_panel", ["picture_frame", "wall_clock"], ["water_cooler"], true],
+	"diner": ["pendant_lamp", ["neon_sign", "poster", "wall_clock"], ["jukebox"], false],
+	"arcade": ["ceiling_panel", ["neon_sign", "poster"], ["vending_machine", "trash_can"], false],
+	"club": ["pendant_lamp", ["neon_sign"], ["speaker_stack"], false],
+	"bar": ["pendant_lamp", ["neon_sign", "wall_shelf_bottles", "dartboard"], ["jukebox"], false],
+	"apartments": ["pendant_lamp", ["picture_frame", "wall_lamp", "poster"], [], true],
+	"mall": ["ceiling_panel", ["poster", "neon_sign", "banner"], ["mannequin", "trash_can"], false],
+	"motel": ["pendant_lamp", ["picture_frame", "wall_lamp"], ["vending_machine"], true],
+	"rundown": ["pendant_lamp", ["graffiti_panel", "poster", "wall_pipes"], ["trash_can"], false],
+	"rundown2": ["pendant_lamp", ["graffiti_panel", "poster", "wall_pipes"], ["trash_can"], false],
+	"office": ["ceiling_panel", ["whiteboard", "picture_frame", "wall_clock"], ["water_cooler", "vending_machine", "trash_can"], false],
+	"casino": ["pendant_lamp", ["neon_sign", "picture_frame", "curtain"], [], true],
+	"library": ["pendant_lamp", ["picture_frame", "wall_clock", "bulletin_board"], [], true],
+	"water": ["industrial_lamp", ["valve_panel", "wall_pipes", "safety_sign"], [], false],
+	"sports": ["industrial_lamp", ["banner"], [], false],
+}
+const LIGHT_STEP := 6.0     # ceiling light spacing (m)
+const P_WALL_DECOR := 0.27  # chance a solid wall module gets a wall piece
+const P_FLOOR_DECOR := 0.12 # chance it gets a floor piece instead
+
+
+## Decorates a building's storeys: ceiling lights on a grid (clear of the stair
+## holes and room walls), themed pieces on the solid exterior wall modules, floor
+## pieces against the walls where no furniture stands, a rug for some types and an
+## exit sign over every street door. Lights, signs, frames and rugs are visual only.
+func _decorate_interior(type: String, floors: int, fh: float, inner: Rect2, stairs: Array, door_spots: Array, floor_zones: Array, floor_cells: Array, floor_walls: Array) -> void:
+	var theme: Array = THEME_DECOR.get(type, [])
+	if theme.is_empty():
+		return
+	var light: String = theme[0]
+	if light == "industrial_lamp" and fh < 5.5:
+		light = "ceiling_panel"  # long drops only in tall halls
+	var wall_items: Array = theme[1]
+	var floor_items: Array = theme[2]
+	var light_yaw := 0.0 if _ax else -PI * 0.5
+	var nx := maxi(1, roundi(inner.size.x / LIGHT_STEP))
+	var nz := maxi(1, roundi(inner.size.y / LIGHT_STEP))
+	for k in floors:
+		var y := k * fh
+		var ceil_y := (k + 1) * fh - SLAB_T
+		var walls: Array = floor_walls[k]
+		# Ceiling lights
+		for i in nx:
+			for j in nz:
+				var c := inner.position + Vector2((i + 0.5) * inner.size.x / nx, (j + 0.5) * inner.size.y / nz)
+				var spot := Rect2(c - Vector2(0.8, 0.8), Vector2(1.6, 1.6))
+				if _hits_any(spot, stairs, 0.3) or _hits_any(spot, walls, 0.0):
+					continue
+				_prefab("furniture/decor/" + light, _at(Vector3(c.x, ceil_y, c.y), light_yaw))
+		if type == "club" and fh >= 5.0:
+			var mid := inner.get_center()
+			if not _hits_any(Rect2(mid - Vector2.ONE, Vector2(2, 2)), stairs, 0.3):
+				_prefab("furniture/decor/disco_ball", _at(Vector3(mid.x, ceil_y, mid.y)))
+		# Rug somewhere clear (under furniture is fine)
+		if theme[3]:
+			for _attempt in 6:
+				var rc := Vector2(rng.randf_range(inner.position.x + 2.0, inner.end.x - 2.0), rng.randf_range(inner.position.y + 2.0, inner.end.y - 2.0))
+				var turn := rng.randf() < 0.5
+				var half := Vector2(0.9, 1.3) if turn else Vector2(1.3, 0.9)
+				if not _blocked(Rect2(rc - half, half * 2.0), floor_zones[k]):
+					_prefab("furniture/decor/rug", _at(Vector3(rc.x, y, rc.y), PI * 0.5 if turn else 0.0))
+					break
+	# Wall modules: a wall piece, a floor piece against the wall, or nothing
+	for ws: Array in _wall_slots:
+		var face: Vector3 = ws[0]
+		var inward: Vector3 = ws[1]
+		var k: int = ws[2]
+		var zones: Array = floor_zones[k]
+		var xf := _at(face, _yaw_to(inward))
+		var roll := rng.randf()
+		if roll < 0.03:
+			if not _blocked(_wall_foot(face, inward, 0.4), zones):
+				_prefab("furniture/decor/fire_extinguisher", xf)
+		elif roll < 0.03 + P_WALL_DECOR:
+			if not _blocked(_wall_foot(face, inward, 0.4), zones):
+				_prefab("furniture/decor/" + wall_items[rng.randi() % wall_items.size()], xf)
+		elif roll < 0.03 + P_WALL_DECOR + P_FLOOR_DECOR and not floor_items.is_empty():
+			var foot := _wall_foot(face, inward, 1.2)
+			if not _blocked(foot, zones) and not _hits_any(foot, floor_cells[k], 0.2):
+				_prefab("furniture/decor/" + floor_items[rng.randi() % floor_items.size()], xf)
+				floor_cells[k].append(foot)
+	# Exit signs over the street doors, on the inside
+	for ds in door_spots:
+		var side: int = ds[0]
+		var t: float = ds[1]
+		var p: Vector3 = [
+			Vector3(t, 0, inner.position.y), Vector3(t, 0, inner.end.y),
+			Vector3(inner.position.x, 0, t), Vector3(inner.end.x, 0, t),
+		][side]
+		var inward: Vector3 = [Vector3.BACK, Vector3.FORWARD, Vector3.RIGHT, Vector3.LEFT][side]
+		_prefab("furniture/decor/exit_sign", _at(p + Vector3(0, DOOR_H + 0.35, 0), _yaw_to(inward)))
+
+
+## Floor rect in front of a wall module: 1.9 m along the wall, depth into the room.
+static func _wall_foot(face: Vector3, inward: Vector3, depth: float) -> Rect2:
+	var hx := absf(inward.z) * 0.95 + absf(inward.x) * depth * 0.5
+	var hz := absf(inward.x) * 0.95 + absf(inward.z) * depth * 0.5
+	var c := Vector2(face.x + inward.x * depth * 0.5, face.z + inward.z * depth * 0.5)
+	return Rect2(c.x - hx, c.y - hz, hx * 2.0, hz * 2.0)
+
+
 # ================================================================ furniture
 
 func _blocked(r: Rect2, zones: Array) -> bool:
@@ -1201,6 +1327,7 @@ func _furnish_floor(type: String, k: int, inner: Rect2, y: float, fh: float, zon
 				continue
 			var c := Vector3(cx, y, cz)
 			var rot := rng.randf() < 0.5
+			_occupied.append(cell)
 			if type == "bank" and k == 0 and not vault_done and i == nx - 1 and j == nz - 1:
 				_vault(c)
 				vault_done = true

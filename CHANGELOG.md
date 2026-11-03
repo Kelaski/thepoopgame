@@ -7,8 +7,19 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
-## 0.9.2
+## 0.10.0
 
+### Added
+- **Interior decoration:** every building's inside is now decorated to match what it is.
+  - **Ceiling lights** on every storey: panel lights in offices, schools, banks, arcades and the mall; hanging lamps in homes, the diner, bar, theater, casino and library; long industrial lamps in the tall warehouse, arena and water treatment halls. The nightclub gets a disco ball.
+  - **Wall decor** on the solid wall sections, themed per building: posters and movie posters, picture frames, wall clocks, neon signs, bulletin boards, whiteboards, bottle shelves and a dartboard in the bar, curtains, wall lamps, banners, safety signs, pipes, valve panels and graffiti.
+  - **Floor pieces** against the walls where no furniture stands: vending machines, water coolers, jukeboxes, speaker stacks, mannequins, trash cans and pallet stacks.
+  - **Rugs** in the bank, apartments, motel, casino and library, **exit signs** over every street door, and the odd **fire extinguisher**.
+- Lights are light fixtures you can see, not real light sources, so performance stays the same.
+- Flat pieces (lights, signs, frames, posters, pipes, rugs) have no collision, so they never snag wall runs or jumps. Floor pieces, curtains, shelves, valve panels and extinguishers are solid.
+- Decor is never placed on stairs, in doorways, on room walls, in the corridor, or on a Tag spot.
+
+## 0.9.2
 ### Changed
 - **Music:** removed the built-in songs Rooftop Run, Neon Chase and Last Stand. The **Tag Rush Theme** is the only built-in music again, and it loops for the whole match. Your own playlist works as before.
 - **Music menu:** the options are now "Tag Rush Theme", "My playlist" and "My playlist + Tag Rush Theme".

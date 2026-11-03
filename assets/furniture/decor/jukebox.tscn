@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_243xr"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5411765, 0.22745098, 0.16470589, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_8cg6f"]
+size = Vector3(1, 1.5, 0.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_e3ajj"]
+size = Vector3(1, 1.5, 0.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_faksq"]
+size = Vector3(0.7, 0.5, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_07dt7"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(1, 0.47843137, 0.2901961, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_1ecrl"]
+size = Vector3(0.7, 0.5, 0.02)
+
+[node name="Jukebox" type="Node3D" unique_id=569324746]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1393253016]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.3)
+material_override = SubResource("StandardMaterial3D_243xr")
+mesh = SubResource("BoxMesh_8cg6f")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=119423449]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=211835332]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.3)
+shape = SubResource("BoxShape3D_e3ajj")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=69237111]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0.61)
+shape = SubResource("BoxShape3D_faksq")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=2112626193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0.61)
+material_override = SubResource("StandardMaterial3D_07dt7")
+mesh = SubResource("BoxMesh_1ecrl")
+metadata/slot_choices = PackedColorArray(1, 0.47843137, 0.2901961, 1, 1, 0.8235294, 0.24705882, 1, 1, 0.3019608, 0.9411765, 1)

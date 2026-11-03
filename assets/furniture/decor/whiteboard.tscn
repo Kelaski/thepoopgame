@@ -1,0 +1,37 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_h7kb6"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.95686275, 0.95686275, 0.95686275, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_6fsyt"]
+size = Vector3(1.8, 1, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dkomk"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6039216, 0.6392157, 0.65882355, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_1s2lf"]
+size = Vector3(1.8, 0.04, 0.08)
+
+[node name="Whiteboard" type="Node3D" unique_id=743788136]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1344781978]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0.02)
+material_override = SubResource("StandardMaterial3D_h7kb6")
+mesh = SubResource("BoxMesh_6fsyt")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=1402713907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.98, 0.04)
+material_override = SubResource("StandardMaterial3D_dkomk")
+mesh = SubResource("BoxMesh_1s2lf")

@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_w37n0"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.65882355, 0.5058824, 0.30980393, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_cmq4m"]
+size = Vector3(1.2, 0.14, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_25lvf"]
+size = Vector3(1.2, 0.14, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jnd21"]
+size = Vector3(1.2, 0.14, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ircjd"]
+size = Vector3(1.2, 0.14, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_i3s28"]
+size = Vector3(1.2, 0.14, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_j2pty"]
+size = Vector3(1.2, 0.14, 1)
+
+[node name="PalletStack" type="Node3D" unique_id=1045560231]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=222236900]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0.6)
+material_override = SubResource("StandardMaterial3D_w37n0")
+mesh = SubResource("BoxMesh_cmq4m")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1443254797]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1907137887]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0.6)
+shape = SubResource("BoxShape3D_25lvf")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=2142301230]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.225, 0.6)
+shape = SubResource("BoxShape3D_jnd21")
+
+[node name="Shape2" type="CollisionShape3D" parent="Collision" unique_id=1903014737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0.6)
+shape = SubResource("BoxShape3D_ircjd")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=383778285]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.225, 0.6)
+material_override = SubResource("StandardMaterial3D_w37n0")
+mesh = SubResource("BoxMesh_i3s28")
+
+[node name="Part3" type="MeshInstance3D" parent="." unique_id=1706050491]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0.6)
+material_override = SubResource("StandardMaterial3D_w37n0")
+mesh = SubResource("BoxMesh_j2pty")

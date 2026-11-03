@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dgmcl"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16470589, 0.16470589, 0.18039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_qfgji"]
+size = Vector3(0.03, 1.2, 0.03)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_snwbc"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3529412, 0.3764706, 0.4, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_gaxcc"]
+top_radius = 0.45
+bottom_radius = 0.45
+height = 0.3
+radial_segments = 10
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1lnm3"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(1, 0.9490196, 0.6901961, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_tmsjm"]
+radius = 0.14
+height = 0.28
+radial_segments = 10
+rings = 5
+
+[node name="IndustrialLamp" type="Node3D" unique_id=1033070359]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=503939259]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
+material_override = SubResource("StandardMaterial3D_dgmcl")
+mesh = SubResource("BoxMesh_qfgji")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=1878918701]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.35, 0)
+material_override = SubResource("StandardMaterial3D_snwbc")
+mesh = SubResource("CylinderMesh_gaxcc")
+
+[node name="Part3" type="MeshInstance3D" parent="." unique_id=701806071]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.5, 0)
+material_override = SubResource("StandardMaterial3D_1lnm3")
+mesh = SubResource("SphereMesh_tmsjm")

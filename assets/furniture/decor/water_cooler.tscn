@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5hjs2"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9254902, 0.9019608, 0.85490197, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_fpdu5"]
+size = Vector3(0.35, 1, 0.35)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_44kw6"]
+size = Vector3(0.35, 1, 0.35)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_e24l0"]
+height = 0.4
+radius = 0.14
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kb0e2"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.43529412, 0.8392157, 1, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_53v8g"]
+top_radius = 0.14
+bottom_radius = 0.14
+height = 0.4
+radial_segments = 10
+rings = 1
+
+[node name="WaterCooler" type="Node3D" unique_id=590296568]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1229656035]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.25)
+material_override = SubResource("StandardMaterial3D_5hjs2")
+mesh = SubResource("BoxMesh_fpdu5")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=622468582]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=848582403]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.25)
+shape = SubResource("BoxShape3D_44kw6")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=240673271]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0.25)
+shape = SubResource("CylinderShape3D_e24l0")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=1613460711]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0.25)
+material_override = SubResource("StandardMaterial3D_kb0e2")
+mesh = SubResource("CylinderMesh_53v8g")

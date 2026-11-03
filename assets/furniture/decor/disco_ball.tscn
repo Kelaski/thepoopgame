@@ -1,0 +1,40 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dgmcl"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16470589, 0.16470589, 0.18039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_h78lx"]
+size = Vector3(0.02, 0.7, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fdhxv"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.76862746, 0.78431374, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_wm6sn"]
+radius = 0.35
+height = 0.7
+radial_segments = 10
+rings = 5
+
+[node name="DiscoBall" type="Node3D" unique_id=1886653998]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1785305190]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.35, 0)
+material_override = SubResource("StandardMaterial3D_dgmcl")
+mesh = SubResource("BoxMesh_h78lx")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=1382692891]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.95, 0)
+material_override = SubResource("StandardMaterial3D_fdhxv")
+mesh = SubResource("SphereMesh_wm6sn")

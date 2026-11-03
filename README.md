@@ -5,7 +5,7 @@ Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and 
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
 Models are being moved from code into Godot scenes you can open and edit in the editor:
-- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), all 82 map props and furniture items (`assets/props/`, `assets/furniture/`), the 16 modular building pieces (`assets/building/`), and every menu and the HUD (`assets/ui/`). See **Editing models**, **Editing props**, **Editing buildings** and **Editing the UI** below.
+- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), all 82 map props and furniture items plus 30 interior decor pieces (`assets/props/`, `assets/furniture/`), the 16 modular building pieces (`assets/building/`), and every menu and the HUD (`assets/ui/`). See **Editing models**, **Editing props**, **Editing buildings** and **Editing the UI** below.
 - **Still built in code:** the ground, roads, road markings and boundary fence, which are generated from the layout. The UI also builds lists that depend on game data, such as rosters, keybinds and the playlist, at runtime.
 - **Always in code:** sounds and music are synthesized.
 
@@ -204,7 +204,7 @@ Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**
 - **Walls:** each storey's walls are a row of 2 m modules. A module is solid, has the building's window style (small, wide or tall), or is a door on the ground floor.
 - **Windows:** never at the ends of a wall or next to a door, and less likely right after another window, which leaves long solid stretches for wall running. Windows are open gaps you can shoot and jump through.
 - **Rooms:** residential and school floors have a corridor with 6 m rooms behind doors.
-**Streets** look like a busy city:
+- **Decor:** every storey has ceiling lights, and the walls get decor that fits the building: posters and clocks in the school, neon signs and a jukebox in the diner and bar, bottle shelves and a dartboard in the bar, picture frames and rugs in the bank, apartments, motel and library, pipes and safety signs in the warehouse and water treatment centre, and so on. Exit signs hang over the street doors. Lights are fixtures only, not real light sources.**Streets** look like a busy city:
 - **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses), with about half the spots taken. Every vehicle, on the road or in a car park, is at least 1.4 m from every other one (front, back and side to side), so you can always slide between two cars. The two lanes are staggered rather than side by side.
 - **Junctions:** kept clear, with zebra crossings.
 - **Sidewalks:** along every curb, a lamp post and street trees alternate every 6 m. In between there are benches, bins, fire hydrants with newspaper boxes, mailboxes and the odd bus shelter.
@@ -261,7 +261,7 @@ Every prop and piece of furniture on the map is a template scene:
 - `assets/props/park/`, `arena/`, `water/`: the basketball court, playground, bleachers, scoreboard, tanks and pumps.
 - `assets/props/crane/`: footing, mast, braces, the crane top, hook and loads, and `beam`, the stretched piece used for cables, jibs and bridge decks.
 - `assets/furniture/`: 40 items, from desks and beds to slot machines.
-
+- `assets/furniture/decor/`: 30 interior decor pieces: ceiling lights, wall decor, floor pieces, a rug and the exit sign.
 Edit them in the Godot editor. The next match uses your changes.
 
 **How they're used:** the map places thousands of these, so they aren't added as nodes. When a map loads, each scene is read once and stamped into the same batched meshes and collision as before, so performance doesn't change (`scripts/map/prefabs.gd`). That puts some limits on what a template can contain:
@@ -279,7 +279,8 @@ Edit them in the Godot editor. The next match uses your changes.
   - Props are placed on the ground at their origin.
   - Street props face their local +Z away from the road.
   - Furniture is sometimes turned 90°.
-  - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
+  - **Decor:** wall pieces have their origin on the wall face at floor level and stick out along +Z into the room. Floor pieces against a wall have their back at Z = 0. Ceiling lights hang down from their origin on the ceiling. The rug is centred on its origin.
+  - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/map_builder.gd`.  - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
 - **Code-side randomness:** sizes such as crates, bushes and tree heights are still random in code.
 
 The parts are named `Part0`, `Part1` and so on, in build order. Rename them freely. Only the meshes, shapes, colours and metadata matter.

@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dgmcl"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16470589, 0.16470589, 0.18039216, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_corgy"]
+top_radius = 0.24
+bottom_radius = 0.24
+height = 0.05
+radial_segments = 10
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5hjs2"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9254902, 0.9019608, 0.85490197, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_p83w0"]
+top_radius = 0.2
+bottom_radius = 0.2
+height = 0.01
+radial_segments = 10
+rings = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_qosdd"]
+size = Vector3(0.02, 0.12, 0.01)
+
+[node name="WallClock" type="Node3D" unique_id=1810256091]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1203378597]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 2.2, 0.025)
+material_override = SubResource("StandardMaterial3D_dgmcl")
+mesh = SubResource("CylinderMesh_corgy")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=1375819538]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 2.2, 0.055)
+material_override = SubResource("StandardMaterial3D_5hjs2")
+mesh = SubResource("CylinderMesh_p83w0")
+
+[node name="Part3" type="MeshInstance3D" parent="." unique_id=925687846]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0.065)
+material_override = SubResource("StandardMaterial3D_dgmcl")
+mesh = SubResource("BoxMesh_qosdd")

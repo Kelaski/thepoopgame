@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fl0nc"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(1, 0.3019608, 0.9411765, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_l6ert"]
+size = Vector3(1.8, 1.2, 0.01)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_svrr7"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(1, 0.8235294, 0.24705882, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_qvwja"]
+size = Vector3(1, 0.4, 0.005)
+
+[node name="GraffitiPanel" type="Node3D" unique_id=1600104487]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1603519074]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0.005)
+material_override = SubResource("StandardMaterial3D_fl0nc")
+mesh = SubResource("BoxMesh_l6ert")
+metadata/slot_choices = PackedColorArray(1, 0.3019608, 0.9411765, 1, 0.3019608, 0.88235295, 1, 1, 1, 0.8235294, 0.24705882, 1, 0.3019608, 1, 0.41568628, 1)
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=917584350]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 1.3, 0.012)
+material_override = SubResource("StandardMaterial3D_svrr7")
+mesh = SubResource("BoxMesh_qvwja")
+metadata/slot_choices = PackedColorArray(1, 0.3019608, 0.9411765, 1, 0.3019608, 0.88235295, 1, 1, 1, 0.8235294, 0.24705882, 1, 0.3019608, 1, 0.41568628, 1)

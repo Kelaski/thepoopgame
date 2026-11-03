@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sw2pw"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.24705882, 0.49803922, 0.65882355, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ciege"]
+top_radius = 0.08
+bottom_radius = 0.08
+radial_segments = 10
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dkomk"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6039216, 0.6392157, 0.65882355, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_bh1ux"]
+top_radius = 0.06
+bottom_radius = 0.06
+radial_segments = 10
+rings = 1
+
+[node name="WallPipes" type="Node3D" unique_id=1587234907]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=628044975]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 2.6, 0.12)
+material_override = SubResource("StandardMaterial3D_sw2pw")
+mesh = SubResource("CylinderMesh_ciege")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=122649799]
+transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0, 2.9, 0.12)
+material_override = SubResource("StandardMaterial3D_dkomk")
+mesh = SubResource("CylinderMesh_bh1ux")
