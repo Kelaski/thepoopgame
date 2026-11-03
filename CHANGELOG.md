@@ -7,6 +7,13 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.9.1
+
+### Changed
+- **Keybinds in the Input Map:** the default controls now live in Godot's own **Project Settings → Input Map** instead of a list in the code. Edit an action's key there to change its default.
+- **Extra inputs:** an action can have several inputs (such as a second key or a gamepad button), and they all work until a player rebinds that action.
+- **Rebinding unchanged:** rebinding in Settings → Keybinds works as before and is saved per player. **Reset Keybinds** restores the Input Map's inputs, and existing saved binds carry over.
+
 ## 0.9.0
 
 Last step of moving the game into editable scenes: the UI.

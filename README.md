@@ -62,6 +62,13 @@ Optional command-line flags (after `--`):
 There is no sprint key: moving forward is always a sprint. Aiming, crouching or holding a lean key slows you to a walk.
 If you played an older version, the old default binds for lean right (C), addon (F) and interact (E) move to the new defaults automatically. Binds you changed yourself are kept.
 
+**Changing the default controls:** the defaults are the game's actions in **Project Settings → Input Map** in the Godot editor (`move_forward`, `jump`, `addon`, `chat` and so on).
+- **Changing a default:** change an action's key there and every player who hasn't rebound it gets the new key.
+- **Adding inputs:** you can give an action more than one input, such as a second key or a gamepad button. They all keep working until a player rebinds that action in game.
+- **Player rebinds:** a rebind in Settings → Keybinds replaces the action's inputs with the player's key or button. It's saved in their settings file, and **Reset Keybinds** brings the Input Map's inputs back.
+- **Labels and order:** the names and order shown in the Keybinds tab are in `Settings.ACTIONS` (`scripts/autoload/settings.gd`).
+- **Left Shift:** the ability key is set to *Left* Shift in the Input Map, because Right Shift + Enter is team chat.
+
 Four built-in songs play during matches: **Tag Rush Theme** (160 BPM), **Rooftop Run** (174 BPM), **Neon Chase** (128 BPM) and **Last Stand** (140 BPM). They are synthesized in code on a background thread when the game starts. Each one plays for a minute before moving on to the next, and music has its own volume slider.
 
 ### Custom music & playlist (Customization → Music & Playlist, from the main menu, lobby or pause menu)

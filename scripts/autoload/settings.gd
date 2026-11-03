@@ -1,6 +1,11 @@
 extends Node
 ## Persistent player settings and rebindable controls.
 ## Everything is stored in user://settings.cfg.
+##
+## The default controls are the game's actions in Project Settings > Input Map
+## (project.godot). Players can rebind them in Settings > Keybinds: a rebound
+## action gets the player's key or mouse button instead (saved in settings.cfg),
+## and resetting it brings back everything set in the Input Map.
 
 signal changed
 signal colors_changed
@@ -8,25 +13,26 @@ signal music_changed
 
 const PATH := "user://settings.cfg"
 
-# [action, label, kind ("k" = keyboard physical key, "m" = mouse button), default code]
+# Rebindable actions, in the order the Keybinds tab lists them: [action, label].
+# Their default keys / buttons are set in Project Settings > Input Map.
 const ACTIONS := [
-	["move_forward", "Move Forward", "k", KEY_W],
-	["move_back", "Move Back", "k", KEY_S],
-	["move_left", "Move Left", "k", KEY_A],
-	["move_right", "Move Right", "k", KEY_D],
-	["jump", "Jump / Double Jump", "k", KEY_SPACE],
-	["crouch", "Crouch / Slide", "k", KEY_CTRL],
-	["lean_left", "Lean Left", "k", KEY_Q],
-	["lean_right", "Lean Right", "k", KEY_E],
-	["addon", "Use Addon (ability)", "k", KEY_SHIFT],
-	["interact", "Interact / Doors", "k", KEY_F],
-	["fire", "Fire", "m", MOUSE_BUTTON_LEFT],
-	["aim", "Aim Down Sights", "m", MOUSE_BUTTON_RIGHT],
-	["reload", "Reload", "k", KEY_R],
-	["scoreboard", "Scoreboard", "k", KEY_TAB],
-	["loadout", "Loadout Menu (while dead)", "k", KEY_B],
-	["spray", "Spray", "k", KEY_T],
-	["chat", "Chat (hold Right Shift for team chat)", "k", KEY_ENTER],
+	["move_forward", "Move Forward"],
+	["move_back", "Move Back"],
+	["move_left", "Move Left"],
+	["move_right", "Move Right"],
+	["jump", "Jump / Double Jump"],
+	["crouch", "Crouch / Slide"],
+	["lean_left", "Lean Left"],
+	["lean_right", "Lean Right"],
+	["addon", "Use Addon (ability)"],
+	["interact", "Interact / Doors"],
+	["fire", "Fire"],
+	["aim", "Aim Down Sights"],
+	["reload", "Reload"],
+	["scoreboard", "Scoreboard"],
+	["loadout", "Loadout Menu (while dead)"],
+	["spray", "Spray"],
+	["chat", "Chat (hold Right Shift for team chat)"],
 ]
 
 const DEFAULTS := {
@@ -109,15 +115,49 @@ const MOUSE_NAMES := {
 }
 
 var values := {}
-var binds := {}  # action -> [kind, code]
+var binds := {}  # action -> [kind ("k" key / "m" mouse button), code]: what's shown in Keybinds
+var _default_events := {}  # action -> the Input Map's events (from project.godot)
+var _default_binds := {}   # action -> [kind, code] of the Input Map's first key / button
 var _last_fullscreen = null
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_buses()
+	_read_input_map()
 	load_settings()
 	apply_all()
+
+
+## Remembers the default controls from Project Settings > Input Map before any
+## of the player's rebinds are applied.
+func _read_input_map() -> void:
+	for a in ACTIONS:
+		var action: String = a[0]
+		if not InputMap.has_action(action):
+			push_warning("Input action \"%s\" is missing from Project Settings > Input Map" % action)
+			InputMap.add_action(action, 0.2)
+		var events := InputMap.action_get_events(action)
+		_default_events[action] = events.duplicate()
+		_default_binds[action] = ["k", 0]
+		for ev in events:
+			var b := _bind_of(ev)
+			if not b.is_empty():
+				_default_binds[action] = b
+				break
+
+
+## [kind, code] for a key or mouse-button event ([] for anything else).
+static func _bind_of(ev: InputEvent) -> Array:
+	if ev is InputEventMouseButton:
+		return ["m", ev.button_index]
+	if ev is InputEventKey:
+		return ["k", ev.physical_keycode if ev.physical_keycode != 0 else ev.keycode]
+	return []
+
+
+func default_bind(action: String) -> Array:
+	return _default_binds.get(action, ["k", 0]).duplicate()
 
 
 func _setup_buses() -> void:
@@ -145,7 +185,7 @@ func load_settings() -> void:
 	values = DEFAULTS.duplicate(true)
 	binds.clear()
 	for a in ACTIONS:
-		binds[a[0]] = [a[2], a[3]]
+		binds[a[0]] = default_bind(a[0])
 	var cf := ConfigFile.new()
 	if cf.load(PATH) == OK:
 		for k in DEFAULTS.keys():
@@ -169,7 +209,7 @@ func _migrate_binds(saved_version: int) -> void:
 		for ver: int in OLD_DEFAULT_BINDS:
 			var old: Dictionary = OLD_DEFAULT_BINDS[ver]
 			if ver > saved_version and old.has(a[0]) and binds[a[0]] == old[a[0]]:
-				binds[a[0]] = [a[2], a[3]]
+				binds[a[0]] = default_bind(a[0])
 	save_settings.call_deferred()
 
 
@@ -196,7 +236,7 @@ func set_bind(action: String, kind: String, code: int) -> void:
 
 func reset_binds() -> void:
 	for a in ACTIONS:
-		binds[a[0]] = [a[2], a[3]]
+		binds[a[0]] = default_bind(a[0])
 	_apply_binds()
 	save_settings()
 	changed.emit()
@@ -256,21 +296,28 @@ func set_music_tracks(tracks: Array) -> void:
 	music_changed.emit()
 
 
+## Actions still on their default use every event from the Input Map (so extra
+## keys or gamepad buttons added there keep working); rebound ones use the
+## player's key or button.
 func _apply_binds() -> void:
 	for a in ACTIONS:
 		var action: String = a[0]
-		if not InputMap.has_action(action):
-			InputMap.add_action(action, 0.2)
 		InputMap.action_erase_events(action)
-		InputMap.action_add_event(action, make_event(binds[action]))
+		if binds[action] == _default_binds.get(action):
+			for ev: InputEvent in _default_events.get(action, []):
+				InputMap.action_add_event(action, ev)
+		else:
+			InputMap.action_add_event(action, make_event(binds[action]))
 
 
 func make_event(b: Array) -> InputEvent:
 	if b[0] == "m":
 		var m := InputEventMouseButton.new()
+		m.device = -1
 		m.button_index = b[1]
 		return m
 	var k := InputEventKey.new()
+	k.device = -1
 	k.physical_keycode = b[1]
 	if b[1] == KEY_SHIFT:
 		# Right Shift is reserved for team chat (Right Shift + Enter), so a Shift
