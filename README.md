@@ -244,9 +244,9 @@ Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**
 - **Open squares:** a few big tree planters, bench pairs, kiosks and dumpsters.
 - **Kept clear:** nothing is placed in front of a building door, on a spawn zone or on a Tag spot.
 
-**The park** is laid out like a real one: two paved paths crossing at a fountain plaza with flower beds, benches, bins and lamp posts along the paths, a row of trees round the edge, the basketball court, a playground on a sandpit, the pond, and picnic tables with umbrellas on the lawns.
+**The park** is laid out like a real one: two paved paths crossing at a fountain plaza with flower beds, benches, bins and lamp posts along the paths, a row of trees round the edge, the basketball court (marked like a real one, with the benches beside it facing the game), a playground on a sandpit, the pond, and picnic tables with umbrellas on the lawns.
 
-**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up twice as high as a jump. Umbrella tops are 2.05 m up, within reach of a double jump, a wall jump or a grapple, and landing on the rim counts.
+**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up twice as high as a jump. Umbrella tops tilt 15° on their poles, so the low edge is about 1.7 m up (the high edge about 2.4 m). Landing anywhere on the top counts, rim included.
 
 Six tower cranes hang planks or sheet metal between rooftops as bridges: Warehouse–School, Apartments–Meridian Tower, Meridian Tower–Casino, the two Tenements, Theater–Bank, and Water Treatment–Library. Crates on each roof help you climb onto them.
 The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).

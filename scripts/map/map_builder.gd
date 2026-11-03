@@ -2216,7 +2216,13 @@ func _build_park() -> void:
 				if not r.grow(-0.8).has_point(c) or _hits_any(foot, avoid, 0.0) or _hits_any(foot, others, 0.0):
 					continue
 				if (i + (1 if side > 0.0 else 0)) % 2 == 0:
-					_prefab("props/park/bench", _at(Vector3(c.x, 0, c.y), _yaw_to(away)))
+					# Benches beside the basketball court turn to watch the game
+					var near := Vector2(clampf(c.x, court.position.x, court.end.x), clampf(c.y, court.position.y, court.end.y))
+					var to_bench := c - near
+					var face := away
+					if to_bench.length() < 4.0:
+						face = Vector3(signf(to_bench.x), 0, 0) if absf(to_bench.x) >= absf(to_bench.y) else Vector3(0, 0, signf(to_bench.y))
+					_prefab("props/park/bench", _at(Vector3(c.x, 0, c.y), _yaw_to(face)))
 					if i % 2 == 0:
 						var bin := c + (Vector2(0, 1.4) if along_z else Vector2(1.4, 0))
 						_prefab("props/street/bin", _at(Vector3(bin.x, 0, bin.y)))

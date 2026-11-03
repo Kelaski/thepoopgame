@@ -7,6 +7,18 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.17.2
+
+### Changed
+- **Basketball court lines** now follow a standard court diagram:
+  - three hash marks down each side of the key
+  - free-throw circles solid outside the key and dashed inside it
+  - wider three-point arcs and a tick on each sideline in both halves
+  - the restricted-area arcs are gone
+- **Benches** beside the basketball court (the team benches and any along the paths next to it) face the court.
+- **Fountain:** the water jets and the moving-water effect are gone. The bottom basin is now filled with water, which used to be hidden under its rim. The droplet spray stays.
+- **Picnic umbrellas** tilt 15°, so the low edge of the top is easier to land on.
+
 ## 0.17.1
 
 ### Added
