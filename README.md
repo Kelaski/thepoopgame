@@ -117,7 +117,7 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 
 ### Movement
 
-Snappy ground acceleration, sprinting by default, crouch, and a momentum slide (crouch while sprinting). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
+Snappy ground acceleration, sprinting by default (9 m/s forward; 5 m/s strafing, backwards or leaning; 2.8 m/s crouched), crouch, and a momentum slide (crouch while sprinting). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
 Slide-jumping keeps your speed. Turning is quick: in the air your momentum swings towards the direction you're pressing (about 260°/s) without losing speed, slides steer at about 170°/s, and extra speed carried onto the ground turns at about 515°/s. Pulling backwards in the air brakes instead of turning.
 **Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
 Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
