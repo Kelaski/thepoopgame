@@ -15,62 +15,27 @@ var typing := false
 var team_only := false
 var _rshift := false  # Right Shift held (Godot can't tell the two Shifts apart from the Enter event)
 
-var _col: VBoxContainer
-var _log: VBoxContainer
-var _suggest_panel: PanelContainer
-var _suggest_box: VBoxContainer
-var _input_row: HBoxContainer
-var _prefix: Label
-var _edit: LineEdit
+const SCENE := "res://assets/ui/chat_box.tscn"
+
+# Layout is in assets/ui/chat_box.tscn; message and suggestion rows are added in code.
+@onready var _log: VBoxContainer = %Log
+@onready var _suggest_panel: PanelContainer = %SuggestPanel
+@onready var _suggest_box: VBoxContainer = %SuggestBox
+@onready var _input_row: HBoxContainer = %InputRow
+@onready var _prefix: Label = %Prefix
+@onready var _edit: LineEdit = %Edit
 var _matches: Array = []
 var _sel := 0
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_col = UiKit.vbox(4)
-	_col.custom_minimum_size.x = 540
-	_col.anchor_left = 0.0
-	_col.anchor_right = 0.0
-	_col.anchor_top = 1.0
-	_col.anchor_bottom = 1.0
-	_col.offset_left = 24
-	_col.offset_right = 24
-	_col.offset_top = -120
-	_col.offset_bottom = -120
-	_col.grow_horizontal = Control.GROW_DIRECTION_END
-	_col.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_col)
-	_log = UiKit.vbox(2)
-	_log.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_col.add_child(_log)
-
-	_suggest_panel = PanelContainer.new()
-	_suggest_box = UiKit.vbox(2)
-	_suggest_panel.add_child(_suggest_box)
-	_suggest_panel.visible = false
-	_suggest_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_col.add_child(_suggest_panel)
-
-	_input_row = UiKit.hbox(6)
-	_prefix = UiKit.outlined("ALL:", 16, UiKit.ACCENT, HORIZONTAL_ALIGNMENT_LEFT)
-	_input_row.add_child(_prefix)
-	_edit = LineEdit.new()
 	_edit.max_length = Sanitize.MAX_CHAT
-	_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_edit.placeholder_text = "Type a message, or / for commands"
-	_edit.context_menu_enabled = false
-	_edit.text_submitted.connect(_on_submit)
-	_edit.text_changed.connect(_on_text_changed)
-	_input_row.add_child(_edit)
-	_input_row.visible = false
-	_col.add_child(_input_row)
-
 	Net.chat_message.connect(_on_message)
-	Net.disconnected.connect(func(_r): _clear())
+	Net.disconnected.connect(_on_disconnected)
 
+
+func _on_disconnected(_reason: String) -> void:
+	_clear()
 
 func _process(delta: float) -> void:
 	visible = Net.online

@@ -157,6 +157,8 @@ func load_settings() -> void:
 				if b is Array and b.size() == 2:
 					binds[a[0]] = b
 		_migrate_binds(int(cf.get_value("meta", "binds_version", 1)))
+		if int(values.get("max_fps", 144)) <= 0:
+			values["max_fps"] = 500  # the old "Unlimited"; the FPS cap is a 30-500 slider now
 	_apply_binds()
 
 

@@ -1,5 +1,6 @@
 class_name UiKit
-## Shared UI theme + small widget helpers (all UI is built in code).
+## Shared UI theme + small widget helpers. The screens are scenes in assets/ui;
+## these helpers build the parts that are generated at runtime (lists, rows).
 
 # Live palette (customizable in Customize Colours). Call refresh() after changes.
 static var BG := Color(0.08, 0.09, 0.11, 0.93)
@@ -75,6 +76,22 @@ static func make_theme() -> Theme:
 	t.set_color("font_selected_color", "TabContainer", ACCENT)
 	t.set_color("font_unselected_color", "TabContainer", TEXT)
 	t.set_stylebox("panel", "PopupMenu", _sb(BG_SOFT, 6, 6.0))
+	# Type variations used by the scenes in assets/ui (Theme Type Variation in the
+	# Inspector), so palette changes recolour every screen.
+	for v: Array in [["TitleLabel", ACCENT], ["AccentLabel", ACCENT], ["MutedLabel", MUTED]]:
+		t.set_type_variation(v[0], "Label")
+		t.set_color("font_color", v[0], v[1])
+	t.set_font_size("font_size", "TitleLabel", 34)
+	# Outlined labels for the HUD and chat (readable over the game).
+	for v: Array in [["HudLabel", Color.WHITE], ["HudAccentLabel", ACCENT], ["HudMutedLabel", MUTED]]:
+		t.set_type_variation(v[0], "Label")
+		t.set_color("font_color", v[0], v[1])
+		t.set_constant("outline_size", v[0], 6)
+		t.set_color("font_outline_color", v[0], Color(0, 0, 0, 0.85))
+	t.set_type_variation("MenuBackground", "Panel")
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = MENU_BG
+	t.set_stylebox("panel", "MenuBackground", bg)
 	return t
 
 

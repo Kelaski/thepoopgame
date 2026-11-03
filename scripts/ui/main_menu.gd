@@ -1,36 +1,35 @@
 class_name MainMenu
 extends Control
-## Title screen: Host Game, Play Game, Settings, Customization, Quit.
-## Your player name is set in Customization; joining by code is under Play Game.
+## Title screen (assets/ui/main_menu.tscn): Host Game, Play Game, Settings,
+## Customization, Quit. Your player name is set in Customization; joining by code
+## is under Play Game.
+
+const SCENE := "res://assets/ui/main_menu.tscn"
 
 var main
 var message := ""
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = UiKit.MENU_BG
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	var stripe := ColorRect.new()
-	stripe.color = Color(1.0, 0.82, 0.25, 0.08)
-	stripe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	stripe.offset_top = 260
-	stripe.offset_bottom = -420
-	add_child(stripe)
+	%Message.text = message
+	%Message.visible = message != ""
 
-	var v := UiKit.centered_panel(self, Vector2(420, 0))
-	v.add_child(UiKit.label("TAG RUSH", 64, UiKit.ACCENT, HORIZONTAL_ALIGNMENT_CENTER))
-	v.add_child(UiKit.label("Grab the Tag. Protect your Runner. First to 4 rounds.", 18, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
-	v.add_child(HSeparator.new())
-	v.add_child(UiKit.button("Host Game", func(): main.host_game()))
-	v.add_child(UiKit.button("Play Game", func(): main.show_join_menu()))
-	v.add_child(UiKit.button("Settings", func(): main.open_settings(false)))
-	v.add_child(UiKit.button("Customization", func(): main.open_customize(false)))
-	v.add_child(UiKit.button("Quit", func(): get_tree().quit()))
-	if message != "":
-		var m := UiKit.label(message, 18, Color("ff7a6a"), HORIZONTAL_ALIGNMENT_CENTER)
-		m.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		m.custom_minimum_size.x = 380
-		v.add_child(m)
+
+func _on_host_pressed() -> void:
+	main.host_game()
+
+
+func _on_play_pressed() -> void:
+	main.show_join_menu()
+
+
+func _on_settings_pressed() -> void:
+	main.open_settings(false)
+
+
+func _on_customize_pressed() -> void:
+	main.open_customize(false)
+
+
+func _on_quit_pressed() -> void:
+	get_tree().quit()

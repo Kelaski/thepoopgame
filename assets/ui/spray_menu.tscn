@@ -1,0 +1,113 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/spray_menu.gd" id="1_0fp7e"]
+
+[node name="SprayMenu" type="Control" unique_id=1152909291]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_0fp7e")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1977497060]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="." unique_id=2088876104]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=15051892]
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Center/Panel" unique_id=833538391]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Content" unique_id=425945647]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 34
+text = "SPRAY"
+horizontal_alignment = 1
+
+[node name="Help" type="Label" parent="Center/Panel/Content" unique_id=1299777842]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PreviewFrame" type="PanelContainer" parent="Center/Panel/Content" unique_id=753018852]
+custom_minimum_size = Vector2(260, 260)
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="Preview" type="TextureRect" parent="Center/Panel/Content/PreviewFrame" unique_id=461293605]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(230, 230)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Content" unique_id=1235825693]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="ChooseButton" type="Button" parent="Center/Panel/Content/Buttons" unique_id=1946634520]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+text = "Choose Image..."
+
+[node name="RemoveButton" type="Button" parent="Center/Panel/Content/Buttons" unique_id=309931968]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 44)
+layout_mode = 2
+text = "Remove"
+
+[node name="Formats" type="Label" parent="Center/Panel/Content" unique_id=1492410978]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 14
+text = "PNG, JPG, WebP, BMP, TGA or SVG. Images are resized to fit 128 px; transparent PNGs look best."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Status" type="Label" parent="Center/Panel/Content" unique_id=55984361]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"AccentLabel"
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+
+[node name="BackRow" type="HBoxContainer" parent="Center/Panel/Content" unique_id=1933049914]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="BackButton" type="Button" parent="Center/Panel/Content/BackRow" unique_id=1336967876]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+text = "Back"
+
+[node name="Dialog" type="FileDialog" parent="." unique_id=451889369]
+unique_name_in_owner = true
+title = "Choose a spray image"
+file_mode = 0
+access = 2
+use_native_dialog = true
+
+[connection signal="pressed" from="Center/Panel/Content/Buttons/ChooseButton" to="." method="_on_choose_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/Buttons/RemoveButton" to="." method="_on_remove_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/BackRow/BackButton" to="." method="_on_back_pressed"]
+[connection signal="file_selected" from="Dialog" to="." method="_on_file_selected"]

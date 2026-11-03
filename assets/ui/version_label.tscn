@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[node name="VersionLabel" type="CanvasLayer" unique_id=1274718874]
+layer = 11
+
+[node name="Label" type="Label" parent="." unique_id=452138219]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = -3.0
+offset_right = 6.0
+offset_bottom = -3.0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.6627451, 0.64705884, 0.6117647, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 6
+text = "v0.0.0"

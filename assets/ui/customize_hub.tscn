@@ -1,0 +1,91 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/customize_hub.gd" id="1_1afm0"]
+
+[node name="CustomizeHub" type="Control" unique_id=754546432]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_1afm0")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=65565082]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="." unique_id=2037683706]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=477159119]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Center/Panel" unique_id=1917574802]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Content" unique_id=1203246762]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 34
+text = "CUSTOMIZE"
+horizontal_alignment = 1
+
+[node name="NameHint" type="Label" parent="Center/Panel/Content" unique_id=1880496381]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 15
+text = "Player name (used when you next host or join)"
+
+[node name="NameEdit" type="LineEdit" parent="Center/Panel/Content" unique_id=1197796031]
+unique_name_in_owner = true
+layout_mode = 2
+max_length = 20
+
+[node name="MusicButton" type="Button" parent="Center/Panel/Content" unique_id=425153933]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Music & Playlist"
+
+[node name="ColoursButton" type="Button" parent="Center/Panel/Content" unique_id=922431044]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Colours"
+
+[node name="CrosshairButton" type="Button" parent="Center/Panel/Content" unique_id=364175640]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Crosshair Editor"
+
+[node name="SprayButton" type="Button" parent="Center/Panel/Content" unique_id=1870251012]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Spray"
+
+[node name="SkyboxButton" type="Button" parent="Center/Panel/Content" unique_id=1221802967]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Skybox"
+
+[node name="BackButton" type="Button" parent="Center/Panel/Content" unique_id=52043966]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Back"
+
+[connection signal="text_changed" from="Center/Panel/Content/NameEdit" to="." method="_on_name_changed"]
+[connection signal="pressed" from="Center/Panel/Content/MusicButton" to="." method="_on_music_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/ColoursButton" to="." method="_on_colours_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/CrosshairButton" to="." method="_on_crosshair_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/SprayButton" to="." method="_on_spray_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/SkyboxButton" to="." method="_on_skybox_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/BackButton" to="." method="_on_back_pressed"]

@@ -5,8 +5,8 @@ Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and 
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
 Models are being moved from code into Godot scenes you can open and edit in the editor:
-- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), all 82 map props and furniture items (`assets/props/`, `assets/furniture/`), and the 16 modular building pieces (`assets/building/`). See **Editing models**, **Editing props** and **Editing buildings** below.
-- **Still built in code:** the UI, which is moving over in the next update. The ground, roads, road markings and boundary fence are generated from the layout and stay in code.
+- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), all 82 map props and furniture items (`assets/props/`, `assets/furniture/`), the 16 modular building pieces (`assets/building/`), and every menu and the HUD (`assets/ui/`). See **Editing models**, **Editing props**, **Editing buildings** and **Editing the UI** below.
+- **Still built in code:** the ground, roads, road markings and boundary fence, which are generated from the layout. The UI also builds lists that depend on game data, such as rosters, keybinds and the playlist, at runtime.
 - **Always in code:** sounds and music are synthesized.
 
 The only binary files are the easter egg's image and sound in `assets/` (see Easter egg below).
@@ -297,6 +297,27 @@ Buildings are put together from the pieces in `assets/building/`. Each piece's c
 
 You can reshape the inside of a module freely: move the jambs, change the window shape, or add trim. Keep its outer size, because the pieces are placed edge to edge. The grid size, storey module height and stair step are constants at the top of `scripts/map/map_builder.gd` (`MODULE`, `MODULE_H`, `STAIR_RUN`, `STAIR_RISE`). Building pieces are always drawn, unlike furniture, which fades out beyond 75 m.
 
+## Editing the UI
+
+Every screen is a scene in `assets/ui/`:
+- **Menus:** `main_menu`, `join_menu`, `lobby`, `pause_menu`, `settings_menu`, `customize_hub`, `colors_menu`, `crosshair_editor`, `music_menu`, `spray_menu` and `skybox_menu`.
+- **In-match:** `hud`, `chat_box` and `loadout_panel`.
+- **Smaller pieces:** `crosshair`, `minimap`, `damage_indicator`, `connecting`, `bird_event` and `version_label`.
+
+**What's where:**
+- **Layout:** each scene holds the layout. Its script (`scripts/ui/`) holds the behaviour and finds nodes by their unique name (`%Name`), so keep the names the scripts use. You can move, resize, restyle or reorder anything else.
+- **Buttons:** they're wired to the script's methods as saved signal connections (Node → Signals in the editor).
+- **Colours:** labels use the theme type variations from `UiKit.make_theme()`, so the colours in Customize → Colours reach every screen:
+  - `TitleLabel`, `AccentLabel` and `MutedLabel` for menus.
+  - `HudLabel`, `HudAccentLabel` and `HudMutedLabel` for outlined HUD text.
+  - `MenuBackground` for menu backdrops.
+
+**Setting rows:** these are instances of three reusable row scenes in `assets/ui/rows/`: `setting_slider`, `setting_check` and `setting_option`.
+- Set a row's **Setting** (the `Settings` key, such as `fov`), **Label Text** and range or choices in the Inspector. The row then shows that setting and saves changes to it, with no code needed.
+- To add a setting to the settings menu, duplicate a row and change those fields.
+
+**Still built in code:** lists that come from game data, such as the keybinds, colour slots, playlist, team rosters, weapon and addon buttons, kill feed and scoreboard rows.
+
 ## Project layout
 
 ```
@@ -325,7 +346,8 @@ assets/models/              # player, weapon, door, Tag, spray decal, muzzle fla
 assets/materials/           # shared materials (.tres)
 assets/props/, assets/furniture/   # map prop and furniture template scenes
 assets/building/            # modular building pieces
-  ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
+assets/ui/                  # every menu, the HUD and reusable setting rows (rows/)
+  ui/*.gd                   # behaviour for the screens in assets/ui (menus, lobby, settings, HUD, minimap, crosshair)
 ```
 
 ## Chat & commands

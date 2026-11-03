@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/setting_check.gd" id="1_ml7pc"]
+
+[node name="SettingCheck" type="HBoxContainer" unique_id=1090346451]
+theme_override_constants/separation = 12
+script = ExtResource("1_ml7pc")
+
+[node name="Name" type="Label" parent="." unique_id=1091031996]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Setting"
+
+[node name="Check" type="CheckButton" parent="." unique_id=1044094984]
+unique_name_in_owner = true
+layout_mode = 2

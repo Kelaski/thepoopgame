@@ -1,0 +1,416 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_4q5hw"]
+[ext_resource type="PackedScene" path="res://assets/ui/crosshair.tscn" id="2_7stka"]
+[ext_resource type="Script" path="res://scripts/ui/crosshair.gd" id="3_ors43"]
+[ext_resource type="PackedScene" path="res://assets/ui/damage_indicator.tscn" id="4_yy5bk"]
+[ext_resource type="Script" path="res://scripts/ui/damage_indicator.gd" id="5_utoo8"]
+[ext_resource type="PackedScene" path="res://assets/ui/minimap.tscn" id="6_fyhec"]
+[ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="7_w3v7v"]
+[ext_resource type="PackedScene" path="res://assets/ui/loadout_panel.tscn" id="8_k7jnj"]
+[ext_resource type="Script" path="res://scripts/ui/loadout_panel.gd" id="9_neqbl"]
+
+[node name="Hud" type="Control" unique_id=1473329737]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1_4q5hw")
+
+[node name="Tint" type="ColorRect" parent="." unique_id=1204275668]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[node name="Vignette" type="ColorRect" parent="." unique_id=839414476]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.7, 0, 0, 0)
+
+[node name="DeathDim" type="ColorRect" parent="." unique_id=2053834304]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.25, 0, 0, 0.35)
+
+[node name="Crosshair" type="Control" parent="." unique_id=977303499 instance=ExtResource("2_7stka")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("3_ors43")
+
+[node name="DamageIndicator" type="Control" parent="." unique_id=178859607 instance=ExtResource("4_yy5bk")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("5_utoo8")
+
+[node name="TopCentre" type="VBoxContainer" parent="." unique_id=1775105867]
+layout_mode = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_top = 12.0
+offset_bottom = 12.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Scores" type="HBoxContainer" parent="TopCentre" unique_id=1016574]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="ScoreBoxRed" type="PanelContainer" parent="TopCentre/Scores" unique_id=1534272040]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ScoreRed" type="Label" parent="TopCentre/Scores/ScoreBoxRed" unique_id=823958514]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 34
+text = "0"
+horizontal_alignment = 1
+
+[node name="Clock" type="VBoxContainer" parent="TopCentre/Scores" unique_id=1588381181]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Timer" type="Label" parent="TopCentre/Scores/Clock" unique_id=1475365269]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 40
+text = "2:00"
+horizontal_alignment = 1
+
+[node name="Round" type="Label" parent="TopCentre/Scores/Clock" unique_id=2053446096]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudMutedLabel"
+theme_override_font_sizes/font_size = 15
+text = "ROUND 1"
+horizontal_alignment = 1
+
+[node name="ScoreBoxBlue" type="PanelContainer" parent="TopCentre/Scores" unique_id=1919687760]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ScoreBlue" type="Label" parent="TopCentre/Scores/ScoreBoxBlue" unique_id=59000397]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 34
+text = "0"
+horizontal_alignment = 1
+
+[node name="Phase" type="Label" parent="TopCentre" unique_id=289778427]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudAccentLabel"
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+
+[node name="RunnerLabel" type="Label" parent="TopCentre" unique_id=1191450395]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 20
+horizontal_alignment = 1
+
+[node name="Banner" type="Label" parent="." unique_id=60527393]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.3
+anchor_right = 0.5
+anchor_bottom = 0.3
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 34
+horizontal_alignment = 1
+
+[node name="Status" type="Label" parent="." unique_id=498388511]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.6
+anchor_right = 0.5
+anchor_bottom = 0.6
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.62352943, 0.8156863, 1, 1)
+horizontal_alignment = 1
+
+[node name="TopRight" type="VBoxContainer" parent="." unique_id=113553325]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -14.0
+offset_top = 14.0
+offset_right = -14.0
+offset_bottom = 14.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Minimap" type="Control" parent="TopRight" unique_id=667029074 instance=ExtResource("6_fyhec")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 204)
+layout_mode = 2
+size_flags_horizontal = 8
+mouse_filter = 2
+script = ExtResource("7_w3v7v")
+
+[node name="Feed" type="VBoxContainer" parent="TopRight" unique_id=848502181]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Health" type="VBoxContainer" parent="." unique_id=445963079]
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = -24.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="HpLabel" type="Label" parent="Health" unique_id=1991799914]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 30
+text = "100"
+
+[node name="HpBar" type="ColorRect" parent="Health" unique_id=1283184226]
+custom_minimum_size = Vector2(280, 16)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="HpFill" type="ColorRect" parent="Health/HpBar" unique_id=1496832007]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 278.0
+offset_bottom = 14.0
+mouse_filter = 2
+color = Color(0.47843137, 0.81960785, 0.41568628, 1)
+
+[node name="WeaponBox" type="VBoxContainer" parent="." unique_id=1028570859]
+custom_minimum_size = Vector2(306, 0)
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -24.0
+offset_top = -24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Ammo" type="Label" parent="WeaponBox" unique_id=795490119]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 34
+text = "30 / 30"
+horizontal_alignment = 2
+
+[node name="Weapon" type="Label" parent="WeaponBox" unique_id=803706230]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudMutedLabel"
+theme_override_font_sizes/font_size = 18
+text = "Assault Rifle"
+horizontal_alignment = 2
+
+[node name="AddonName" type="Label" parent="WeaponBox" unique_id=366000562]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudAccentLabel"
+theme_override_font_sizes/font_size = 16
+text = "Trackstar"
+horizontal_alignment = 2
+
+[node name="AddonBar" type="ColorRect" parent="WeaponBox" unique_id=546038835]
+custom_minimum_size = Vector2(306, 22)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="AddonFill" type="ColorRect" parent="WeaponBox/AddonBar" unique_id=1921031704]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 304.0
+offset_bottom = 20.0
+mouse_filter = 2
+
+[node name="AddonText" type="Label" parent="WeaponBox/AddonBar" unique_id=1840531389]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 14
+text = "READY"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Fps" type="Label" parent="." unique_id=2017711065]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 10.0
+offset_top = 8.0
+offset_right = 10.0
+offset_bottom = 8.0
+theme_type_variation = &"HudMutedLabel"
+theme_override_font_sizes/font_size = 14
+
+[node name="NowPlaying" type="Label" parent="." unique_id=863746269]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_type_variation = &"HudAccentLabel"
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+
+[node name="Death" type="PanelContainer" parent="." unique_id=1078019297]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(760, 0)
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_top = 30.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Content" type="VBoxContainer" parent="Death" unique_id=85303579]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="DeathTitle" type="Label" parent="Death/Content" unique_id=320645121]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 18
+text = "ELIMINATED BY"
+horizontal_alignment = 1
+
+[node name="DeathName" type="Label" parent="Death/Content" unique_id=2035414185]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 46
+horizontal_alignment = 1
+
+[node name="DeathDetail" type="Label" parent="Death/Content" unique_id=1987577733]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 17
+horizontal_alignment = 1
+
+[node name="DeathTimer" type="Label" parent="Death/Content" unique_id=1564667212]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.6039216, 0.5411765, 1)
+horizontal_alignment = 1
+
+[node name="DeathHint" type="Label" parent="Death/Content" unique_id=50640240]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+
+[node name="LoadoutHolder" type="PanelContainer" parent="Death/Content" unique_id=571338517]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="Loadout" type="VBoxContainer" parent="Death/Content/LoadoutHolder" unique_id=1171490246 instance=ExtResource("8_k7jnj")]
+layout_mode = 2
+theme_override_constants/separation = 8
+script = ExtResource("9_neqbl")
+
+[node name="Scoreboard" type="PanelContainer" parent="." unique_id=1309882188]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(760, 0)
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Columns" type="HBoxContainer" parent="Scoreboard" unique_id=1837144312]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="ScoreboardRed" type="VBoxContainer" parent="Scoreboard/Columns" unique_id=814734860]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="ScoreboardBlue" type="VBoxContainer" parent="Scoreboard/Columns" unique_id=858266030]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 4

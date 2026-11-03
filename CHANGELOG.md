@@ -7,6 +7,18 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.9.0
+
+Last step of moving the game into editable scenes: the UI.
+
+### Changed
+- **Every screen is a scene:** the menus, lobby, pause menu, settings, all the customization screens, the HUD, chat and loadout picker are now scenes in `assets/ui/`. Open them in Godot to move, resize or restyle anything.
+- **Signal connections:** buttons are wired to their actions as saved connections, so you can see them in the editor's Node → Signals tab.
+- **Setting rows:** these are now reusable row scenes (`assets/ui/rows/`): slider, checkbox and dropdown. Set a row's setting name in the Inspector and it reads and saves that setting by itself. The settings menu, crosshair editor, skybox and music screens are built from them.
+- **Colours:** menu text and backdrops use theme styles (`TitleLabel`, `AccentLabel`, `MutedLabel`, `HudLabel` and so on), so your Customize → Colours choices apply to every screen.
+- **Music menu:** the built-in music option now says "Built-in songs" instead of "Built-in Tag Rush beat", since there are four songs now.
+- **FPS cap:** a saved "Unlimited" FPS cap from older versions now shows as 500 on the slider.
+
 ## 0.8.0
 
 Fourth step of moving the game's models into editable scenes: buildings.

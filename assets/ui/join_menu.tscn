@@ -1,0 +1,81 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/join_menu.gd" id="1_bteqx"]
+
+[node name="JoinMenu" type="Control" unique_id=1851725961]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_bteqx")
+
+[node name="Background" type="Panel" parent="." unique_id=964115206]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_type_variation = &"MenuBackground"
+
+[node name="Center" type="CenterContainer" parent="." unique_id=1887749040]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=447566031]
+custom_minimum_size = Vector2(460, 0)
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Center/Panel" unique_id=669936141]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Content" unique_id=404223282]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 40
+text = "PLAY GAME"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Center/Panel/Content" unique_id=223931205]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 16
+text = "Enter the join code from the host's lobby."
+horizontal_alignment = 1
+
+[node name="Code" type="LineEdit" parent="Center/Panel/Content" unique_id=498680870]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+placeholder_text = "e.g. 6C8-4HKQ"
+alignment = 1
+max_length = 32
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Content" unique_id=264767956]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="JoinButton" type="Button" parent="Center/Panel/Content/Buttons" unique_id=1112374186]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Join"
+
+[node name="BackButton" type="Button" parent="Center/Panel/Content/Buttons" unique_id=664465748]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Back"
+
+[node name="Message" type="Label" parent="Center/Panel/Content" unique_id=1129222051]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.47843137, 0.41568628, 1)
+horizontal_alignment = 1
+
+[connection signal="text_submitted" from="Center/Panel/Content/Code" to="." method="_on_code_submitted"]
+[connection signal="pressed" from="Center/Panel/Content/Buttons/JoinButton" to="." method="_on_join_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/Buttons/BackButton" to="." method="_on_back_pressed"]

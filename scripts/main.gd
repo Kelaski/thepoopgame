@@ -7,6 +7,24 @@ extends Node
 ##   (--join also takes IP or IP:PORT)
 ##   --autostart=N     host starts the match once N players are connected
 
+# Every screen is a scene in assets/ui (its script holds the behaviour).
+const MAIN_MENU_SCENE := preload("res://assets/ui/main_menu.tscn")
+const JOIN_MENU_SCENE := preload("res://assets/ui/join_menu.tscn")
+const CONNECTING_SCENE := preload("res://assets/ui/connecting.tscn")
+const LOBBY_SCENE := preload("res://assets/ui/lobby.tscn")
+const HUD_SCENE := preload("res://assets/ui/hud.tscn")
+const PAUSE_SCENE := preload("res://assets/ui/pause_menu.tscn")
+const SETTINGS_SCENE := preload("res://assets/ui/settings_menu.tscn")
+const CUSTOMIZE_SCENE := preload("res://assets/ui/customize_hub.tscn")
+const MUSIC_SCENE := preload("res://assets/ui/music_menu.tscn")
+const COLORS_SCENE := preload("res://assets/ui/colors_menu.tscn")
+const CROSSHAIR_SCENE := preload("res://assets/ui/crosshair_editor.tscn")
+const SPRAY_SCENE := preload("res://assets/ui/spray_menu.tscn")
+const SKYBOX_SCENE := preload("res://assets/ui/skybox_menu.tscn")
+const CHAT_SCENE := preload("res://assets/ui/chat_box.tscn")
+const BIRD_SCENE := preload("res://assets/ui/bird_event.tscn")
+const VERSION_SCENE := preload("res://assets/ui/version_label.tscn")
+
 var ui_layer: CanvasLayer
 var ui_root: Control
 var screen: Control
@@ -31,8 +49,8 @@ func _ready() -> void:
 	ui_root.theme = UiKit.make_theme()
 	ui_layer.add_child(ui_root)
 	Settings.colors_changed.connect(_on_colors_changed)
-	add_child(BirdEvent.new())
-	var chat := ChatBox.new()
+	add_child(BIRD_SCENE.instantiate())
+	var chat: ChatBox = CHAT_SCENE.instantiate()
 	chat.name = "Chat"
 	ui_root.add_child(chat)
 	_add_version_label()
@@ -47,20 +65,12 @@ func _ready() -> void:
 
 
 ## Game version in the bottom-left corner of every screen (menus, lobby and
-## matches), on its own layer so menu backgrounds never cover it.
+## matches), on its own layer (assets/ui/version_label.tscn) so menu backgrounds
+## never cover it.
 func _add_version_label() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 11
+	var layer: CanvasLayer = VERSION_SCENE.instantiate()
 	add_child(layer)
-	var l := UiKit.outlined("v" + GameVersion.CURRENT, 12, UiKit.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(l)
-	l.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	l.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	l.offset_left = 6
-	l.offset_right = 6
-	l.offset_top = -3
-	l.offset_bottom = -3
+	layer.get_node("Label").text = "v" + GameVersion.CURRENT
 
 
 func _handle_cmdline() -> bool:
@@ -100,7 +110,7 @@ func _set_screen(c: Control) -> void:
 
 func show_main_menu(message := "") -> void:
 	close_overlay()
-	var m := MainMenu.new()
+	var m: MainMenu = MAIN_MENU_SCENE.instantiate()
 	m.main = self
 	m.message = message
 	_set_screen(m)
@@ -108,7 +118,7 @@ func show_main_menu(message := "") -> void:
 
 func show_lobby() -> void:
 	close_overlay()
-	var l := Lobby.new()
+	var l: Lobby = LOBBY_SCENE.instantiate()
 	l.main = self
 	_set_screen(l)
 
@@ -116,18 +126,15 @@ func show_lobby() -> void:
 ## "Play Game": enter a join code.
 func show_join_menu(message := "") -> void:
 	close_overlay()
-	var j := JoinMenu.new()
+	var j: JoinMenu = JOIN_MENU_SCENE.instantiate()
 	j.main = self
 	j.message = message
 	_set_screen(j)
 
 
 func show_connecting() -> void:
-	var c := Control.new()
-	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var v := UiKit.centered_panel(c, Vector2(420, 0))
-	v.add_child(UiKit.label("Connecting ...", 22, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	v.add_child(UiKit.button("Cancel", func(): leave_to_menu()))
+	var c: Control = CONNECTING_SCENE.instantiate()
+	c.get_node("%CancelButton").pressed.connect(leave_to_menu.bind(""))
 	_set_screen(c)
 
 
@@ -213,7 +220,7 @@ func _on_match_started() -> void:
 	world = World.new()
 	world.name = "World"
 	add_child(world)
-	hud = Hud.new()
+	hud = HUD_SCENE.instantiate()
 	hud.main = self
 	ui_root.add_child(hud)
 	Sfx.start_music()
@@ -246,7 +253,7 @@ func _teardown_world() -> void:
 # ================================================================ overlays & input
 
 func open_pause() -> void:
-	var p := PauseMenu.new()
+	var p: PauseMenu = PAUSE_SCENE.instantiate()
 	p.main = self
 	_set_overlay(p)
 
@@ -257,30 +264,30 @@ var _back_to_hub := false
 ## Customization screens. from_hub = Back returns to the Customize hub.
 func open_customize(back_to_pause: bool) -> void:
 	_settings_back_to_pause = back_to_pause
-	var h := CustomizeHub.new()
+	var h: CustomizeHub = CUSTOMIZE_SCENE.instantiate()
 	h.main = self
 	h.back_to_pause = back_to_pause
 	_set_overlay(h)
 
 
 func open_music(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(MusicMenu.new(), back_to_pause, from_hub)
+	_open_custom(MUSIC_SCENE.instantiate(), back_to_pause, from_hub)
 
 
 func open_colors(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(ColorsMenu.new(), back_to_pause, from_hub)
+	_open_custom(COLORS_SCENE.instantiate(), back_to_pause, from_hub)
 
 
 func open_crosshair(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(CrosshairEditor.new(), back_to_pause, from_hub)
+	_open_custom(CROSSHAIR_SCENE.instantiate(), back_to_pause, from_hub)
 
 
 func open_spray(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(SprayMenu.new(), back_to_pause, from_hub)
+	_open_custom(SPRAY_SCENE.instantiate(), back_to_pause, from_hub)
 
 
 func open_skybox(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(SkyboxMenu.new(), back_to_pause, from_hub)
+	_open_custom(SKYBOX_SCENE.instantiate(), back_to_pause, from_hub)
 
 
 func _open_custom(menu: Control, back_to_pause: bool, from_hub: bool) -> void:
@@ -327,7 +334,7 @@ func _apply_colors() -> void:
 
 func open_settings(back_to_pause: bool) -> void:
 	_settings_back_to_pause = back_to_pause
-	var s := SettingsMenu.new()
+	var s: SettingsMenu = SETTINGS_SCENE.instantiate()
 	s.on_back = _settings_back
 	_set_overlay(s)
 

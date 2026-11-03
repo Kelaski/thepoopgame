@@ -16,21 +16,17 @@ var _audio: AudioStreamPlayer
 var _left := 0.0
 
 
+## The image and sound are set in assets/ui/bird_event.tscn; the loaders below are
+## only a fallback for when the editor hasn't imported them yet.
 func _ready() -> void:
-	layer = 50
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_rect = TextureRect.new()
-	_rect.texture = _load_texture()
-	_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rect = $Image
+	_audio = $Sound
+	if _rect.texture == null:
+		_rect.texture = _load_texture()
+	if _audio.stream == null:
+		_audio.stream = _load_sound()
 	_rect.visible = false
-	add_child(_rect)
-	_audio = AudioStreamPlayer.new()
-	_audio.bus = "UI"
-	_audio.stream = _load_sound()
-	add_child(_audio)
 	instance = self
 
 

@@ -1,0 +1,117 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/colors_menu.gd" id="1_076ca"]
+
+[node name="ColorsMenu" type="Control" unique_id=1997872371]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_076ca")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=242117568]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="." unique_id=1532129981]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=1068453525]
+custom_minimum_size = Vector2(860, 620)
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="Center/Panel" unique_id=385240698]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/Content" unique_id=2028951294]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 34
+text = "CUSTOMIZE COLOURS"
+horizontal_alignment = 1
+
+[node name="Presets" type="HBoxContainer" parent="Center/Panel/Content" unique_id=1804055846]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PresetsLabel" type="Label" parent="Center/Panel/Content/Presets" unique_id=617379508]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 16
+text = "Presets:"
+
+[node name="Tabs" type="TabContainer" parent="Center/Panel/Content" unique_id=1882492356]
+custom_minimum_size = Vector2(820, 430)
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Menus" type="ScrollContainer" parent="Center/Panel/Content/Tabs" unique_id=473487135]
+visible = false
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 0
+
+[node name="MenusList" type="VBoxContainer" parent="Center/Panel/Content/Tabs/Menus" unique_id=616224029]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Teams & Tag" type="ScrollContainer" parent="Center/Panel/Content/Tabs" unique_id=972649324]
+visible = false
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 1
+
+[node name="TeamsList" type="VBoxContainer" parent="Center/Panel/Content/Tabs/Teams & Tag" unique_id=1326424294]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Sky" type="ScrollContainer" parent="Center/Panel/Content/Tabs" unique_id=1948111464]
+visible = false
+layout_mode = 2
+horizontal_scroll_mode = 0
+metadata/_tab_index = 2
+
+[node name="SkyList" type="VBoxContainer" parent="Center/Panel/Content/Tabs/Sky" unique_id=456533025]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="SkyNote" type="Label" parent="Center/Panel/Content/Tabs/Sky/SkyList" unique_id=2147321145]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 14
+text = "Sky and fog colours change instantly. For a picture skybox, use Customize > Skybox."
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/Content" unique_id=207713353]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="BackButton" type="Button" parent="Center/Panel/Content/Buttons" unique_id=752510969]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+text = "Back"
+
+[node name="ResetAllButton" type="Button" parent="Center/Panel/Content/Buttons" unique_id=1060388290]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Reset All Colours"
+
+[connection signal="pressed" from="Center/Panel/Content/Buttons/BackButton" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/Buttons/ResetAllButton" to="." method="_on_reset_all_pressed"]

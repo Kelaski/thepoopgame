@@ -1,6 +1,6 @@
 class_name Hud
 extends Control
-## In-match HUD.
+## In-match HUD (assets/ui/hud.tscn).
 ##
 ## Layout rule: every element is pinned to an anchor point on the screen (a corner,
 ## an edge centre or the centre) with a zero-size rect, and grows away from that
@@ -13,42 +13,43 @@ const FEED_TIME := 7.0
 var main
 var loadout_open := false
 
-var _crosshair: Crosshair
-var _minimap: Minimap
-var _score_red: Label
-var _score_blue: Label
-var _timer: Label
-var _phase: Label
-var _round: Label
-var _hp_fill: ColorRect
-var _hp_label: Label
-var _ammo: Label
-var _weapon: Label
-var _addon_name: Label
-var _addon_fill: ColorRect
-var _addon_text: Label
-var _banner: Label
+# The layout is assets/ui/hud.tscn; these are its nodes.
+@onready var _crosshair: Crosshair = %Crosshair
+@onready var _minimap: Minimap = %Minimap
+@onready var _score_red: Label = %ScoreRed
+@onready var _score_blue: Label = %ScoreBlue
+@onready var _timer: Label = %Timer
+@onready var _phase: Label = %Phase
+@onready var _round: Label = %Round
+@onready var _hp_fill: ColorRect = %HpFill
+@onready var _hp_label: Label = %HpLabel
+@onready var _ammo: Label = %Ammo
+@onready var _weapon: Label = %Weapon
+@onready var _addon_name: Label = %AddonName
+@onready var _addon_fill: ColorRect = %AddonFill
+@onready var _addon_text: Label = %AddonText
+@onready var _banner: Label = %Banner
 var _banner_t := 0.0
-var _feed: VBoxContainer
-var _fps: Label
-var _status: Label
-var _runner_label: Label
-var _vignette: ColorRect
-var _tint: ColorRect
-var _death_dim: ColorRect
-var _death: PanelContainer
-var _death_title: Label
-var _death_name: Label
-var _death_detail: Label
-var _death_timer: Label
-var _death_hint: Label
-var _loadout_panel: PanelContainer
-var _scoreboard: PanelContainer
-var _sb_cols: Array = []
+@onready var _feed: VBoxContainer = %Feed
+@onready var _fps: Label = %Fps
+@onready var _status: Label = %Status
+@onready var _runner_label: Label = %RunnerLabel
+@onready var _vignette: ColorRect = %Vignette
+@onready var _tint: ColorRect = %Tint
+@onready var _death_dim: ColorRect = %DeathDim
+@onready var _death: PanelContainer = %Death
+@onready var _death_title: Label = %DeathTitle
+@onready var _death_name: Label = %DeathName
+@onready var _death_detail: Label = %DeathDetail
+@onready var _death_timer: Label = %DeathTimer
+@onready var _death_hint: Label = %DeathHint
+@onready var _loadout_panel: PanelContainer = %LoadoutHolder
+@onready var _scoreboard: PanelContainer = %Scoreboard
+@onready var _sb_cols: Array = [%ScoreboardRed, %ScoreboardBlue]
 var _sb_acc := 0.0
 var _was_alive := true
 
-var _np: Label
+@onready var _np: Label = %NowPlaying
 var _np_t := 0.0
 var _killer_id := 0
 var _killer_weapon := ""
@@ -57,205 +58,27 @@ var _killer_hp := -1.0
 
 
 func _ready() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	_tint = _fullscreen_rect(Color(0, 0, 0, 0))
-	_vignette = _fullscreen_rect(Color(0.7, 0.0, 0.0, 0.0))
-	_death_dim = _fullscreen_rect(Color(0.25, 0.0, 0.0, 0.35))
-	_death_dim.visible = false
-
-	_crosshair = Crosshair.new()
-	add_child(_crosshair)
-	add_child(DamageIndicator.new())
-
-	# --- Top centre: score + timer, phase text, runner label
-	var top_col := UiKit.vbox(4)
-	top_col.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_pin(top_col, 0.5, 0.0, Vector2(0, 12))
-	var top := UiKit.hbox(14)
-	top.alignment = BoxContainer.ALIGNMENT_CENTER
-	_score_red = _score_box(top, 0)
-	var mid := UiKit.vbox(0)
-	mid.custom_minimum_size.x = 200
-	_timer = UiKit.outlined("2:00", 40)
-	_round = UiKit.outlined("ROUND 1", 15, UiKit.MUTED)
-	mid.add_child(_timer)
-	mid.add_child(_round)
-	top.add_child(mid)
-	_score_blue = _score_box(top, 1)
-	top_col.add_child(top)
-	_phase = UiKit.outlined("", 22, UiKit.ACCENT)
-	top_col.add_child(_phase)
-	_runner_label = UiKit.outlined("", 20, Mats.TAG_COLOR)
-	top_col.add_child(_runner_label)
-	_ignore_mouse(top_col)
-
-	# --- Centre messages
-	_banner = UiKit.outlined("", 34, Color.WHITE)
-	_pin(_banner, 0.5, 0.3, Vector2.ZERO)
-	_status = UiKit.outlined("", 18, Color("9fd0ff"))
-	_pin(_status, 0.5, 0.6, Vector2.ZERO)
-
-	# --- Top right: minimap with the kill feed underneath
-	var right_col := UiKit.vbox(10)
-	right_col.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_pin(right_col, 1.0, 0.0, Vector2(-14, 14))
-	_minimap = Minimap.new()
-	_minimap.size_flags_horizontal = Control.SIZE_SHRINK_END
-	right_col.add_child(_minimap)
-	_feed = UiKit.vbox(4)
-	_feed.size_flags_horizontal = Control.SIZE_SHRINK_END
-	right_col.add_child(_feed)
-	_ignore_mouse(right_col)
-
-	# --- Bottom left: health
-	var hp_box := UiKit.vbox(4)
-	_pin(hp_box, 0.0, 1.0, Vector2(24, -24))
-	_hp_label = UiKit.outlined("100", 30, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT)
-	hp_box.add_child(_hp_label)
-	var hp_bg := ColorRect.new()
-	hp_bg.color = Color(0, 0, 0, 0.55)
-	hp_bg.custom_minimum_size = Vector2(280, 16)
-	hp_box.add_child(hp_bg)
-	_hp_fill = ColorRect.new()
-	_hp_fill.color = Color("7ad16a")
-	_hp_fill.size = Vector2(276, 12)
-	_hp_fill.position = Vector2(2, 2)
-	hp_bg.add_child(_hp_fill)
-	_ignore_mouse(hp_box)
-
-	# --- Bottom right: weapon + addon
-	var wbox := UiKit.vbox(2)
-	wbox.custom_minimum_size.x = 306
-	_pin(wbox, 1.0, 1.0, Vector2(-24, -24))
-	_ammo = UiKit.outlined("30 / 30", 34, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT)
-	_weapon = UiKit.outlined("Assault Rifle", 18, UiKit.MUTED, HORIZONTAL_ALIGNMENT_RIGHT)
-	_addon_name = UiKit.outlined("Trackstar", 16, UiKit.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT)
-	wbox.add_child(_ammo)
-	wbox.add_child(_weapon)
-	wbox.add_child(_addon_name)
-	var abg := ColorRect.new()
-	abg.color = Color(0, 0, 0, 0.55)
-	abg.custom_minimum_size = Vector2(306, 22)
-	wbox.add_child(abg)
-	_addon_fill = ColorRect.new()
-	_addon_fill.position = Vector2(2, 2)
-	_addon_fill.size = Vector2(302, 18)
-	abg.add_child(_addon_fill)
-	_addon_text = UiKit.outlined("READY", 14, Color.WHITE)
-	_addon_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_addon_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	abg.add_child(_addon_text)
-	_ignore_mouse(wbox)
-
-	_fps = UiKit.outlined("", 14, UiKit.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
-	_pin(_fps, 0.0, 0.0, Vector2(10, 8))
-	_np = UiKit.outlined("", 15, UiKit.ACCENT)
-	_pin(_np, 0.5, 1.0, Vector2(0, -16))
+	# Team colours on the score boxes and the Tag colour on the runner label.
+	for team in 2:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Mats.team_color(team)
+		sb.set_corner_radius_all(8)
+		sb.set_content_margin_all(8)
+		(%ScoreBoxRed if team == 0 else %ScoreBoxBlue).add_theme_stylebox_override("panel", sb)
+	_runner_label.add_theme_color_override("font_color", Mats.TAG_COLOR)
 	_np.modulate.a = 0.0
 	Sfx.now_playing.connect(_on_now_playing)
 	if Sfx.current_title != "":
 		_on_now_playing(Sfx.current_title)
-
-	_build_death_screen()
-	_build_scoreboard()
-
 	Game.announce.connect(_on_announce)
 	Game.kill_event.connect(_on_kill)
 	Game.local_hit.connect(_on_local_hit)
-
-
-## Pin a control to an anchor point (0 / 0.5 / 1 on each axis) plus a pixel offset.
-## The control sizes itself to its content and grows away from the anchor.
-func _pin(c: Control, ax: float, ay: float, off: Vector2) -> void:
-	add_child(c)
-	c.anchor_left = ax
-	c.anchor_right = ax
-	c.anchor_top = ay
-	c.anchor_bottom = ay
-	c.offset_left = off.x
-	c.offset_right = off.x
-	c.offset_top = off.y
-	c.offset_bottom = off.y
-	c.grow_horizontal = _grow(ax)
-	c.grow_vertical = _grow(ay)
-
-
-func _grow(a: float) -> Control.GrowDirection:
-	if a <= 0.01:
-		return Control.GROW_DIRECTION_END
-	if a >= 0.99:
-		return Control.GROW_DIRECTION_BEGIN
-	return Control.GROW_DIRECTION_BOTH
-
-
-func _fullscreen_rect(col: Color) -> ColorRect:
-	var r := ColorRect.new()
-	r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	r.color = col
-	add_child(r)
-	return r
-
 
 func _ignore_mouse(c: Control) -> void:
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for ch in c.get_children():
 		if ch is Control:
 			_ignore_mouse(ch)
-
-
-func _score_box(parent: Control, team: int) -> Label:
-	var pc := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Mats.team_color(team)
-	sb.set_corner_radius_all(8)
-	sb.set_content_margin_all(8)
-	pc.add_theme_stylebox_override("panel", sb)
-	pc.custom_minimum_size = Vector2(90, 0)
-	var l := UiKit.outlined("0", 34, Color.WHITE)
-	pc.add_child(l)
-	parent.add_child(pc)
-	return l
-
-
-func _build_death_screen() -> void:
-	_death = PanelContainer.new()
-	_death.custom_minimum_size = Vector2(760, 0)
-	_pin(_death, 0.5, 0.5, Vector2(0, 30))
-	var v := UiKit.vbox(6)
-	_death.add_child(v)
-	_death_title = UiKit.label("ELIMINATED BY", 18, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(_death_title)
-	_death_name = UiKit.outlined("", 46, Color.WHITE)
-	v.add_child(_death_name)
-	_death_detail = UiKit.label("", 17, UiKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(_death_detail)
-	_death_timer = UiKit.label("", 24, Color("ff9a8a"), HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(_death_timer)
-	_death_hint = UiKit.label("", 15, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
-	v.add_child(_death_hint)
-	_loadout_panel = PanelContainer.new()
-	_loadout_panel.add_child(LoadoutPanel.new())
-	_loadout_panel.visible = false
-	v.add_child(_loadout_panel)
-	_death.visible = false
-
-
-func _build_scoreboard() -> void:
-	_scoreboard = PanelContainer.new()
-	_scoreboard.custom_minimum_size = Vector2(760, 0)
-	_pin(_scoreboard, 0.5, 0.5, Vector2.ZERO)
-	var h := UiKit.hbox(20)
-	_scoreboard.add_child(h)
-	for team in 2:
-		var v := UiKit.vbox(4)
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(v)
-		_sb_cols.append(v)
-	_ignore_mouse(_scoreboard)
-	_scoreboard.visible = false
 
 
 func set_loadout_open(o: bool) -> void:
