@@ -27,6 +27,7 @@ func _ready() -> void:
 	streams["head"] = _tap(rng, 1700.0, 0.06, 0.5)
 	streams["kill"] = _bell(1250.0, 1.1, 0.5)
 	streams["step"] = _step(rng)
+	streams["spray"] = _whoosh(rng, 0.45)
 	streams["heartbeat"] = _heartbeat()
 	streams["door"] = _thud(rng, 0.22, 90.0)
 	streams["pickup"] = _chirp(500.0, 1200.0, 0.35, 0.5)

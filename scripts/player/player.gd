@@ -525,7 +525,7 @@ func _set_crouch_shape(c: bool) -> void:
 # ================================================================ input
 
 func _input_ok() -> bool:
-	return is_local and not Game.ui_open and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	return is_local and not Game.ui_open and not Game.typing and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 
 
 func _input(event: InputEvent) -> void:
@@ -795,6 +795,8 @@ func _physics_process(delta: float) -> void:
 			_use_addon()
 		if Input.is_action_just_pressed("interact"):
 			_interact()
+		if Input.is_action_just_pressed("spray"):
+			_try_spray()
 
 	_net_acc += delta
 	if _net_acc >= NET_INTERVAL:
@@ -1254,6 +1256,38 @@ func _check_door_slam(dir: Vector3) -> void:
 			if not door.is_open():
 				Game.world.door_rpc.rpc(door.idx, door.away_from(global_position), true)
 			return
+
+
+const SPRAY_COOLDOWN := 5.0
+const SPRAY_REACH := 4.0
+var _spray_ready_at := 0.0
+
+
+## Places your custom spray on the surface you're looking at (5 s cooldown).
+func _try_spray() -> void:
+	if Game.world == null:
+		return
+	if not UserImages.exists(UserImages.SPRAY):
+		Game.announce.emit("No spray yet - add one in Customize > Spray", UiKit.MUTED)
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	if now < _spray_ready_at:
+		Game.announce.emit("Spray ready in %.1fs" % (_spray_ready_at - now), UiKit.MUTED)
+		return
+	var from := cam.global_position
+	var dir := aim_dir()
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * SPRAY_REACH, MASK_FULL, [get_rid()])
+	var r := get_world_3d().direct_space_state.intersect_ray(q)
+	if r.is_empty():
+		return
+	var normal: Vector3 = r.normal
+	var up := Vector3.UP
+	if absf(normal.dot(Vector3.UP)) > 0.8:
+		up = Vector3(dir.x, 0.0, dir.z).normalized()
+		if up == Vector3.ZERO:
+			up = Vector3.FORWARD
+	_spray_ready_at = now + SPRAY_COOLDOWN
+	Game.world.request_spray.rpc_id(1, r.position, normal, up)
 
 
 func _interact() -> void:

@@ -26,6 +26,9 @@ const ACTIONS := [
 	["reload", "Reload", "k", KEY_R],
 	["scoreboard", "Scoreboard", "k", KEY_TAB],
 	["loadout", "Loadout Menu (while dead)", "k", KEY_B],
+	["spray", "Spray", "k", KEY_T],
+	["chat", "Chat (all)", "k", KEY_ENTER],
+	["team_chat", "Chat (team)", "k", KEY_Y],
 ]
 
 const DEFAULTS := {
@@ -66,6 +69,21 @@ const DEFAULTS := {
 	# HUD
 	"crosshair_size": 8.0,
 	"crosshair_color": "ffffff",
+	# Crosshair editor (Counter-Strike style)
+	"xh_style": "classic",      # classic, circle, dot, image
+	"xh_length": 8.0,
+	"xh_thickness": 2.0,
+	"xh_gap": 4.0,
+	"xh_alpha": 1.0,
+	"xh_outline": true,
+	"xh_outline_thickness": 1.0,
+	"xh_dot": true,
+	"xh_dot_size": 2.0,
+	"xh_tstyle": false,
+	"xh_dynamic": true,
+	"xh_image_scale": 1.0,
+	"scope_custom": false,
+	"scope_scale": 1.0,
 	"hitmarker_sound": true,
 }
 

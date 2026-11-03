@@ -31,6 +31,9 @@ func _ready() -> void:
 	ui_layer.add_child(ui_root)
 	Settings.colors_changed.connect(_on_colors_changed)
 	add_child(BirdEvent.new())
+	var chat := ChatBox.new()
+	chat.name = "Chat"
+	ui_root.add_child(chat)
 	Net.joined_ok.connect(_on_joined)
 	Net.join_failed.connect(_on_join_failed)
 	Net.disconnected.connect(_on_disconnected)
@@ -193,18 +196,46 @@ func open_pause() -> void:
 	_set_overlay(p)
 
 
-func open_music(back_to_pause: bool) -> void:
-	_settings_back_to_pause = back_to_pause
-	var m := MusicMenu.new()
-	m.on_back = _settings_back
-	_set_overlay(m)
+var _back_to_hub := false
 
 
-func open_colors(back_to_pause: bool) -> void:
+## Customization screens. from_hub = Back returns to the Customize hub.
+func open_customize(back_to_pause: bool) -> void:
 	_settings_back_to_pause = back_to_pause
-	var c := ColorsMenu.new()
-	c.on_back = _settings_back
-	_set_overlay(c)
+	var h := CustomizeHub.new()
+	h.main = self
+	h.back_to_pause = back_to_pause
+	_set_overlay(h)
+
+
+func open_music(back_to_pause: bool, from_hub := false) -> void:
+	_open_custom(MusicMenu.new(), back_to_pause, from_hub)
+
+
+func open_colors(back_to_pause: bool, from_hub := false) -> void:
+	_open_custom(ColorsMenu.new(), back_to_pause, from_hub)
+
+
+func open_crosshair(back_to_pause: bool, from_hub := false) -> void:
+	_open_custom(CrosshairEditor.new(), back_to_pause, from_hub)
+
+
+func open_spray(back_to_pause: bool, from_hub := false) -> void:
+	_open_custom(SprayMenu.new(), back_to_pause, from_hub)
+
+
+func _open_custom(menu: Control, back_to_pause: bool, from_hub: bool) -> void:
+	_settings_back_to_pause = back_to_pause
+	_back_to_hub = from_hub
+	menu.set("on_back", _custom_back)
+	_set_overlay(menu)
+
+
+func _custom_back() -> void:
+	if _back_to_hub:
+		open_customize(_settings_back_to_pause)
+	else:
+		_settings_back()
 
 
 func _on_colors_changed() -> void:

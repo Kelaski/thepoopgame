@@ -41,6 +41,8 @@ Optional command-line flags (after `--`):
 | Reload | R |
 | Scoreboard | Tab |
 | Loadout (while dead) | B |
+| Spray | T |
+| Chat (all / team) | Enter / Y |
 | Pause / settings | Esc |
 
 A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and has its own volume slider.
@@ -182,6 +184,29 @@ scripts/
   player/player.gd          # FPS controller, weapons, addons, netcode
   ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
 ```
+
+## Chat & commands
+
+- Press **Enter** for all chat or **Y** for team chat (both rebindable). Chat works in the lobby and in matches; while you type, gameplay keys are ignored.
+- Typing **/** at the start of a message opens command autocomplete: **Tab** completes, **Up/Down** choose, **Enter** sends, **Esc** cancels.
+- Commands: `/help` lists commands; `/kill` eliminates yourself (the normal respawn timer applies). New commands are added in `scripts/data/commands.gd`.
+- **Safety:** the server rate-limits chat (5 messages per 4 s) and caps messages at 200 characters. It strips control, zero-width and bidirectional-override characters, both before sending and when receiving. Player names get the same cleaning. Messages are displayed as plain text in Labels (never BBCode). Commands are matched against a fixed whitelist and run on the server; nothing anyone types is ever evaluated as code.
+
+## Sprays
+
+Customize → **Spray** lets you choose an image (PNG, JPG, WebP, BMP, TGA or SVG). It's resized to fit 128 px and re-saved as a clean PNG. In a match, press **T** to spray it on the surface you're looking at (within 4 m), with a 5 s cooldown. Everyone sees it, and your newest spray replaces your previous one. The server only accepts PNG data under 64 KB, re-checks the cooldown and distance, and every client decodes sprays as PNG only (at most 256×256).
+
+## Crosshair editor
+
+Customize → **Crosshair Editor** has Counter-Strike-style options:
+- Style: classic, circle, dot, or a custom image.
+- Colour (presets or any colour), opacity, length, thickness, gap.
+- Outline and outline thickness, centre dot and dot size.
+- T-style (no top line) and dynamic spread.
+
+It has a live preview and copy/paste **share codes**. Pasted codes are parsed as data only: unknown keys are ignored and every value is checked and clamped.
+
+You can also upload a **custom crosshair image** (with a scale slider) and a **custom sniper scope** image. The scope is fitted to the screen height and the rest is blacked out, so a transparent PNG with a see-through centre works best.
 
 ## Easter egg
 

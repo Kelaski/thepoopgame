@@ -385,7 +385,7 @@ func _process(delta: float) -> void:
 
 	_fps.visible = Settings.g("show_fps")
 	_fps.text = "%d FPS" % Engine.get_frames_per_second()
-	_scoreboard.visible = Input.is_action_pressed("scoreboard") and not Game.ui_open
+	_scoreboard.visible = Input.is_action_pressed("scoreboard") and not Game.ui_open and not Game.typing
 	if _scoreboard.visible:
 		_sb_acc -= delta
 		if _sb_acc <= 0.0:
@@ -495,10 +495,10 @@ func _process(delta: float) -> void:
 			_death_timer.text = "Respawn available in %.1f" % left
 		else:
 			_death_timer.text = "Press %s to respawn" % Settings.bind_text("jump").to_upper()
-			if Input.is_action_just_pressed("jump") and main and main.overlay == null:
+			if Input.is_action_just_pressed("jump") and main and main.overlay == null and not Game.typing:
 				Game.request_respawn.rpc_id(1)
 		_death_hint.text = "Press %s to change your weapon / addon" % Settings.bind_text("loadout") if not loadout_open else "Changes apply when you respawn. Esc to close."
-		if Input.is_action_just_pressed("loadout") and not loadout_open and main and main.overlay == null:
+		if Input.is_action_just_pressed("loadout") and not loadout_open and main and main.overlay == null and not Game.typing:
 			set_loadout_open(true)
 	if alive and not _was_alive:
 		_killer_id = 0

@@ -34,6 +34,7 @@ const RUNNER_KILL_REWARD := 5.0
 var world = null  # World node while a match is loaded
 var in_match := false
 var ui_open := false
+var typing := false  # chat box has focus: gameplay keys are ignored
 
 # Replicated state
 var phase: int = Phase.LOBBY
@@ -84,6 +85,7 @@ func my_hp() -> float:
 func reset_local() -> void:
 	in_match = false
 	ui_open = false
+	typing = false
 	phase = Phase.LOBBY
 	scores = [0, 0]
 	round_num = 0
@@ -330,6 +332,20 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
 		_announce.rpc("Runner kill! -%ds on the timer" % int(RUNNER_KILL_REWARD), Mats.TAG_COLOR)
 	Net.broadcast_roster()
 	_push_state()
+
+
+## /kill: the player eliminates themselves. Returns a reply for the chat.
+func server_suicide(id: int) -> String:
+	if not multiplayer.is_server():
+		return ""
+	if not in_match or world == null:
+		return "You can only use /kill during a match."
+	if not alive_ids.get(id, false):
+		return "You're already dead."
+	if not (phase in [Phase.RUSH, Phase.HELD, Phase.DROPPED]):
+		return "You can't use /kill right now."
+	_server_kill(id, id, "suicide", false)
+	return "You eliminated yourself."
 
 
 ## Dead player asks to respawn. Honoured once their respawn timer has run out.

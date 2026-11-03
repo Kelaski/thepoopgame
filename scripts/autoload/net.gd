@@ -6,12 +6,20 @@ signal roster_changed
 signal joined_ok
 signal join_failed(reason: String)
 signal disconnected(reason: String)
+signal chat_message(from_id: int, text: String, team_only: bool)
+signal spray_updated(id: int)
 
 const DEFAULT_PORT := 7777
 const MAX_PER_TEAM := 8
 const MAX_PLAYERS := 16
 
 var players := {}  # peer id -> {name, team, weapon, addon, kills, deaths}
+var sprays := {}   # peer id -> PackedByteArray (validated PNG)
+var _spray_tex := {}
+var _chat_times := {}  # server: peer id -> recent message timestamps (rate limit)
+
+const CHAT_BURST := 5        # messages allowed...
+const CHAT_WINDOW := 4.0     # ...per this many seconds
 var online := false
 
 
@@ -49,6 +57,7 @@ func host(port: int) -> String:
 	players.clear()
 	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
 	roster_changed.emit()
+	upload_my_spray()
 	return ""
 
 
@@ -65,6 +74,9 @@ func join(ip: String, port: int) -> String:
 
 
 func leave() -> void:
+	sprays.clear()
+	_spray_tex.clear()
+	_chat_times.clear()
 	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
@@ -104,6 +116,7 @@ func name_of(id: int) -> String:
 
 func _on_connected() -> void:
 	register.rpc_id(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
+	upload_my_spray()
 	joined_ok.emit()
 
 
@@ -126,6 +139,9 @@ func _on_peer_disconnected(id: int) -> void:
 		return
 	if players.has(id):
 		players.erase(id)
+		sprays.erase(id)
+		_chat_times.erase(id)
+		_spray_data.rpc(id, PackedByteArray())
 		Game.on_player_left(id)
 		_broadcast()
 
@@ -142,11 +158,13 @@ func register(pname: String, weapon: String, addon: String) -> void:
 		return
 	_add_player(id, pname, weapon, addon)
 	_broadcast()
+	for sid in sprays:
+		_spray_data.rpc_id(id, sid, sprays[sid])
 	Game.on_player_joined(id)
 
 
 func _add_player(id: int, pname: String, weapon: String, addon: String) -> void:
-	pname = pname.strip_edges().left(20)
+	pname = Sanitize.player_name(pname)
 	if pname == "":
 		pname = "Player %d" % (players.size() + 1)
 	var team := 0 if team_count(0) <= team_count(1) else 1
@@ -213,3 +231,94 @@ func request_shuffle() -> void:
 	for i in ids.size():
 		players[ids[i]].team = i % 2
 	_broadcast()
+
+
+# ------------------------------------------------------------------ chat
+
+## Send a chat message (or a /command). The server sanitizes, rate-limits and
+## relays it; commands are run from a fixed whitelist (see Commands).
+func send_chat(text: String, team_only: bool) -> void:
+	text = Sanitize.text(text)
+	if text == "" or not online:
+		return
+	chat_send.rpc_id(1, text, team_only)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func chat_send(text: String, team_only: bool) -> void:
+	if not multiplayer.is_server():
+		return
+	var id := sender()
+	if not players.has(id):
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	var times: Array = _chat_times.get(id, [])
+	times = times.filter(func(t): return now - t < CHAT_WINDOW)
+	if times.size() >= CHAT_BURST:
+		_system_to(id, "You're sending messages too fast.")
+		return
+	times.append(now)
+	_chat_times[id] = times
+	text = Sanitize.text(text)
+	if text == "":
+		return
+	if text.begins_with("/"):
+		for line in Commands.run(id, text):
+			_system_to(id, str(line))
+		return
+	var team := team_of(id)
+	for pid in players:
+		if not team_only or players[pid].team == team:
+			_chat_receive.rpc_id(pid, id, text, team_only)
+
+
+func _system_to(id: int, text: String) -> void:
+	_chat_receive.rpc_id(id, 0, text, false)
+
+
+@rpc("authority", "call_local", "reliable")
+func _chat_receive(from_id: int, text: String, team_only: bool) -> void:
+	chat_message.emit(from_id, Sanitize.text(text), team_only)
+
+
+# ------------------------------------------------------------------ sprays
+
+func upload_my_spray() -> void:
+	if not online:
+		return
+	var b := UserImages.spray_bytes()
+	if UserImages.valid_spray_bytes(b):
+		upload_spray.rpc_id(1, b)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func upload_spray(bytes: PackedByteArray) -> void:
+	if not multiplayer.is_server():
+		return
+	var id := sender()
+	if not players.has(id) or not UserImages.valid_spray_bytes(bytes):
+		return
+	if UserImages.decode_spray(bytes) == null:
+		return
+	sprays[id] = bytes
+	_spray_data.rpc(id, bytes)
+
+
+@rpc("authority", "call_local", "reliable")
+func _spray_data(id: int, bytes: PackedByteArray) -> void:
+	_spray_tex.erase(id)
+	if bytes.is_empty() or not UserImages.valid_spray_bytes(bytes):
+		sprays.erase(id)
+	else:
+		sprays[id] = bytes
+	spray_updated.emit(id)
+
+
+func spray_texture(id: int) -> Texture2D:
+	if _spray_tex.has(id):
+		return _spray_tex[id]
+	if not sprays.has(id):
+		return null
+	var tex := UserImages.decode_spray(sprays[id])
+	_spray_tex[id] = tex
+	return tex

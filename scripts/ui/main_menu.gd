@@ -67,14 +67,15 @@ func _ready() -> void:
 	quit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b2.add_child(st)
 	b2.add_child(quit)
-	var b3 := UiKit.hbox(10)
-	var mus := UiKit.button("Music & Playlist", func(): main.open_music(false), 200)
-	mus.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var col := UiKit.button("Customize Colours", func(): main.open_colors(false), 200)
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b3.add_child(mus)
-	b3.add_child(col)
-	v.add_child(b3)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	for item in [["Music & Playlist", "open_music"], ["Customize Colours", "open_colors"], ["Crosshair Editor", "open_crosshair"], ["Spray", "open_spray"]]:
+		var b := UiKit.button(item[0], Callable(main, item[1]).bind(false), 200)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(b)
+	v.add_child(grid)
 	v.add_child(b2)
 
 	if message != "":

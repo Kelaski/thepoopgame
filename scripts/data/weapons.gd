@@ -54,6 +54,8 @@ static func max_hp(weapon_id: String) -> float:
 static func display_name(id: String) -> String:
 	if id == "thrown":
 		return "Thrown Gun"
+	if id == "suicide":
+		return "Suicide"
 	return DATA.get(id, {}).get("name", id)
 
 

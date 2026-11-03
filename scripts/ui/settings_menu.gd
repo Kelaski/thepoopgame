@@ -155,8 +155,5 @@ func _audio() -> VBoxContainer:
 func _hud() -> VBoxContainer:
 	var v := UiKit.vbox(10)
 	v.add_child(UiKit.check_row("Show FPS counter", Settings.g("show_fps"), func(x): Settings.s("show_fps", x)))
-	v.add_child(UiKit.slider_row("Crosshair size", 3, 20, 1, Settings.g("crosshair_size"), func(x): Settings.s("crosshair_size", x), "%.0f"))
-	var cols := ["ffffff", "4dff6a", "ffd23f", "4de1ff", "ff4df0", "ff5a4d"]
-	var names := ["White", "Green", "Yellow", "Cyan", "Magenta", "Red"]
-	v.add_child(UiKit.option_row("Crosshair colour", names, maxi(0, cols.find(str(Settings.g("crosshair_color")))), func(i): Settings.s("crosshair_color", cols[i])))
+	v.add_child(UiKit.label("Crosshair style, colour, size, custom images and sniper scopes are in Customize > Crosshair Editor.", 15, UiKit.MUTED))
 	return v

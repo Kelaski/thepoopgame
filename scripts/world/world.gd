@@ -558,3 +558,59 @@ func _update_heartbeat(delta: float) -> void:
 		var k := d / HEARTBEAT_RANGE
 		_hb_timer = lerpf(0.45, 1.15, k)
 		Sfx.play_at("heartbeat", runner.global_position + Vector3(0, 1.2, 0), lerpf(6.0, -6.0, k), HEARTBEAT_RANGE + 5.0)
+
+
+# ================================================================ sprays
+
+const SPRAY_SIZE := 1.3
+var _spray_nodes := {}   # peer id -> MeshInstance3D (one spray per player)
+var _spray_last := {}    # server: peer id -> time of last spray
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_spray(pos: Vector3, normal: Vector3, up: Vector3) -> void:
+	if not multiplayer.is_server():
+		return
+	var id: int = Net.sender()
+	var now := Time.get_ticks_msec() / 1000.0
+	if not Net.sprays.has(id) or not Game.is_alive(id) or not players.has(id):
+		return
+	if now - float(_spray_last.get(id, -100.0)) < Player.SPRAY_COOLDOWN - 0.25:
+		return
+	if not (pos.is_finite() and normal.is_finite() and up.is_finite()) or normal.length() < 0.5:
+		return
+	if players[id].global_position.distance_to(pos) > Player.SPRAY_REACH + 3.0:
+		return
+	_spray_last[id] = now
+	_spray_placed.rpc(id, pos, normal.normalized(), up.normalized())
+
+
+@rpc("authority", "call_local", "reliable")
+func _spray_placed(id: int, pos: Vector3, normal: Vector3, up: Vector3) -> void:
+	var tex := Net.spray_texture(id)
+	if tex == null:
+		return
+	var mi: MeshInstance3D = _spray_nodes.get(id)
+	if mi == null or not is_instance_valid(mi):
+		mi = MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		mi.mesh = quad
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
+		_spray_nodes[id] = mi
+	var aspect := float(tex.get_width()) / maxf(1.0, tex.get_height())
+	(mi.mesh as QuadMesh).size = Vector2(SPRAY_SIZE * minf(aspect, 1.0) if aspect < 1.0 else SPRAY_SIZE, SPRAY_SIZE / aspect if aspect > 1.0 else SPRAY_SIZE)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_texture = tex
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	mi.material_override = m
+	var z := normal
+	var x := up.cross(z)
+	if x.length() < 0.01:
+		x = Vector3.RIGHT
+	x = x.normalized()
+	var y := z.cross(x).normalized()
+	mi.global_transform = Transform3D(Basis(x, y, z), pos + normal * 0.02)
+	Sfx.play_at("spray", pos, -2.0, 25.0)
