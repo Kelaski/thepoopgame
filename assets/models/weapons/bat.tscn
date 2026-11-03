@@ -1,0 +1,120 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player/weapon_model.gd" id="1_c0shd"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_q4pv8"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.22745098, 0.16470589, 0.1254902, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_7a57b"]
+size = Vector3(0.05, 0.05, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7cgxx"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7058824, 0.5411765, 0.3529412, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_ikcb0"]
+size = Vector3(0.1, 0.1, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_u64im"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.76862746, 0.78431374, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_wwob8"]
+size = Vector3(0.14, 0.02, 0.02)
+
+[sub_resource type="BoxMesh" id="BoxMesh_hhqo5"]
+size = Vector3(0.02, 0.14, 0.02)
+
+[node name="SpikedBat" type="Node3D" unique_id=760687685]
+script = ExtResource("1_c0shd")
+viewmodel_rotation = Vector3(-25, 0, -18)
+held_rotation = Vector3(70, 0, 0)
+
+[node name="Handle" type="MeshInstance3D" parent="." unique_id=1649956313]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.05)
+material_override = SubResource("StandardMaterial3D_q4pv8")
+mesh = SubResource("BoxMesh_7a57b")
+
+[node name="Head" type="MeshInstance3D" parent="." unique_id=53609340]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4)
+material_override = SubResource("StandardMaterial3D_7cgxx")
+mesh = SubResource("BoxMesh_ikcb0")
+
+[node name="Spike0" type="MeshInstance3D" parent="." unique_id=591293553]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.02, 0, -0.25)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_wwob8")
+
+[node name="Spike1" type="MeshInstance3D" parent="." unique_id=1974385537]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.28)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_hhqo5")
+
+[node name="Spike2" type="MeshInstance3D" parent="." unique_id=313757722]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.02, 0, -0.32)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_wwob8")
+
+[node name="Spike3" type="MeshInstance3D" parent="." unique_id=30496603]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -0.35)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_hhqo5")
+
+[node name="Spike4" type="MeshInstance3D" parent="." unique_id=874208193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.02, 0, -0.39)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_wwob8")
+
+[node name="Spike5" type="MeshInstance3D" parent="." unique_id=1844213144]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.42)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_hhqo5")
+
+[node name="Spike6" type="MeshInstance3D" parent="." unique_id=405584135]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.02, 0, -0.46)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_wwob8")
+
+[node name="Spike7" type="MeshInstance3D" parent="." unique_id=631895274]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -0.49)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_hhqo5")
+
+[node name="Spike8" type="MeshInstance3D" parent="." unique_id=2113030930]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.02, 0, -0.53)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_wwob8")
+
+[node name="Spike9" type="MeshInstance3D" parent="." unique_id=827187579]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.56)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_hhqo5")
+
+[node name="Spike10" type="MeshInstance3D" parent="." unique_id=976883471]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.02, 0, -0.6)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_wwob8")
+
+[node name="Spike11" type="MeshInstance3D" parent="." unique_id=957225679]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -0.63)
+material_override = SubResource("StandardMaterial3D_u64im")
+mesh = SubResource("BoxMesh_hhqo5")
+
+[node name="Muzzle" type="Marker3D" parent="." unique_id=110883192]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.7)

@@ -8,6 +8,8 @@ const TRACER_LIFE := 0.07
 const MAX_TRAIL_POINTS := 400  # ~6 s of points even at full slide speed
 const TRAIL_WIDTH := 0.34      # half-width in metres
 
+const PLAYER_SCENE := preload("res://assets/models/player.tscn")
+
 var builder: MapBuilder
 var players := {}  # peer id -> Player
 var players_node: Node3D
@@ -192,7 +194,7 @@ func _build_fx() -> void:
 func sync_players() -> void:
 	for id in Net.players:
 		if not players.has(id):
-			var p := Player.new()
+			var p: Player = PLAYER_SCENE.instantiate()
 			p.setup(id, Net.players[id])
 			players_node.add_child(p)
 			players[id] = p

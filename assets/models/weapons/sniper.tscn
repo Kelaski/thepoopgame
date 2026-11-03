@@ -1,0 +1,80 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player/weapon_model.gd" id="1_a60t5"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7meta"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.18431373, 0.30980393, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_wl20k"]
+size = Vector3(0.07, 0.1, 0.95)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4p2jx"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.101960786, 0.101960786, 0.11764706, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_usefa"]
+size = Vector3(0.07, 0.07, 0.34)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dbxfi"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.35686275, 0.22745098, 0.16078432, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_vai3h"]
+size = Vector3(0.07, 0.13, 0.26)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_02jwa"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.18431373, 0.19607843, 0.21176471, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_htaqn"]
+size = Vector3(0.03, 0.03, 0.3)
+
+[node name="Sniper" type="Node3D" unique_id=2056355248]
+script = ExtResource("1_a60t5")
+
+[node name="Body" type="MeshInstance3D" parent="." unique_id=961599597]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
+material_override = SubResource("StandardMaterial3D_7meta")
+mesh = SubResource("BoxMesh_wl20k")
+
+[node name="Scope" type="MeshInstance3D" parent="." unique_id=1411071836]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -0.08)
+material_override = SubResource("StandardMaterial3D_4p2jx")
+mesh = SubResource("BoxMesh_usefa")
+
+[node name="Stock" type="MeshInstance3D" parent="." unique_id=1749151365]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 0.35)
+material_override = SubResource("StandardMaterial3D_dbxfi")
+mesh = SubResource("BoxMesh_vai3h")
+
+[node name="Barrel" type="MeshInstance3D" parent="." unique_id=260153917]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.8)
+material_override = SubResource("StandardMaterial3D_02jwa")
+mesh = SubResource("BoxMesh_htaqn")
+
+[node name="Muzzle" type="Marker3D" parent="." unique_id=304211124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.95)
+
+[node name="GlintPoint" type="Marker3D" parent="." unique_id=20763874]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -0.28)

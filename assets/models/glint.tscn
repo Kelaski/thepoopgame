@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://assets/materials/sniper_glint.tres" id="1_i6cis"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_j5dkd"]
+size = Vector2(0.075, 0.075)
+
+[sub_resource type="QuadMesh" id="QuadMesh_0hap8"]
+size = Vector2(0.24, 0.012)
+
+[node name="Glint" type="Node3D" unique_id=1398671663]
+
+[node name="Flare" type="MeshInstance3D" parent="." unique_id=2051145873]
+material_override = ExtResource("1_i6cis")
+cast_shadow = 0
+mesh = SubResource("QuadMesh_j5dkd")
+
+[node name="Streak" type="MeshInstance3D" parent="." unique_id=1123991551]
+material_override = ExtResource("1_i6cis")
+cast_shadow = 0
+mesh = SubResource("QuadMesh_0hap8")

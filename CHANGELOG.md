@@ -7,6 +7,17 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.5.0
+
+First step of moving the game's models from code into scenes you can edit in the Godot editor.
+
+### Changed
+- **Player model:** now a scene, `assets/models/player.tscn`. It has the same parts, hitboxes, nameplate and Tag marker as before. Team colours are applied to any part in the `team_color` / `team_color_dark` groups.
+- **Weapons:** the five weapons are now scenes in `assets/models/weapons/`. The same scene is used for your first-person view and for the gun others see you holding. The holo-sight reticles only appear in first person, and the muzzle and sniper glint points are markers you can move.
+- **Muzzle flash and sniper glint:** now scenes too, with the glint material in `assets/materials/sniper_glint.tres`.
+- Everything looks and plays the same: the scenes were generated from the old code, so the parts, sizes and colours match.
+- Team colours are now applied again when a player respawns, not only when they first spawn in.
+
 ## 0.4.3
 
 ### Changed

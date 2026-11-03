@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player/weapon_model.gd" id="1_rgplv"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_02jwa"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.18431373, 0.19607843, 0.21176471, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_qxany"]
+size = Vector3(0.07, 0.07, 0.78)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_52lyj"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5411765, 0.3529412, 0.23529412, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_hr3na"]
+size = Vector3(0.09, 0.08, 0.24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_u7jq4"]
+size = Vector3(0.08, 0.12, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mdahm"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.8392157, 0.65882355, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_rb1c6"]
+size = Vector3(0.02, 0.03, 0.02)
+
+[node name="Shotgun" type="Node3D" unique_id=2034317259]
+script = ExtResource("1_rgplv")
+ads_offset = Vector3(0, -0.08, -0.3)
+
+[node name="Barrel" type="MeshInstance3D" parent="." unique_id=2115981158]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.25)
+material_override = SubResource("StandardMaterial3D_02jwa")
+mesh = SubResource("BoxMesh_qxany")
+
+[node name="Pump" type="MeshInstance3D" parent="." unique_id=2101222031]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, -0.3)
+material_override = SubResource("StandardMaterial3D_52lyj")
+mesh = SubResource("BoxMesh_hr3na")
+
+[node name="Stock" type="MeshInstance3D" parent="." unique_id=1608931094]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0.2)
+material_override = SubResource("StandardMaterial3D_52lyj")
+mesh = SubResource("BoxMesh_u7jq4")
+
+[node name="Bead" type="MeshInstance3D" parent="." unique_id=2022548815]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, -0.6)
+material_override = SubResource("StandardMaterial3D_mdahm")
+mesh = SubResource("BoxMesh_rb1c6")
+
+[node name="Muzzle" type="Marker3D" parent="." unique_id=434458105]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.66)

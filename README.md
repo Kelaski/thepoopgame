@@ -4,7 +4,12 @@ A team-based, first-person objective shooter built in **Godot 4.7 (GDScript only
 Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and the team holding it
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
-Everything (map, furniture, sounds, UI) is generated in code, so the repository has no binary assets. The one exception is the easter egg's image and sound in `assets/` (see Easter egg below).
+Models are being moved from code into Godot scenes you can open and edit in the editor:
+- **Done:** the player and the five weapons, in `assets/models/` (see **Editing models** below).
+- **Still built in code:** the map, furniture, doors, the Tag, effects and the UI. They're moving over in the next updates.
+- **Always in code:** sounds and music are synthesized.
+
+The only binary files are the easter egg's image and sound in `assets/` (see Easter egg below).
 
 ## Running it
 
@@ -215,6 +220,19 @@ Each client simulates its own movement and streams its position at 30 Hz. Remote
 Shooting is resolved on the shooter's client, and the server validates every hit (alive, enemy team, not spawn-protected, damage clamped to the weapon maximum) before applying damage.
 Round state, the timer, respawns, the Tag and health regeneration all run on the server.
 
+## Editing models
+
+Open these in the Godot editor. Changes show up in game the next time a match loads.
+- **`assets/models/player.tscn`:** the player.
+  - Parts in the `team_color` group get the team colour, and parts in `team_color_dark` a darker shade. Add your own parts to these groups to colour them too.
+  - `BodyShape` and `HeadHitbox` are the hitboxes, and `BodyRoot/TpPivot/TpGun` is where the held weapon goes.
+  - Keep the node names: the code finds them by name.
+- **`assets/models/weapons/*.tscn`:** one scene per weapon, used for both your first-person view and the gun other players see you holding.
+  - `Muzzle` marks where shots and the muzzle flash come from. On the sniper, `GlintPoint` marks where the scope glint shows.
+  - Nodes in the `first_person_only` group (the holo-sight reticles) only appear in first person.
+  - The root's **Ads Offset** setting is where the gun sits while aiming. **Viewmodel Rotation** and **Held Rotation** tilt it in first person and in other players' hands (the bat uses both).
+- **`assets/models/muzzle_flash.tscn` and `glint.tscn`:** the muzzle flash and the sniper glint, whose material is `assets/materials/sniper_glint.tres`.
+
 ## Project layout
 
 ```
@@ -237,6 +255,9 @@ scripts/
   world/door.gd             # hinged doors
   world/mats.gd             # shared materials / team colours
   player/player.gd          # FPS controller, weapons, addons, netcode
+  player/weapon_model.gd    # weapon scene root: muzzle, glint point, first/third-person setup
+assets/models/              # player, weapon, muzzle flash and glint scenes
+assets/materials/           # shared materials (.tres)
   ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
 ```
 

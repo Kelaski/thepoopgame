@@ -1,0 +1,121 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player/weapon_model.gd" id="1_txko8"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o3ujp"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.22745098, 0.22745098, 0.2509804, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_dkpaq"]
+size = Vector3(0.08, 0.12, 0.42)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_02jwa"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.18431373, 0.19607843, 0.21176471, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_2nwlr"]
+size = Vector3(0.05, 0.26, 0.07)
+
+[sub_resource type="BoxMesh" id="BoxMesh_d7hg5"]
+size = Vector3(0.03, 0.03, 0.14)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4p2jx"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.101960786, 0.101960786, 0.11764706, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_ul83t"]
+size = Vector3(0.05, 0.03, 0.11)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ieu8e"]
+size = Vector3(0.008, 0.06, 0.012)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vahlj"]
+size = Vector3(0.068, 0.008, 0.012)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8oday"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(0.62352943, 0.9019608, 1, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_e0st3"]
+size = Vector3(0.06, 0.048, 0.002)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jstx2"]
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(1, 0.23137255, 0.1882353, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_5dn26"]
+radius = 0.0016
+height = 0.0032
+radial_segments = 6
+rings = 3
+
+[node name="SMG" type="Node3D" unique_id=381699873]
+script = ExtResource("1_txko8")
+ads_offset = Vector3(0, -0.118, -0.3)
+
+[node name="Body" type="MeshInstance3D" parent="." unique_id=1924414763]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.05)
+material_override = SubResource("StandardMaterial3D_o3ujp")
+mesh = SubResource("BoxMesh_dkpaq")
+
+[node name="Magazine" type="MeshInstance3D" parent="." unique_id=551715107]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.18, -0.08)
+material_override = SubResource("StandardMaterial3D_02jwa")
+mesh = SubResource("BoxMesh_2nwlr")
+
+[node name="Barrel" type="MeshInstance3D" parent="." unique_id=2132852020]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.33)
+material_override = SubResource("StandardMaterial3D_02jwa")
+mesh = SubResource("BoxMesh_d7hg5")
+
+[node name="SightMount" type="MeshInstance3D" parent="." unique_id=53387062]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, -0.06)
+material_override = SubResource("StandardMaterial3D_4p2jx")
+mesh = SubResource("BoxMesh_ul83t")
+
+[node name="SightPostL" type="MeshInstance3D" parent="." unique_id=1480690872]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.03, 0.118, -0.06)
+material_override = SubResource("StandardMaterial3D_4p2jx")
+mesh = SubResource("BoxMesh_ieu8e")
+
+[node name="SightPostR" type="MeshInstance3D" parent="." unique_id=1806552124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.03, 0.118, -0.06)
+material_override = SubResource("StandardMaterial3D_4p2jx")
+mesh = SubResource("BoxMesh_ieu8e")
+
+[node name="SightTop" type="MeshInstance3D" parent="." unique_id=891560698]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.146, -0.06)
+material_override = SubResource("StandardMaterial3D_4p2jx")
+mesh = SubResource("BoxMesh_vahlj")
+
+[node name="SightGlass" type="MeshInstance3D" parent="." unique_id=1219964106]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.118, -0.06)
+material_override = SubResource("StandardMaterial3D_8oday")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_e0st3")
+
+[node name="ReticleDot" type="MeshInstance3D" parent="." unique_id=218375116 groups=["first_person_only"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.118, -0.062)
+material_override = SubResource("StandardMaterial3D_jstx2")
+mesh = SubResource("SphereMesh_5dn26")
+
+[node name="Muzzle" type="Marker3D" parent="." unique_id=1130296124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.42)
