@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://assets/materials/water.gdshader" id="1_water"]
+
+[resource]
+shader = ExtResource("1_water")
+shader_parameter/flow_speed = 0.5
+shader_parameter/ripple_scale = 1.6
+shader_parameter/sparkle = 0.35
+shader_parameter/flow_dir = Vector2(0.6, 0.8)

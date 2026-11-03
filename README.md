@@ -332,6 +332,7 @@ Edit them in the Godot editor. The next match uses your changes.
   - `batch`: `static` or `detail`. Detail parts are hidden beyond 140 m, like the furniture.
   - `night_only` (on an `OmniLight3D`): the light only shines in the evening and at night, like the street lamps.
   - `glow`: true for parts that light up (bulbs, screens, neon, headlights). They're drawn unshaded and bright enough to bloom.
+  - `material`: draw the part with a material from `assets/materials/` instead: `water` (rippling still water, `water.gdshader`) or `waterfall` (flowing water, `waterfall.gdshader`). The part's colour tints it.
 - **Lights:** an `OmniLight3D` in a template becomes a real light wherever the piece is placed. Its colour, energy and range are used, and shadows stay off. The lamp scenes in `assets/furniture/decor/` have one each.
 - **Placement:**
   - Props are placed on the ground at their origin.

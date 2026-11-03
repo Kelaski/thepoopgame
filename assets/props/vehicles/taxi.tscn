@@ -25,15 +25,9 @@ size = Vector3(0.05, 0.8, 1.6)
 height = 0.26
 radius = 0.34
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_pq0i5"]
-size = Vector3(0.86, 0.06, 0.12)
-
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_xpe5p"]
 height = 0.26
 radius = 0.34
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_wd82k"]
-size = Vector3(0.86, 0.06, 0.12)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jx7kc"]
 size = Vector3(0.12, 0.22, 1.9)
@@ -42,15 +36,9 @@ size = Vector3(0.12, 0.22, 1.9)
 height = 0.26
 radius = 0.34
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_fneek"]
-size = Vector3(0.86, 0.06, 0.12)
-
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_hs7hs"]
 height = 0.26
 radius = 0.34
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_inrpw"]
-size = Vector3(0.86, 0.06, 0.12)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_x6spf"]
 size = Vector3(0.12, 0.22, 1.9)
@@ -415,17 +403,9 @@ shape = SubResource("BoxShape3D_scyyq")
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 1.38, 0.34, -0.86)
 shape = SubResource("CylinderShape3D_y858u")
 
-[node name="Shape9" type="CollisionShape3D" parent="Collision" unique_id=841483675]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.38, 0.72, -0.9)
-shape = SubResource("BoxShape3D_pq0i5")
-
 [node name="Shape10" type="CollisionShape3D" parent="Collision" unique_id=543800445]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -1.38, 0.34, -0.86)
 shape = SubResource("CylinderShape3D_xpe5p")
-
-[node name="Shape11" type="CollisionShape3D" parent="Collision" unique_id=1313390481]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.38, 0.72, -0.9)
-shape = SubResource("BoxShape3D_wd82k")
 
 [node name="Shape12" type="CollisionShape3D" parent="Collision" unique_id=52057995]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0.45, 0)
@@ -435,17 +415,9 @@ shape = SubResource("BoxShape3D_jx7kc")
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 1.38, 0.34, 0.86)
 shape = SubResource("CylinderShape3D_3cjkh")
 
-[node name="Shape15" type="CollisionShape3D" parent="Collision" unique_id=1067557066]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.38, 0.72, 0.9)
-shape = SubResource("BoxShape3D_fneek")
-
 [node name="Shape16" type="CollisionShape3D" parent="Collision" unique_id=2082021835]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, -1.38, 0.34, 0.86)
 shape = SubResource("CylinderShape3D_hs7hs")
-
-[node name="Shape17" type="CollisionShape3D" parent="Collision" unique_id=843281267]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.38, 0.72, 0.9)
-shape = SubResource("BoxShape3D_inrpw")
 
 [node name="Shape18" type="CollisionShape3D" parent="Collision" unique_id=1120269160]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.45, 0)

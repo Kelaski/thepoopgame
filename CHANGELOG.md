@@ -7,6 +7,20 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.17.1
+
+### Added
+- **Real water:** the pond and the fountain's basins now ripple, with light glinting off the moving waves. The fountain's jets flow, with streaks pouring down each one.
+- **Fountain spray:** droplets spurt from the statue's spout and splash round the basin.
+
+### Changed
+- **Basketball court lines** are smooth and laid out like a real court:
+  - boundary lines and a centre circle
+  - painted keys with free-throw lines and circles
+  - a restricted-area arc under each basket
+  - three-point lines with straight corners and a smooth arc
+- **Cars and taxis:** the little lips above the wheels no longer have collision.
+
 ## 0.17.0
 
 ### Added

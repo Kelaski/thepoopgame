@@ -75,6 +75,18 @@ static func vertex_glow() -> StandardMaterial3D:
 	return m
 
 
+## A material from assets/materials/ by name (for prefab parts with a
+## "material" meta, such as "water"). Falls back to the plain toon material.
+static func named(name: String) -> Material:
+	var key := "named_" + name
+	if _cache.has(key):
+		return _cache[key]
+	var path := "res://assets/materials/%s.tres" % name
+	var m: Material = load(path) if ResourceLoader.exists(path) else vertex_toon()
+	_cache[key] = m
+	return m
+
+
 static func vertex_unshaded(no_depth := false) -> StandardMaterial3D:
 	var key := "vun_%s" % no_depth
 	if _cache.has(key):

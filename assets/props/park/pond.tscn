@@ -367,21 +367,25 @@ mesh = SubResource("CylinderMesh_ujluj")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.07, -5.5)
 material_override = SubResource("StandardMaterial3D_q4uht")
 mesh = SubResource("CylinderMesh_20q65")
+metadata/material = "water"
 
 [node name="Part5" type="MeshInstance3D" parent="." unique_id=1711258973]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.07, -1)
 material_override = SubResource("StandardMaterial3D_q4uht")
 mesh = SubResource("CylinderMesh_ycb6b")
+metadata/material = "water"
 
 [node name="Part6" type="MeshInstance3D" parent="." unique_id=974849762]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.07, 2.5)
 material_override = SubResource("StandardMaterial3D_q4uht")
 mesh = SubResource("CylinderMesh_l81br")
+metadata/material = "water"
 
 [node name="Part7" type="MeshInstance3D" parent="." unique_id=1015769705]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.07, 5)
 material_override = SubResource("StandardMaterial3D_q4uht")
 mesh = SubResource("CylinderMesh_oo12x")
+metadata/material = "water"
 
 [node name="Part8" type="MeshInstance3D" parent="." unique_id=1124980902]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.9, 0.12, -6.5)

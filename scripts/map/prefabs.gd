@@ -14,6 +14,9 @@ class_name Prefabs
 ##                    75 m draw distance); otherwise it follows where it's placed
 ##       glow         true = lit from within (bulbs, screens, neon): drawn unshaded
 ##                    and bright enough to bloom
+##       material     a material in assets/materials/ to draw the part with, such as
+##                    "water" (rippling still water) or "waterfall" (flowing water);
+##                    the part's colour tints it
 ##   * OmniLight3D: a real light, placed with the prefab (colour, energy and range
 ##     are used; shadows stay off). The player's Interior lights setting thins them.
 ##     With the night_only metadata it only shines in the evening and at night.
@@ -95,6 +98,7 @@ static func _add_part(mi: MeshInstance3D, xf: Transform3D, r: Dictionary) -> voi
 		"choices": mi.get_meta("slot_choices", PackedColorArray()),
 		"batch": str(mi.get_meta("batch", "")),
 		"glow": bool(mi.get_meta("glow", false)),
+		"material": str(mi.get_meta("material", "")),
 	})
 
 

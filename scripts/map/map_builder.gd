@@ -24,6 +24,7 @@ const SKY_CLEARANCE := 35.0  # the sky barrier is this far above the tallest str
 const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
 const DOOR_SCENE := preload("res://assets/models/door.tscn")
 const SIGN_SCENE := preload("res://assets/models/building_sign.tscn")
+const FOUNTAIN_SPRAY := preload("res://assets/props/park/fountain_spray.tscn")
 const DECOR := 0    # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them); foliage never collides
 
 const WALL_T := 0.3
@@ -114,6 +115,7 @@ var _cyls: Array = []
 var _fcyls: Array = []
 var _spheres: Array = []
 var _glows: Array = []   # [kind, transform, colour, detail]: glowing parts
+var _specials := {}      # material name -> [[kind, transform, colour, detail]]: parts drawn with their own material
 var _floor_body: StaticBody3D
 var _wall_body: StaticBody3D
 var _solid_body: StaticBody3D
@@ -269,6 +271,7 @@ func _begin_chunk(nm: String) -> void:
 	_fcyls = []
 	_spheres = []
 	_glows = []
+	_specials = {}
 
 
 func _end_chunk() -> void:
@@ -286,6 +289,15 @@ func _end_chunk() -> void:
 				if g[0] == kind and g[3] == detail:
 					items.append([g[1], g[2]])
 			_make_mm(meshes[kind], items, FURNITURE_VIS_RANGE if detail else 0.0, Mats.vertex_glow())
+	# Parts with their own material (water): one batch per material and shape
+	for mat_name: String in _specials:
+		var mat: Material = Mats.named(mat_name)
+		for kind: String in meshes:
+			var items := []
+			for g: Array in _specials[mat_name]:
+				if g[0] == kind:
+					items.append([g[1], g[2]])
+			_make_mm(meshes[kind], items, 0.0, mat)
 
 
 func _make_mm(mesh: Mesh, items: Array, vis_range: float, mat: Material = null) -> void:
@@ -388,6 +400,11 @@ func _prefab(name: String, xf: Transform3D, slots := {}) -> void:
 				col = col.lightened(p.lighten)
 		var t: Transform3D = xf * p.xform
 		var detail: bool = _detail if p.batch == "" else p.batch == "detail"
+		if p.material != "":
+			if not _specials.has(p.material):
+				_specials[p.material] = []
+			_specials[p.material].append([p.kind, t, col, detail])
+			continue
 		if p.glow:
 			var gain := GLOW_BOOST / maxf(0.05, maxf(col.r, maxf(col.g, col.b)))
 			_glows.append([p.kind, t, Color(col.r * gain, col.g * gain, col.b * gain), detail])
@@ -2160,6 +2177,9 @@ func _build_park() -> void:
 	if plaza.is_finite():
 		_prefab("props/park/plaza", _at(Vector3(plaza.x, 0, plaza.y)))
 		_prefab("props/park/fountain", _at(Vector3(plaza.x, 0, plaza.y)))
+		var spray: Node3D = FOUNTAIN_SPRAY.instantiate()  # real particles, so a node rather than baked
+		spray.position = Vector3(plaza.x, 0, plaza.y)
+		_chunk.add_child(spray)
 		# Benches round the fountain on the diagonals, facing it
 		for i in 4:
 			var ba := PI * 0.25 + i * PI * 0.5
