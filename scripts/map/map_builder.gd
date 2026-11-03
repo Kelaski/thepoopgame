@@ -1279,8 +1279,6 @@ func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: 
 				if piece == "building/wall_solid":
 					var inward: Vector3 = [Vector3.BACK, Vector3.FORWARD, Vector3.RIGHT, Vector3.LEFT][side]
 					_wall_slots.append([at + inward * WALL_T * 0.5, inward, k])
-					if k > 0 and rng.randf() < 0.07:
-						_prefab("building/wall_ac", _at(at - inward * WALL_T * 0.5, _yaw_to(-inward)))
 				_prefab(piece, _at(at, yaw), cols)
 				if fh > MODULE_H:
 					_prefab("building/wall_filler", _at(at + Vector3(0, MODULE_H, 0), yaw, Vector3(1, fh - MODULE_H, 1)), cols)

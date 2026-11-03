@@ -7,6 +7,17 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.16.1
+
+### Changed
+- **No more A/C units on outside walls:** they're gone from building walls. The ones on rooftops stay.
+
+### Fixed
+- **Cars missing the top of their body:** cars and taxis now have a solid upper body, with pillars and window frames, instead of windows floating over a hollow middle.
+
+### Releases
+- Every version is now published on GitHub as a pre-release, with its patch notes and Windows and Linux downloads.
+
 ## 0.16.0
 
 ### Added

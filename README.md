@@ -216,7 +216,7 @@ Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**
 - **Walls:** each storey's walls are a row of 2 m modules. A module is solid, has the building's window style (small, wide or tall), or is a door on the ground floor.
 - **Windows:** evenly spaced in the same columns on every storey, singly or in pairs. Each side has about the same number per floor as before. They're never at the ends of a wall or next to a door, which leaves solid stretches for wall running. Windows are framed open gaps you can shoot and jump through.
 - **Doors and signs:** most buildings have one street door, some have two, always on the sides facing a street. Each door has an awning, and the building's name is centred on every wall that has a door.
-- **Rooftops and walls:** A/C units and vents on the roofs (cover to fight around), water towers on tall buildings, and window A/C units on upper floors.
+- **Rooftops:** A/C units and vents (cover to fight around), and water towers on tall buildings.
 - **Windows** never sit where an inside wall meets the outside wall.
 - **Rooms:** residential and school floors have a corridor with 6 m rooms behind doors.
 - **Decor:** every storey has ceiling lights, and the walls get decor that fits the building: posters and clocks in the school, neon signs and a jukebox in the diner and bar, bottle shelves and a dartboard in the bar, picture frames and rugs in the bank, apartments, motel and library, pipes and safety signs in the warehouse and water treatment centre, and so on. Exit signs hang over the street doors. The lamps cast real light, and bulbs, screens and neon glow.

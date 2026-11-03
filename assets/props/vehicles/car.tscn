@@ -255,6 +255,42 @@ size = Vector3(0.02, 0.12, 0.42)
 [sub_resource type="BoxMesh" id="BoxMesh_7vbwv"]
 size = Vector3(0.03, 0.18, 0.78)
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ov7iw"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7529412, 0.27058825, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_o10s8"]
+size = Vector3(1.78, 0.7, 1.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_aeksk"]
+size = Vector3(0.07, 0.86, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_vs0m5"]
+size = Vector3(0.07, 0.82, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lckfa"]
+size = Vector3(1.66, 0.06, 0.03)
+
+[sub_resource type="BoxMesh" id="BoxMesh_xkid6"]
+size = Vector3(1.66, 0.06, 0.03)
+
+[sub_resource type="BoxMesh" id="BoxMesh_kiipq"]
+size = Vector3(0.07, 0.86, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_8ufhd"]
+size = Vector3(0.07, 0.82, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_037mc"]
+size = Vector3(1.66, 0.06, 0.03)
+
+[sub_resource type="BoxMesh" id="BoxMesh_okyd5"]
+size = Vector3(1.66, 0.06, 0.03)
+
 [node name="Car" type="Node3D" unique_id=1309657234]
 
 [node name="Collision" type="StaticBody3D" parent="." unique_id=1224650727]
@@ -538,3 +574,65 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.16, 0.74, 0)
 material_override = SubResource("StandardMaterial3D_ufip0")
 mesh = SubResource("BoxMesh_7vbwv")
 metadata/batch = "detail"
+
+[node name="Cabin0" type="MeshInstance3D" parent="." unique_id=251709046]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13, 1.33, 0)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_o10s8")
+metadata/slot = "body"
+
+[node name="Cabin1" type="MeshInstance3D" parent="." unique_id=298016508]
+transform = Transform3D(0.7880108, -0.6156615, 0, 0.6156615, 0.7880108, 0, 0, 0, 1, 0.84, 1.36, -0.79)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_aeksk")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
+
+[node name="Cabin2" type="MeshInstance3D" parent="." unique_id=137985173]
+transform = Transform3D(0.8290376, 0.5591929, 0, -0.5591929, 0.8290376, 0, 0, 0, 1, -1.11, 1.36, -0.79)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_vs0m5")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
+
+[node name="Cabin3" type="MeshInstance3D" parent="." unique_id=369568041]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 1.63, -0.82)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_lckfa")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
+
+[node name="Cabin4" type="MeshInstance3D" parent="." unique_id=1363724380]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 1.09, -0.82)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_xkid6")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
+
+[node name="Cabin5" type="MeshInstance3D" parent="." unique_id=579682283]
+transform = Transform3D(0.7880108, -0.6156615, 0, 0.6156615, 0.7880108, 0, 0, 0, 1, 0.84, 1.36, 0.79)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_kiipq")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
+
+[node name="Cabin6" type="MeshInstance3D" parent="." unique_id=116265267]
+transform = Transform3D(0.8290376, 0.5591929, 0, -0.5591929, 0.8290376, 0, 0, 0, 1, -1.11, 1.36, 0.79)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_8ufhd")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
+
+[node name="Cabin7" type="MeshInstance3D" parent="." unique_id=1847850442]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 1.63, 0.82)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_037mc")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
+
+[node name="Cabin8" type="MeshInstance3D" parent="." unique_id=699628148]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 1.09, 0.82)
+material_override = SubResource("StandardMaterial3D_ov7iw")
+mesh = SubResource("BoxMesh_okyd5")
+metadata/slot = "body"
+metadata/slot_darken = 0.12
