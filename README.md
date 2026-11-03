@@ -113,7 +113,7 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 | Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
 | Stalker | See wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
 | Phantom | Shift: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
-| Grapple | Shift: fire a grappling hook up to 20 m. It latches onto whatever it hits (walls, floors, doors, props or players) and pulls you towards it at 20 m/s for up to 1.6 s. Jump lets go early, and you keep your momentum. 17 s cooldown after a hit; a miss only costs 1 s. Everyone sees the rope. |
+| Grapple | Shift: throw a grappling hook up to 30 m (it flies out over about 0.3 s). It latches onto whatever it hits (walls, floors, doors, props or players) and reels you in while you keep steering, up to 24 m/s for at most 2.5 s. The rope only ever shortens, so hooking something above you swings you underneath it. Reaching the hook pops you upwards so you can climb onto ledges. Jump or Shift lets go with your momentum, and the rope snaps if something gets in the way. Hooking an enemy yanks them towards you. 9 s cooldown after a hit; a miss only costs 1 s. Everyone sees the hook and rope. |
 
 ### Movement
 

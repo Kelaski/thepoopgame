@@ -128,12 +128,18 @@ var invisible := false
 var phasing := 0.0
 var floor_phase := 0.0
 var _last_crouch_tap := -10.0
-var grappling := false
-var grapple_point := Vector3.ZERO
-var grapple_t := 0.0
+enum Hook { NONE, FLYING, ATTACHED }
+var grapple_state: int = Hook.NONE
+var grapple_point := Vector3.ZERO    # where the hook is attached
+var grapple_t := 0.0                 # time left on the rope
 var _grapple_target: Player = null   # hooked player (the hook follows them)
 var _grapple_offset := Vector3.ZERO
+var _hook_pos := Vector3.ZERO        # flying hook
+var _hook_dir := Vector3.ZERO
+var _hook_dist := 0.0
+var _rope_len := 0.0                 # only ever shortens, so you swing below the anchor
 var _rope: MeshInstance3D
+var _hook_mesh: MeshInstance3D
 
 # Spawn protection
 var prot_pending := false  # kept for compatibility; protection is now a plain timer
@@ -437,7 +443,7 @@ func set_alive(a: bool) -> void:
 		velocity = Vector3.ZERO
 		if is_local:
 			_end_grapple()
-		grappling = false
+		grapple_state = Hook.NONE
 	if body_root:
 		body_root.visible = a and not is_local
 	if viewmodel:
@@ -463,7 +469,7 @@ func respawn(pos: Vector3, protect: bool) -> void:
 	floor_phase = 0.0
 	addon_active = 0.0
 	addon_cd = 0.0
-	grappling = false
+	grapple_state = Hook.NONE
 	_grapple_target = null
 	dj_ready = true
 	wallrunning = false
@@ -746,8 +752,10 @@ func _physics_process(delta: float) -> void:
 				slide_cd = SLIDE_CD
 			Sfx.play("jump", -4.0, 1.4)
 			_on_moved()
-	if grappling:
-		hvel = _apply_grapple(delta, hvel, jump_tap)
+	if grapple_state == Hook.FLYING:
+		_tick_hook(delta)
+	if grapple_state == Hook.ATTACHED:
+		hvel = _apply_grapple(delta, hvel, wish, jump_tap, on_floor)
 	velocity.x = hvel.x
 	velocity.z = hvel.z
 	if move_in != Vector2.ZERO:
@@ -912,6 +920,8 @@ func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int, ln: floa
 # ================================================================ per-frame visuals
 
 func _process(delta: float) -> void:
+	if not is_local and grapple_state == Hook.FLYING:
+		_hook_dist = minf(_hook_dist + Addons.GRAPPLE_HOOK_SPEED * delta, Addons.GRAPPLE_RANGE)
 	_update_rope()
 	if is_local:
 		_local_visuals(delta)
@@ -1182,48 +1192,102 @@ func _use_addon() -> void:
 				phasing = Addons.PHANTOM_TIME
 				Sfx.play("addon", -4.0, 0.7)
 		"grapple":
-			if addon_cd <= 0.0 and not grappling:
+			if grapple_state == Hook.ATTACHED:
+				_end_grapple()  # pressing it again lets go
+			elif grapple_state == Hook.NONE and addon_cd <= 0.0:
 				_fire_grapple()
 
 
-## Grapple: hook whatever the crosshair is on within range. A miss only costs a
-## short cooldown; a hit starts the full cooldown.
+# ---------------------------------------------------------------- grapple
+# A momentum grappling hook: the hook flies out (it isn't instant), latches onto
+# whatever it hits, then reels you in while you keep steering. The rope only ever
+# gets shorter, so hooking something above you swings you under it, and you get a
+# small upward pop at the end so you can climb onto ledges. Jump or the ability key
+# lets go with your momentum. Hooking an enemy also yanks them towards you.
+
 func _fire_grapple() -> void:
-	var from := cam.global_position
-	var mask := MASK_FULL | MapBuilder.L_PLAYER
-	var q := PhysicsRayQueryParameters3D.create(from, from + aim_dir() * Addons.GRAPPLE_RANGE, mask, [get_rid()])
-	var r := get_world_3d().direct_space_state.intersect_ray(q)
-	if r.is_empty():
-		addon_cd = Addons.GRAPPLE_MISS_CD
-		Sfx.play("addon_end", -6.0, 1.6)
-		return
-	grappling = true
-	grapple_point = r.position
-	grapple_t = Addons.GRAPPLE_MAX_TIME
-	addon_cd = Addons.GRAPPLE_CD
-	_grapple_target = r.collider if r.collider is Player else null
-	if _grapple_target:
-		_grapple_offset = grapple_point - _grapple_target.global_position
+	_hook_pos = cam.global_position
+	_hook_dir = aim_dir()
+	_hook_dist = 0.0
+	grapple_state = Hook.FLYING
 	Sfx.play("addon", -4.0, 1.6)
-	_grapple_net.rpc(true, grapple_point)
+	_grapple_net.rpc(Hook.FLYING, _hook_pos, _hook_dir)
 	_on_moved()
 
 
-## Pulls you towards the hook. Returns the new horizontal velocity (vertical is
-## written to velocity.y). Jumping, arriving or running out of time lets go.
-func _apply_grapple(delta: float, hvel: Vector3, jump_tap: bool) -> Vector3:
+func _tick_hook(delta: float) -> void:
+	var step := minf(Addons.GRAPPLE_HOOK_SPEED * delta, Addons.GRAPPLE_RANGE - _hook_dist)
+	var from := _hook_pos + _hook_dir * _hook_dist
+	var to := from + _hook_dir * step
+	var q := PhysicsRayQueryParameters3D.create(from, to, MASK_FULL | MapBuilder.L_PLAYER, [get_rid()])
+	var r := get_world_3d().direct_space_state.intersect_ray(q)
+	if not r.is_empty():
+		_attach_grapple(r.position, r.collider)
+		return
+	_hook_dist += step
+	if _hook_dist >= Addons.GRAPPLE_RANGE - 0.01:
+		# Missed: the hook reels back in and only a short cooldown applies.
+		grapple_state = Hook.NONE
+		addon_cd = Addons.GRAPPLE_MISS_CD
+		Sfx.play("addon_end", -6.0, 1.6)
+		_grapple_net.rpc(Hook.NONE, Vector3.ZERO, Vector3.ZERO)
+
+
+func _attach_grapple(point: Vector3, collider: Object) -> void:
+	grapple_state = Hook.ATTACHED
+	grapple_point = point
+	grapple_t = Addons.GRAPPLE_MAX_TIME
+	addon_cd = Addons.GRAPPLE_CD
+	_rope_len = point.distance_to(global_position + Vector3(0, 1.0, 0))
+	_grapple_target = collider as Player
+	if _grapple_target:
+		_grapple_offset = point - _grapple_target.global_position
+		if _grapple_target.team != team:
+			_grapple_target._grapple_yank.rpc_id(_grapple_target.peer_id)
+	Sfx.play("door", -6.0, 1.8)
+	_grapple_net.rpc(Hook.ATTACHED, point, Vector3.ZERO)
+
+
+## Reels you towards the hook. Returns the new horizontal velocity (vertical is
+## written to velocity.y).
+func _apply_grapple(delta: float, hvel: Vector3, wish: Vector3, jump_tap: bool, on_floor: bool) -> Vector3:
 	grapple_t -= delta
 	if _grapple_target:
 		if not is_instance_valid(_grapple_target) or not _grapple_target.alive:
 			_end_grapple()
 			return hvel
 		grapple_point = _grapple_target.global_position + _grapple_offset
-	var to := grapple_point - (global_position + Vector3(0, 1.0, 0))
+	var chest := global_position + Vector3(0, 1.0, 0)
+	var to := grapple_point - chest
 	var d := to.length()
-	if jump_tap or grapple_t <= 0.0 or d < Addons.GRAPPLE_ARRIVE:
+	if jump_tap or grapple_t <= 0.0 or d < 0.1:
 		_end_grapple()
 		return hvel
-	var v := Vector3(hvel.x, velocity.y, hvel.z).move_toward(to / d * Addons.GRAPPLE_SPEED, Addons.GRAPPLE_ACCEL * delta)
+	var n := to / d
+	var v := Vector3(hvel.x, velocity.y, hvel.z)
+	if d < Addons.GRAPPLE_ARRIVE:
+		# Arrived: pop up and over the edge you hooked, keeping your momentum.
+		v.y = maxf(v.y, Addons.GRAPPLE_END_POP)
+		velocity.y = v.y
+		_end_grapple()
+		return Vector3(v.x, 0.0, v.z) + Vector3(n.x, 0.0, n.z) * 2.0
+	# The rope snaps if something gets between you and the hook.
+	var q := PhysicsRayQueryParameters3D.create(chest, grapple_point - n * 0.35, MASK_FULL, [get_rid()])
+	if not get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+		_end_grapple()
+		return hvel
+	if on_floor and v.y < 2.5:
+		v.y = 2.5  # unstick from the ground
+	v += n * Addons.GRAPPLE_PULL * delta
+	v += wish * Addons.GRAPPLE_STEER * delta
+	# Rope constraint: it only gets shorter, so outward speed is cancelled (swing).
+	_rope_len = minf(_rope_len, d)
+	if d > _rope_len + 0.05:
+		var outward := -v.dot(n)
+		if outward > 0.0:
+			v += n * outward
+	if v.length() > Addons.GRAPPLE_MAX_SPEED:
+		v = v.normalized() * Addons.GRAPPLE_MAX_SPEED
 	velocity.y = v.y
 	sliding = false
 	if wallrunning:
@@ -1233,26 +1297,66 @@ func _apply_grapple(delta: float, hvel: Vector3, jump_tap: bool) -> Vector3:
 
 
 func _end_grapple() -> void:
-	if not grappling:
+	if grapple_state == Hook.NONE:
 		return
-	grappling = false
+	if grapple_state == Hook.FLYING:
+		addon_cd = maxf(addon_cd, Addons.GRAPPLE_MISS_CD)
+	grapple_state = Hook.NONE
 	_grapple_target = null
-	_grapple_net.rpc(false, Vector3.ZERO)
+	_grapple_net.rpc(Hook.NONE, Vector3.ZERO, Vector3.ZERO)
 
 
-## Lets everyone else see the rope.
+## Lets everyone else see the hook and rope. FLYING sends the throw origin and
+## direction (remotes fly the hook themselves); ATTACHED sends the anchor point.
 @rpc("authority", "call_remote", "reliable")
-func _grapple_net(on: bool, point: Vector3) -> void:
-	grappling = on
-	grapple_point = point
+func _grapple_net(state: int, point: Vector3, dir: Vector3) -> void:
+	grapple_state = state
+	if state == Hook.FLYING:
+		_hook_pos = point
+		_hook_dir = dir
+		_hook_dist = 0.0
+	elif state == Hook.ATTACHED:
+		grapple_point = point
+
+
+## An enemy hooked us: we get yanked towards them. Only honoured from a player
+## who is actually within grapple range.
+@rpc("any_peer", "call_remote", "reliable")
+func _grapple_yank() -> void:
+	if not is_local or not alive or Game.world == null:
+		return
+	var from: Player = Game.world.players.get(multiplayer.get_remote_sender_id())
+	if from == null or not from.alive or from.team == team:
+		return
+	var to := from.global_position - global_position
+	if to.length() > Addons.GRAPPLE_RANGE + 6.0:
+		return
+	velocity += to.normalized() * Addons.GRAPPLE_YANK + Vector3.UP * 3.0
+	sliding = false
+
+
+func _grapple_end_point() -> Vector3:
+	if grapple_state == Hook.FLYING:
+		return _hook_pos + _hook_dir * _hook_dist
+	return grapple_point
 
 
 func _update_rope() -> void:
-	if not grappling or not alive:
+	if grapple_state == Hook.NONE or not alive:
 		if _rope:
 			_rope.visible = false
+			_hook_mesh.visible = false
 		return
 	if _rope == null:
+		_hook_mesh = MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = 0.09
+		sm.height = 0.18
+		_hook_mesh.mesh = sm
+		_hook_mesh.material_override = Mats.toon(Color(0.75, 0.75, 0.8))
+		_hook_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_hook_mesh.top_level = true
+		add_child(_hook_mesh)
 		_rope = MeshInstance3D.new()
 		var bm := BoxMesh.new()
 		bm.size = Vector3(0.035, 0.035, 1.0)
@@ -1267,7 +1371,10 @@ func _update_rope() -> void:
 	var from := global_position + Vector3(0, 1.3, 0)
 	if is_local and cam:
 		from = cam.global_position + cam.global_basis * Vector3(0.22, -0.22, -0.35)
-	var dir := grapple_point - from
+	var end := _grapple_end_point()
+	_hook_mesh.global_position = end
+	_hook_mesh.visible = true
+	var dir := end - from
 	var d := dir.length()
 	if d < 0.05:
 		_rope.visible = false
@@ -1337,7 +1444,9 @@ func addon_status() -> Array:
 			if addon_cd > 0.0:
 				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.PHANTOM_CD, "cooldown"]
 		"grapple":
-			if grappling:
+			if grapple_state == Hook.FLYING:
+				return ["HOOK OUT", 1.0 - _hook_dist / Addons.GRAPPLE_RANGE, "active"]
+			if grapple_state == Hook.ATTACHED:
 				return ["GRAPPLING", grapple_t / Addons.GRAPPLE_MAX_TIME, "active"]
 			if addon_cd > 0.0:
 				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.GRAPPLE_CD, "cooldown"]
