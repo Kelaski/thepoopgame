@@ -4,7 +4,7 @@ A team-based, first-person objective shooter built in **Godot 4.3+ (GDScript onl
 Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and the team holding it
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
-Everything (map, furniture, sounds, UI) is generated in code, so the repository has no binary assets.
+Everything (map, furniture, sounds, UI) is generated in code, so the repository has no binary assets. The one exception is the easter egg's image and sound in `assets/` (see Easter egg below).
 
 ## Running it
 
@@ -51,9 +51,10 @@ A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and 
 
 - **Add Songs...** opens your system file picker. You can pick several songs at once.
 - Imported songs are copied into the game's own music folder (`user://music`), so the playlist keeps working even if you move or delete the originals. **Open Music Folder** shows that folder.
-- **Formats:** OGG, MP3 and WAV (any bit depth) work out of the box. FLAC, M4A/AAC, Opus, WMA, AIFF, WebM/MKA, ALAC and more are converted on import, which needs [ffmpeg](https://ffmpeg.org) installed and on your PATH.
+- Importing runs in the background, so the game keeps running (important when you're the host) and you can close the menu while it works.
+- **Formats:** OGG, MP3 and WAV (8/16/24/32-bit integer or 32/64-bit float PCM) work out of the box; other WAV encodings fall back to ffmpeg. FLAC, M4A/AAC, Opus, WMA, AIFF, WebM/MKA, ALAC and more are converted on import, which needs [ffmpeg](https://ffmpeg.org) installed and on your PATH.
 - In the playlist you can turn songs on and off, reorder them, preview them and remove them.
-- **Play during matches** chooses between the built-in beat, your playlist, or both. There's also a shuffle option. Use **Skip Song** in the pause menu to move on, and a "Now playing" toast shows each new song.
+- **Play during matches** chooses between the built-in beat, your playlist, or both. There's also a shuffle option. Use **Skip Song** in the pause menu to move on, and a "Now playing" toast shows each new song. Editing the playlist mid-match keeps the current song playing unless you disable or remove it.
 
 ### Colour customization (Main menu → Customize Colours, also in the lobby and pause menu)
 
@@ -194,7 +195,7 @@ scripts/
 
 ## Sprays
 
-Customize → **Spray** lets you choose an image (PNG, JPG, WebP, BMP, TGA or SVG). It's resized to fit 128 px and re-saved as a clean PNG. In a match, press **T** to spray it on the surface you're looking at (within 4 m), with a 5 s cooldown. Everyone sees it, and your newest spray replaces your previous one. The server only accepts PNG data under 64 KB, re-checks the cooldown and distance, and every client decodes sprays as PNG only (at most 256×256).
+Customize → **Spray** lets you choose an image (PNG, JPG, WebP, BMP, TGA or SVG). It's resized to fit 128 px and re-saved as a clean PNG. In a match, press **T** to spray it on the surface you're looking at (within 4 m), with a 5 s cooldown. Everyone sees it, and your newest spray replaces your previous one. The server only accepts PNG data under 64 KB, at most one new spray image per player every 3 s, re-checks the cooldown and distance, and every client decodes sprays as PNG only (at most 256×256). A player's spray disappears when they leave.
 
 ## Crosshair editor
 
@@ -210,7 +211,7 @@ You can also upload a **custom crosshair image** (with a scale slider) and a **c
 
 ## Easter egg
 
-Every time you spawn or respawn, there's a 1% chance that a sweaty guy appears on your screen while birds chirp, staying up for the whole clip. Press **Ctrl+F4** to trigger it whenever you like. It only shows for you (`scripts/ui/bird_event.gd`, `assets/sweaty_guy.png`, `assets/birds_chirping.ogg`).
+Every time you spawn or respawn, there's a 1% chance that a sweaty guy appears on your screen while birds chirp, staying up for the whole clip. Press **Ctrl+F4** to trigger it whenever you like. It only shows for you (`scripts/ui/bird_event.gd`, `assets/sweaty_guy.png`, `assets/birds_chirping.ogg`). These two files are the project's only binary assets. Godot imports them when the project is opened in the editor, so open the project once before running it headless or exporting it.
 
 ## Assumptions and choices not covered by the spec
 

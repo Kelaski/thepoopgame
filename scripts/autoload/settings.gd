@@ -67,7 +67,6 @@ const DEFAULTS := {
 	# Colour overrides: key -> html colour (see Palette)
 	"colors": {},
 	# HUD
-	"crosshair_size": 8.0,
 	"crosshair_color": "ffffff",
 	# Crosshair editor (Counter-Strike style)
 	"xh_style": "classic",      # classic, circle, dot, image

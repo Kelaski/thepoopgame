@@ -76,6 +76,9 @@ func _ready() -> void:
 	_dialog.files_selected.connect(_on_files_selected)
 	_dialog.file_selected.connect(func(p: String): _on_files_selected(PackedStringArray([p])))
 	add_child(_dialog)
+	Sfx.import_finished.connect(_on_import_finished)
+	if Sfx.importing():
+		_status.text = "Importing songs..."
 	_refresh()
 
 
@@ -103,24 +106,17 @@ func _open_folder() -> void:
 	OS.shell_open(MusicLibrary.folder_path())
 
 
+## Imports run on a background thread in Sfx (see Sfx.import_songs), so closing
+## this menu mid-import is fine and the game never freezes.
 func _on_files_selected(paths: PackedStringArray) -> void:
+	if not Sfx.import_songs(paths):
+		_status.text = "Still importing the previous songs, please wait."
+		return
 	_status.text = "Importing %d file(s)..." % paths.size()
-	await get_tree().process_frame
-	await get_tree().process_frame
-	var tracks: Array = Settings.music_tracks()
-	var added := 0
-	var errors: Array = []
-	for p in paths:
-		var res := MusicLibrary.import_file(p)
-		if res.ok:
-			tracks.append(res.track)
-			added += 1
-		else:
-			errors.append(res.error)
-	Settings.set_music_tracks(tracks)
-	if added > 0 and str(Settings.g("music_mode")) == "builtin":
-		Settings.s("music_mode", "custom")
-		Settings.music_changed.emit()
+
+
+func _on_import_finished(added: int, errors: Array, mode_switched: bool) -> void:
+	if mode_switched:
 		_rebuild()
 		return
 	var msg := "Added %d song(s)." % added
@@ -134,11 +130,7 @@ func _rebuild() -> void:
 	# Recreate the menu so the mode dropdown reflects the change.
 	var fresh := MusicMenu.new()
 	fresh.on_back = on_back
-	var main = get_tree().root.get_node_or_null("Main")
-	if main and main.overlay == self:
-		main.overlay = fresh
-	get_parent().add_child(fresh)
-	queue_free()
+	get_tree().root.get_node("Main").replace_overlay(self, fresh)
 
 
 func _refresh() -> void:

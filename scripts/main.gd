@@ -155,6 +155,7 @@ func _on_match_started() -> void:
 	_teardown_world()
 	_set_screen(null)
 	close_overlay()
+	Mats.refresh()
 	world = World.new()
 	world.name = "World"
 	add_child(world)
@@ -238,9 +239,31 @@ func _custom_back() -> void:
 		_settings_back()
 
 
+const COLORS_APPLY_INTERVAL := 0.1
+var _colors_dirty := false
+var _colors_cooldown := 0.0
+
+
+## Colour pickers fire on every drag step, so the theme is rebuilt at most every
+## COLORS_APPLY_INTERVAL seconds.
 func _on_colors_changed() -> void:
+	_colors_dirty = true
+
+
+func _process(delta: float) -> void:
+	_colors_cooldown = maxf(0.0, _colors_cooldown - delta)
+	if _colors_dirty and _colors_cooldown <= 0.0:
+		_colors_dirty = false
+		_colors_cooldown = COLORS_APPLY_INTERVAL
+		_apply_colors()
+
+
+func _apply_colors() -> void:
 	UiKit.refresh()
-	Mats.refresh()
+	# Team / Tag colours are part of the map's materials, so mid-match changes wait
+	# for the next match (see _on_match_started) to keep HUD and models consistent.
+	if not Game.in_match:
+		Mats.refresh()
 	ui_root.theme = UiKit.make_theme()
 
 
@@ -264,6 +287,16 @@ func _set_overlay(c: Control) -> void:
 	overlay = c
 	ui_root.add_child(c)
 	_update_mouse()
+
+
+## Swaps the open menu for a freshly built one (menus rebuild themselves to show
+## changed settings). Falls back to a plain swap if old isn't the current overlay.
+func replace_overlay(old: Control, fresh: Control) -> void:
+	if overlay == old:
+		_set_overlay(fresh)
+	else:
+		old.get_parent().add_child(fresh)
+		old.queue_free()
 
 
 func close_overlay() -> void:
