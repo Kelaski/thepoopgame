@@ -587,7 +587,7 @@ func request_spray(pos: Vector3, normal: Vector3, up: Vector3) -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _spray_placed(id: int, pos: Vector3, normal: Vector3, up: Vector3) -> void:
-	var tex := Net.spray_texture(id)
+	var tex: Texture2D = Net.spray_texture(id)
 	if tex == null:
 		return
 	var mi: MeshInstance3D = _spray_nodes.get(id)

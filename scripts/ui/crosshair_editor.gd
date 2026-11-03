@@ -202,7 +202,7 @@ func _copy_code() -> void:
 	var d := {}
 	for k in CODE_FIELDS.keys():
 		d[k] = Settings.g(k)
-	DisplayServer.clipboard_apply("TAGXH-" + Marshalls.utf8_to_base64(JSON.stringify(d)))
+	DisplayServer.clipboard_set("TAGXH-" + Marshalls.utf8_to_base64(JSON.stringify(d)))
 	_status.text = "Share code copied to the clipboard."
 
 
