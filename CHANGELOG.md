@@ -7,6 +7,15 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.3.1
+
+### Fixed
+- **Lobby fits on screen again:** the Start Match row had been pushed off the bottom. The top of the lobby is now much shorter:
+  - The title and join code share one line.
+  - The port box and the **Map** size dropdown share one line. Hover over the map size for the full description.
+  - The connection help text is smaller.
+  - The team boxes start shorter, and grow as players join.
+
 ## 0.3.0
 
 ### New
