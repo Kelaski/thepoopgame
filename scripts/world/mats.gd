@@ -2,9 +2,15 @@ class_name Mats
 ## Shared, cached materials. Toon diffuse + soft rim for a clean cartoon look.
 ## Sharing materials keeps draw-state changes (and memory) low.
 
-const TEAM_COLORS := [Color("c0453a"), Color("4f7fae")]
 const TEAM_NAMES := ["Red", "Blue"]
-const TAG_COLOR := Color("ffd23f")
+# Live colours (customizable in Customize Colours). Call refresh() after changes.
+static var TEAM_COLORS := [Color("c0453a"), Color("4f7fae")]
+static var TAG_COLOR := Color("ffd23f")
+
+
+static func refresh() -> void:
+	TEAM_COLORS = [Palette.get_color("team_red"), Palette.get_color("team_blue")]
+	TAG_COLOR = Palette.get_color("tag")
 
 static var _cache := {}
 

@@ -25,8 +25,11 @@ func _ready() -> void:
 	ui_root.name = "UI"
 	ui_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiKit.refresh()
+	Mats.refresh()
 	ui_root.theme = UiKit.make_theme()
 	ui_layer.add_child(ui_root)
+	Settings.colors_changed.connect(_on_colors_changed)
 	add_child(BirdEvent.new())
 	Net.joined_ok.connect(_on_joined)
 	Net.join_failed.connect(_on_join_failed)
@@ -188,6 +191,26 @@ func open_pause() -> void:
 	var p := PauseMenu.new()
 	p.main = self
 	_set_overlay(p)
+
+
+func open_music(back_to_pause: bool) -> void:
+	_settings_back_to_pause = back_to_pause
+	var m := MusicMenu.new()
+	m.on_back = _settings_back
+	_set_overlay(m)
+
+
+func open_colors(back_to_pause: bool) -> void:
+	_settings_back_to_pause = back_to_pause
+	var c := ColorsMenu.new()
+	c.on_back = _settings_back
+	_set_overlay(c)
+
+
+func _on_colors_changed() -> void:
+	UiKit.refresh()
+	Mats.refresh()
+	ui_root.theme = UiKit.make_theme()
 
 
 func open_settings(back_to_pause: bool) -> void:

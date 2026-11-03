@@ -48,6 +48,8 @@ var _sb_cols: Array = []
 var _sb_acc := 0.0
 var _was_alive := true
 
+var _np: Label
+var _np_t := 0.0
 var _killer_id := 0
 var _killer_weapon := ""
 var _killer_head := false
@@ -148,6 +150,12 @@ func _ready() -> void:
 
 	_fps = UiKit.outlined("", 14, UiKit.MUTED, HORIZONTAL_ALIGNMENT_LEFT)
 	_pin(_fps, 0.0, 0.0, Vector2(10, 8))
+	_np = UiKit.outlined("", 15, UiKit.ACCENT)
+	_pin(_np, 0.5, 1.0, Vector2(0, -16))
+	_np.modulate.a = 0.0
+	Sfx.now_playing.connect(_on_now_playing)
+	if Sfx.current_title != "":
+		_on_now_playing(Sfx.current_title)
 
 	_build_death_screen()
 	_build_scoreboard()
@@ -258,6 +266,11 @@ func set_loadout_open(o: bool) -> void:
 
 # ================================================================ events
 
+func _on_now_playing(title: String) -> void:
+	_np.text = "Now playing: %s" % title
+	_np_t = 4.0
+
+
 func _on_announce(text: String, color: Color) -> void:
 	_banner.text = text
 	_banner.add_theme_color_override("font_color", color)
@@ -353,6 +366,10 @@ func _process(delta: float) -> void:
 		_runner_label.text = "YOU ARE THE RUNNER" if Game.holder == me else "Runner: %s" % Net.name_of(Game.holder)
 	else:
 		_runner_label.text = ""
+
+	# Now-playing toast
+	_np_t = maxf(0.0, _np_t - delta)
+	_np.modulate.a = clampf(_np_t, 0.0, 1.0)
 
 	# Banner fade
 	_banner_t = maxf(0.0, _banner_t - delta)

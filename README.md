@@ -45,6 +45,24 @@ Optional command-line flags (after `--`):
 
 A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and has its own volume slider.
 
+### Custom music & playlist (Main menu → Music & Playlist, also in the lobby and pause menu)
+
+- **Add Songs...** opens your system file picker. You can pick several songs at once.
+- Imported songs are copied into the game's own music folder (`user://music`), so the playlist keeps working even if you move or delete the originals. **Open Music Folder** shows that folder.
+- **Formats:** OGG, MP3 and WAV (any bit depth) work out of the box. FLAC, M4A/AAC, Opus, WMA, AIFF, WebM/MKA, ALAC and more are converted on import, which needs [ffmpeg](https://ffmpeg.org) installed and on your PATH.
+- In the playlist you can turn songs on and off, reorder them, preview them and remove them.
+- **Play during matches** chooses between the built-in beat, your playlist, or both. There's also a shuffle option. Use **Skip Song** in the pause menu to move on, and a "Now playing" toast shows each new song.
+
+### Colour customization (Main menu → Customize Colours, also in the lobby and pause menu)
+
+The game has no image textures; every surface is a flat colour, so this is how you retexture the game. You can recolour:
+- The menus: accent, panels, buttons, text and backdrop.
+- Team and Tag colours.
+- The world: sky, fog, sunlight, ground, roads, road lines, grass, and the area outside the fence.
+- Every building style: wall, roof, floor and trim.
+
+Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu, sky and sunlight colours change instantly. Map and team colours apply when the next match loads. Colours are personal and don't affect other players.
+
 Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch, always-sprint,
 FOV (90–120, horizontal), brightness, fullscreen, V-Sync, FPS cap, render scale, MSAA, shadows,
 view distance, master/effects/UI volume, hitmarker sound, crosshair size and colour, and an FPS counter.

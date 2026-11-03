@@ -10,7 +10,7 @@ var _status: Label
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
-	bg.color = Color("1b2430")
+	bg.color = UiKit.MENU_BG
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var v := UiKit.centered_panel(self, Vector2(820, 0))
@@ -54,7 +54,9 @@ func _ready() -> void:
 		_start = UiKit.button("START MATCH", func(): Game.server_start_match(), 220)
 		row.add_child(_start)
 		row.add_child(UiKit.button("Shuffle Teams", func(): Net.request_shuffle.rpc_id(1), 180))
-	row.add_child(UiKit.button("Settings", func(): main.open_settings(false), 150))
+	row.add_child(UiKit.button("Settings", func(): main.open_settings(false), 130))
+	row.add_child(UiKit.button("Music", func(): main.open_music(false), 110))
+	row.add_child(UiKit.button("Colours", func(): main.open_colors(false), 120))
 	row.add_child(UiKit.button("Leave", func(): main.leave_to_menu(), 140))
 	_status = UiKit.label("", 15, UiKit.MUTED)
 	v.add_child(_status)

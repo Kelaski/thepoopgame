@@ -3,6 +3,8 @@ extends Node
 ## Everything is stored in user://settings.cfg.
 
 signal changed
+signal colors_changed
+signal music_changed
 
 const PATH := "user://settings.cfg"
 
@@ -55,6 +57,12 @@ const DEFAULTS := {
 	"sfx_volume": 1.0,
 	"ui_volume": 0.8,
 	"music_volume": 0.45,
+	# Music: "builtin" (the game's beat), "custom" (your playlist) or "both"
+	"music_mode": "builtin",
+	"music_shuffle": false,
+	"music_tracks": [],   # [{name, file, enabled}]
+	# Colour overrides: key -> html colour (see Palette)
+	"colors": {},
 	# HUD
 	"crosshair_size": 8.0,
 	"crosshair_color": "ffffff",
@@ -105,7 +113,7 @@ func s(key: String, v, save_now := true) -> void:
 
 
 func load_settings() -> void:
-	values = DEFAULTS.duplicate()
+	values = DEFAULTS.duplicate(true)
 	binds.clear()
 	for a in ACTIONS:
 		binds[a[0]] = [a[2], a[3]]
@@ -151,11 +159,57 @@ func reset_binds() -> void:
 
 
 func reset_all() -> void:
-	values = DEFAULTS.duplicate()
+	values = DEFAULTS.duplicate(true)
 	reset_binds()
 	apply_all()
 	save_settings()
 	changed.emit()
+	colors_changed.emit()
+	music_changed.emit()
+
+
+# ------------------------------------------------------------------ colours
+
+func color(key: String, fallback: Color) -> Color:
+	var c: Dictionary = values.get("colors", {})
+	if c.has(key):
+		return Color.from_string(str(c[key]), fallback)
+	return fallback
+
+
+func set_color(key: String, c: Color, save_now := true) -> void:
+	var d: Dictionary = values.get("colors", {}).duplicate()
+	d[key] = c.to_html(true)
+	values["colors"] = d
+	if save_now:
+		save_settings()
+	colors_changed.emit()
+
+
+func clear_color(key: String) -> void:
+	var d: Dictionary = values.get("colors", {}).duplicate()
+	d.erase(key)
+	values["colors"] = d
+	save_settings()
+	colors_changed.emit()
+
+
+func set_colors(d: Dictionary) -> void:
+	values["colors"] = d.duplicate()
+	save_settings()
+	colors_changed.emit()
+
+
+# ------------------------------------------------------------------ music
+
+func music_tracks() -> Array:
+	return values.get("music_tracks", []).duplicate(true)
+
+
+func set_music_tracks(tracks: Array) -> void:
+	values["music_tracks"] = tracks.duplicate(true)
+	save_settings()
+	music_changed.emit()
 
 
 func _apply_binds() -> void:

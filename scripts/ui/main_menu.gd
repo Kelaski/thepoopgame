@@ -11,7 +11,7 @@ var _port: LineEdit
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
-	bg.color = Color("1b2430")
+	bg.color = UiKit.MENU_BG
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var stripe := ColorRect.new()
@@ -67,6 +67,14 @@ func _ready() -> void:
 	quit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b2.add_child(st)
 	b2.add_child(quit)
+	var b3 := UiKit.hbox(10)
+	var mus := UiKit.button("Music & Playlist", func(): main.open_music(false), 200)
+	mus.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var col := UiKit.button("Customize Colours", func(): main.open_colors(false), 200)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b3.add_child(mus)
+	b3.add_child(col)
+	v.add_child(b3)
 	v.add_child(b2)
 
 	if message != "":

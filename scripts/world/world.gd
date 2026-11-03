@@ -41,8 +41,10 @@ func _ready() -> void:
 	Game.world = self
 	Net.roster_changed.connect(sync_players)
 	Settings.changed.connect(_apply_settings)
+	Settings.colors_changed.connect(_apply_colors)
 	sync_players()
 	_apply_settings()
+	_apply_colors()
 
 
 func _exit_tree() -> void:
@@ -57,10 +59,7 @@ func _build_environment() -> void:
 	var e := Environment.new()
 	var sky := Sky.new()
 	var sm := ProceduralSkyMaterial.new()
-	sm.sky_top_color = Color("5b8fd0")
-	sm.sky_horizon_color = Color("cfe3f2")
 	sm.ground_bottom_color = Color("6f7f5a")
-	sm.ground_horizon_color = Color("cfe3f2")
 	sm.sun_angle_max = 20.0
 	sky.sky_material = sm
 	sky.radiance_size = Sky.RADIANCE_SIZE_32
@@ -72,7 +71,7 @@ func _build_environment() -> void:
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.tonemap_white = 6.0
 	e.fog_enabled = true
-	e.fog_light_color = Color("cfe3f2")
+
 	e.fog_density = 0.0025
 	e.fog_aerial_perspective = 0.3
 	e.adjustment_enabled = true
@@ -81,11 +80,25 @@ func _build_environment() -> void:
 	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-52.0, -38.0, 0.0)
 	sun.light_energy = 1.25
-	sun.light_color = Color("fff1dc")
+
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	sun.directional_shadow_max_distance = 70.0
 	sun.shadow_blur = 1.0
 	add_child(sun)
+
+
+## Sky, fog and sunlight follow the colour customization live; map colours are
+## applied when the map is built (next match).
+func _apply_colors() -> void:
+	if env and env.environment and env.environment.sky:
+		var sm := env.environment.sky.sky_material as ProceduralSkyMaterial
+		if sm:
+			sm.sky_top_color = Palette.get_color("sky_top")
+			sm.sky_horizon_color = Palette.get_color("sky_horizon")
+			sm.ground_horizon_color = Palette.get_color("sky_horizon")
+		env.environment.fog_light_color = Palette.get_color("sky_horizon")
+	if sun:
+		sun.light_color = Palette.get_color("sun")
 
 
 func _apply_settings() -> void:

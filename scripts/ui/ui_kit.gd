@@ -1,11 +1,26 @@
 class_name UiKit
 ## Shared UI theme + small widget helpers (all UI is built in code).
 
-const BG := Color(0.08, 0.09, 0.11, 0.93)
-const BG_SOFT := Color(0.12, 0.13, 0.16, 0.95)
-const ACCENT := Color("ffd23f")
-const TEXT := Color("f2efe8")
-const MUTED := Color("a9a59c")
+# Live palette (customizable in Customize Colours). Call refresh() after changes.
+static var BG := Color(0.08, 0.09, 0.11, 0.93)
+static var BG_SOFT := Color(0.12, 0.13, 0.16, 0.95)
+static var ACCENT := Color("ffd23f")
+static var TEXT := Color("f2efe8")
+static var MUTED := Color("a9a59c")
+static var BUTTON := Color("2b2f38")
+static var BUTTON_HOVER := Color("3b414e")
+static var MENU_BG := Color("1b2430")
+
+
+static func refresh() -> void:
+	ACCENT = Palette.get_color("ui_accent")
+	BG = Palette.get_color("ui_panel")
+	BG_SOFT = Palette.get_color("ui_panel_soft")
+	BUTTON = Palette.get_color("ui_button")
+	BUTTON_HOVER = Palette.get_color("ui_button_hover")
+	TEXT = Palette.get_color("ui_text")
+	MUTED = Palette.get_color("ui_muted")
+	MENU_BG = Palette.get_color("ui_menu_bg")
 
 
 static func _sb(col: Color, radius := 8, margin := 10.0) -> StyleBoxFlat:
@@ -25,10 +40,10 @@ static func make_theme() -> Theme:
 	var panel := _sb(BG, 12, 18.0)
 	t.set_stylebox("panel", "PanelContainer", panel)
 	t.set_stylebox("panel", "Panel", panel)
-	var bn := _sb(Color("2b2f38"), 8, 8.0)
-	var bh := _sb(Color("3b414e"), 8, 8.0)
+	var bn := _sb(BUTTON, 8, 8.0)
+	var bh := _sb(BUTTON_HOVER, 8, 8.0)
 	var bp := _sb(ACCENT.darkened(0.1), 8, 8.0)
-	var bd := _sb(Color("1f2228"), 8, 8.0)
+	var bd := _sb(BUTTON.darkened(0.3), 8, 8.0)
 	var bf := _sb(Color(0, 0, 0, 0), 8, 8.0)
 	bf.border_color = ACCENT
 	bf.set_border_width_all(2)
@@ -45,31 +60,36 @@ static func make_theme() -> Theme:
 		t.set_color("font_hover_pressed_color", type, Color("1a1a1a"))
 		t.set_color("font_focus_color", type, TEXT)
 		t.set_color("font_disabled_color", type, MUTED)
-	var le := _sb(Color("1c1f25"), 6, 8.0)
+	var le := _sb(BUTTON.darkened(0.35), 6, 8.0)
 	t.set_stylebox("normal", "LineEdit", le)
 	t.set_stylebox("focus", "LineEdit", bf)
 	t.set_color("font_color", "LineEdit", TEXT)
 	t.set_color("font_color", "Label", TEXT)
 	t.set_stylebox("panel", "TabContainer", _sb(BG_SOFT, 8, 14.0))
-	t.set_stylebox("tab_selected", "TabContainer", _sb(Color("3b414e"), 6, 8.0))
-	t.set_stylebox("tab_unselected", "TabContainer", _sb(Color("22252b"), 6, 8.0))
-	t.set_stylebox("tab_hovered", "TabContainer", _sb(Color("2f343e"), 6, 8.0))
+	t.set_stylebox("tab_selected", "TabContainer", _sb(BUTTON_HOVER, 6, 8.0))
+	t.set_stylebox("tab_unselected", "TabContainer", _sb(BUTTON.darkened(0.2), 6, 8.0))
+	t.set_stylebox("tab_hovered", "TabContainer", _sb(BUTTON, 6, 8.0))
+	t.set_color("font_color", "CheckButton", TEXT)
+	t.set_color("font_color", "CheckBox", TEXT)
+	t.set_stylebox("panel", "ItemList", _sb(BG_SOFT, 6, 6.0))
 	t.set_color("font_selected_color", "TabContainer", ACCENT)
 	t.set_color("font_unselected_color", "TabContainer", TEXT)
 	t.set_stylebox("panel", "PopupMenu", _sb(BG_SOFT, 6, 6.0))
 	return t
 
 
-static func label(text: String, size := 18, color := TEXT, align := HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+## color = null uses the theme's text colour (and follows palette changes).
+static func label(text: String, size := 18, color = null, align := HORIZONTAL_ALIGNMENT_LEFT) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", color)
+	if color != null:
+		l.add_theme_color_override("font_color", color)
 	l.horizontal_alignment = align
 	return l
 
 
-static func outlined(text: String, size := 20, color := TEXT, align := HORIZONTAL_ALIGNMENT_CENTER) -> Label:
+static func outlined(text: String, size := 20, color = null, align := HORIZONTAL_ALIGNMENT_CENTER) -> Label:
 	var l := label(text, size, color, align)
 	l.add_theme_constant_override("outline_size", 6)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))

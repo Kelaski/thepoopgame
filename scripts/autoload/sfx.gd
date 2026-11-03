@@ -237,23 +237,37 @@ var _music_stream: AudioStreamWAV
 var _music_tween: Tween
 
 
+signal now_playing(title: String)
+
+const BUILTIN_ID := "__builtin__"
+const BUILTIN_TITLE := "Tag Rush Theme"
+const BUILTIN_PLAY_TIME := 48.0  # how long the looping theme plays in "both" mode
+
+var current_title := ""
+var _queue: Array = []
+var _qi := -1
+var _music_active := false
+var _builtin_left := -1.0
+
+
+## Starts match music using the player's music settings (built-in beat, their
+## custom playlist, or both; optionally shuffled).
 func start_music() -> void:
-	if _music_stream == null:
-		_music_stream = _render_music()
-	if _music == null:
-		_music = AudioStreamPlayer.new()
-		_music.bus = "Music"
-		add_child(_music)
+	_ensure_music_player()
+	_music_active = true
+	_build_queue()
+	_qi = -1
 	if _music_tween:
 		_music_tween.kill()
-	_music.stream = _music_stream
 	_music.volume_db = -30.0
-	_music.play()
+	_next_track()
 	_music_tween = create_tween()
 	_music_tween.tween_property(_music, "volume_db", -4.0, 1.5)
 
 
 func stop_music() -> void:
+	_music_active = false
+	_builtin_left = -1.0
 	if _music == null or not _music.playing:
 		return
 	if _music_tween:
@@ -261,6 +275,82 @@ func stop_music() -> void:
 	_music_tween = create_tween()
 	_music_tween.tween_property(_music, "volume_db", -40.0, 0.8)
 	_music_tween.tween_callback(_music.stop)
+
+
+func skip_track() -> void:
+	if _music_active:
+		_next_track()
+
+
+func _ensure_music_player() -> void:
+	if _music == null:
+		_music = AudioStreamPlayer.new()
+		_music.bus = "Music"
+		add_child(_music)
+		_music.finished.connect(_on_music_finished)
+		Settings.music_changed.connect(_on_music_settings_changed)
+
+
+func _on_music_settings_changed() -> void:
+	if _music_active:
+		start_music()
+
+
+func _build_queue() -> void:
+	var mode := str(Settings.g("music_mode"))
+	var tracks: Array = []
+	if mode != "builtin":
+		for t in Settings.music_tracks():
+			if t.get("enabled", true) and FileAccess.file_exists(str(t.get("file", ""))):
+				tracks.append(t)
+	if mode == "builtin" or (mode == "custom" and tracks.is_empty()):
+		_queue = [BUILTIN_ID]
+		return
+	_queue = tracks
+	if mode == "both":
+		_queue.append(BUILTIN_ID)
+	if Settings.g("music_shuffle"):
+		_queue.shuffle()
+
+
+func _next_track() -> void:
+	if _queue.is_empty():
+		return
+	for _attempt in _queue.size():
+		_qi += 1
+		if _qi >= _queue.size():
+			_qi = 0
+			if Settings.g("music_shuffle") and _queue.size() > 2:
+				_queue.shuffle()
+		var entry = _queue[_qi]
+		var stream: AudioStream = null
+		if entry is String and entry == BUILTIN_ID:
+			if _music_stream == null:
+				_music_stream = _render_music()
+			stream = _music_stream
+			current_title = BUILTIN_TITLE
+			_builtin_left = BUILTIN_PLAY_TIME if _queue.size() > 1 else -1.0
+		else:
+			stream = MusicLibrary.load_stream(str(entry.file))
+			current_title = str(entry.name)
+			_builtin_left = -1.0
+		if stream:
+			_music.stream = stream
+			_music.play()
+			now_playing.emit(current_title)
+			return
+
+
+func _on_music_finished() -> void:
+	if _music_active:
+		_next_track()
+
+
+func _process(delta: float) -> void:
+	if _music_active and _builtin_left > 0.0:
+		_builtin_left -= delta
+		if _builtin_left <= 0.0:
+			_next_track()
 
 
 func _render_music() -> AudioStreamWAV:
