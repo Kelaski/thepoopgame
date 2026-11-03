@@ -7,6 +7,17 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.6.0
+
+Second step of moving the game's models into editable scenes.
+
+### Changed
+- **Doors:** now a scene, `assets/models/door.tscn`. In game it's stretched to fit each doorway, with the same size, hinge, knob and colour as before.
+- **The Tag:** its gem, pickup ring and beam are now `assets/models/tag.tscn`, still tinted with your Tag colour.
+- **Sprays:** the decal is now `assets/models/spray_decal.tscn`, using `assets/materials/spray_decal.tres`.
+- **Thrown gun:** the gun a killing bat swing launches is now the victim's actual weapon model instead of a grey block. It's aimed along its flight.
+- **Effect materials:** bullet tracers, impacts and Stalker trails use editable materials, `assets/materials/fx_tracers.tres` and `fx_trails.tres`.
+
 ## 0.5.0
 
 First step of moving the game's models from code into scenes you can edit in the Godot editor.

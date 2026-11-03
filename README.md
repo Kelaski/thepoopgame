@@ -5,8 +5,8 @@ Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and 
 has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
 
 Models are being moved from code into Godot scenes you can open and edit in the editor:
-- **Done:** the player and the five weapons, in `assets/models/` (see **Editing models** below).
-- **Still built in code:** the map, furniture, doors, the Tag, effects and the UI. They're moving over in the next updates.
+- **Done:** the player, the five weapons, doors, the Tag and the spray decal, in `assets/models/` (see **Editing models** below).
+- **Still built in code:** the map, its props and furniture, and the UI. They're moving over in the next updates.
 - **Always in code:** sounds and music are synthesized.
 
 The only binary files are the easter egg's image and sound in `assets/` (see Easter egg below).
@@ -232,6 +232,14 @@ Open these in the Godot editor. Changes show up in game the next time a match lo
   - Nodes in the `first_person_only` group (the holo-sight reticles) only appear in first person.
   - The root's **Ads Offset** setting is where the gun sits while aiming. **Viewmodel Rotation** and **Held Rotation** tilt it in first person and in other players' hands (the bat uses both).
 - **`assets/models/muzzle_flash.tscn` and `glint.tscn`:** the muzzle flash and the sniper glint, whose material is `assets/materials/sniper_glint.tres`.
+- **`assets/models/door.tscn`:** the door, with the hinge at the origin, built for a 1.7 × 2.45 m doorway.
+  - In game, `Panel` is stretched to each doorway, the collision `Shape` is resized, and other parts under `Body` (the `Knob`) move to match.
+  - The panel takes each building's door colour.
+- **`assets/models/tag.tscn`:** the Tag: `Gem`, `PickupRing` and `Beam`. They're tinted with the Tag colour from Customization.
+  - The ring shows the pickup radius (1.7 m, `Game.PICKUP_RADIUS`), so change both together.
+- **`assets/models/spray_decal.tscn`:** the spray decal. Its material is `assets/materials/spray_decal.tres`, and each player's image and aspect ratio are filled in at runtime.
+- **Thrown gun:** the gun a killing bat swing launches is now the victim's actual weapon model.
+- **Effect materials:** bullet tracers and impacts use `assets/materials/fx_tracers.tres`, and the Stalker trails use `fx_trails.tres`.
 
 ## Project layout
 
@@ -256,7 +264,7 @@ scripts/
   world/mats.gd             # shared materials / team colours
   player/player.gd          # FPS controller, weapons, addons, netcode
   player/weapon_model.gd    # weapon scene root: muzzle, glint point, first/third-person setup
-assets/models/              # player, weapon, muzzle flash and glint scenes
+assets/models/              # player, weapon, door, Tag, spray decal, muzzle flash and glint scenes
 assets/materials/           # shared materials (.tres)
   ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
 ```

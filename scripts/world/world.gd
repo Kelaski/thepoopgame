@@ -9,6 +9,10 @@ const MAX_TRAIL_POINTS := 400  # ~6 s of points even at full slide speed
 const TRAIL_WIDTH := 0.34      # half-width in metres
 
 const PLAYER_SCENE := preload("res://assets/models/player.tscn")
+const TAG_SCENE := preload("res://assets/models/tag.tscn")
+const SPRAY_SCENE := preload("res://assets/models/spray_decal.tscn")
+const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # bullet tracers + impacts
+const FX_TRAILS_MAT := preload("res://assets/materials/fx_trails.tres")    # Stalker trails
 
 var builder: MapBuilder
 var players := {}  # peer id -> Player
@@ -134,43 +138,19 @@ func _apply_settings() -> void:
 		sun.shadow_enabled = bool(Settings.g("shadows"))
 
 
+## The Tag (assets/models/tag.tscn): Gem, PickupRing and Beam, tinted with the
+## Tag colour (which players can customize) at load.
 func _build_tag() -> void:
-	tag_node = Node3D.new()
+	tag_node = TAG_SCENE.instantiate()
 	tag_node.name = "Tag"
 	add_child(tag_node)
-	tag_gem = MeshInstance3D.new()
-	var gm := SphereMesh.new()
-	gm.radius = 0.45
-	gm.height = 0.9
-	gm.radial_segments = 4
-	gm.rings = 2
-	tag_gem.mesh = gm
+	tag_gem = tag_node.get_node("Gem")
+	tag_beam = tag_node.get_node("Beam")
 	tag_gem.material_override = Mats.glow(Mats.TAG_COLOR)
-	tag_gem.position.y = 1.0
-	tag_node.add_child(tag_gem)
-	var base := MeshInstance3D.new()
-	var bm := CylinderMesh.new()
-	bm.top_radius = Game.PICKUP_RADIUS
-	bm.bottom_radius = Game.PICKUP_RADIUS
-	bm.height = 0.04
-	bm.radial_segments = 24
-	base.mesh = bm
-	base.material_override = Mats.glow(Mats.TAG_COLOR, 0.35)
-	base.position.y = 0.06
-	tag_node.add_child(base)
-	tag_beam = MeshInstance3D.new()
-	var beam := CylinderMesh.new()
-	beam.top_radius = 0.25
-	beam.bottom_radius = 0.25
-	beam.height = 60.0
-	beam.radial_segments = 8
-	beam.cap_top = false
-	beam.cap_bottom = false
-	tag_beam.mesh = beam
+	var ring := tag_node.get_node_or_null("PickupRing") as GeometryInstance3D
+	if ring:
+		ring.material_override = Mats.glow(Mats.TAG_COLOR, 0.35)
 	tag_beam.material_override = Mats.glow(Mats.TAG_COLOR, 0.25)
-	tag_beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	tag_beam.position.y = 30.0
-	tag_node.add_child(tag_beam)
 	tag_node.visible = false
 
 
@@ -178,13 +158,13 @@ func _build_fx() -> void:
 	_fx_mesh = ImmediateMesh.new()
 	_fx_inst = MeshInstance3D.new()
 	_fx_inst.mesh = _fx_mesh
-	_fx_inst.material_override = Mats.vertex_unshaded(false)
+	_fx_inst.material_override = FX_TRACERS_MAT
 	_fx_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_fx_inst)
 	_trail_mesh = ImmediateMesh.new()
 	_trail_inst = MeshInstance3D.new()
 	_trail_inst.mesh = _trail_mesh
-	_trail_inst.material_override = Mats.vertex_unshaded(false)  # depth-tested: hidden behind geometry
+	_trail_inst.material_override = FX_TRAILS_MAT  # depth-tested: hidden behind geometry
 	_trail_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_trail_inst)
 
@@ -398,13 +378,17 @@ func launch_thrown_gun(start: Vector3, dir: Vector3, victim: int) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func _fx_projectile(owner_id: int, start: Vector3, vel: Vector3, victim: int) -> void:
-	var mi := MeshInstance3D.new()
-	var m := BoxMesh.new()
-	m.size = Vector3(0.12, 0.16, 0.7)
-	mi.mesh = m
-	mi.material_override = Mats.toon(Color("2f3236"))
+	# The victim's actual gun (its held, third-person model) tumbles through the air.
+	var w: String = Net.players[victim].weapon if Net.players.has(victim) else "ar"
+	if not Player.WEAPON_SCENES.has(w) or w == "bat":
+		w = "ar"
+	var mi: WeaponModel = Player.WEAPON_SCENES[w].instantiate()
+	mi.make_third_person()
+	mi.rotation = Vector3.ZERO
 	add_child(mi)
 	mi.global_position = start
+	if absf(vel.normalized().y) < 0.99:
+		mi.look_at(start + vel, Vector3.UP)
 	_projectiles.append({"node": mi, "pos": start, "vel": vel, "owner": owner_id, "life": 3.0, "victim": victim})
 	Sfx.play_at("thrown", start, 0.0, 50.0)
 
@@ -455,7 +439,7 @@ func _update_projectiles(delta: float) -> void:
 					Game.report_hit.rpc_id(1, victim.peer_id, Weapons.THROWN_DAMAGE, false, "thrown")
 			Sfx.play_at("bat_hit", r.position, 0.0, 40.0)
 		pr["pos"] = nxt
-		var node: MeshInstance3D = pr.node
+		var node: Node3D = pr.node
 		node.global_position = nxt
 		node.rotate_x(delta * 18.0)
 		if done:
@@ -637,20 +621,15 @@ func _spray_placed(id: int, pos: Vector3, normal: Vector3, up: Vector3) -> void:
 		return
 	var mi: MeshInstance3D = _spray_nodes.get(id)
 	if mi == null or not is_instance_valid(mi):
-		mi = MeshInstance3D.new()
-		var quad := QuadMesh.new()
-		mi.mesh = quad
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# assets/models/spray_decal.tscn: a quad (its own copy, resized below) with
+		# the decal material from the scene, copied so each player has their image.
+		mi = SPRAY_SCENE.instantiate()
+		mi.material_override = mi.material_override.duplicate()
 		add_child(mi)
 		_spray_nodes[id] = mi
 	var aspect := float(tex.get_width()) / maxf(1.0, tex.get_height())
 	(mi.mesh as QuadMesh).size = Vector2(SPRAY_SIZE * minf(aspect, 1.0) if aspect < 1.0 else SPRAY_SIZE, SPRAY_SIZE / aspect if aspect > 1.0 else SPRAY_SIZE)
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.albedo_texture = tex
-	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	mi.material_override = m
+	(mi.material_override as StandardMaterial3D).albedo_texture = tex
 	var z := normal
 	var x := up.cross(z)
 	if x.length() < 0.01:

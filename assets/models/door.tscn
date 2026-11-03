@@ -1,0 +1,52 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/door.gd" id="1_0fucj"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_3xnsl"]
+resource_local_to_scene = true
+size = Vector3(1.7, 2.45, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tajxs"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.35686275, 0.41960785, 0.45490196, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_8pjx8"]
+size = Vector3(1.7, 2.45, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sbwch"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.8392157, 0.65882355, 0.22745098, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_4u6dn"]
+size = Vector3(0.08, 0.08, 0.2)
+
+[node name="Door" type="Node3D" unique_id=638338058]
+script = ExtResource("1_0fucj")
+
+[node name="Body" type="AnimatableBody3D" parent="." unique_id=1045051837]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 1.225, 0)
+collision_layer = 8
+collision_mask = 0
+sync_to_physics = false
+
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1463908647]
+shape = SubResource("BoxShape3D_3xnsl")
+
+[node name="Panel" type="MeshInstance3D" parent="Body" unique_id=1336375722]
+material_override = SubResource("StandardMaterial3D_tajxs")
+mesh = SubResource("BoxMesh_8pjx8")
+
+[node name="Knob" type="MeshInstance3D" parent="Body" unique_id=1488882684]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.68, -0.1, 0)
+material_override = SubResource("StandardMaterial3D_sbwch")
+mesh = SubResource("BoxMesh_4u6dn")

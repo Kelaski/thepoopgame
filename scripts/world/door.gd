@@ -1,9 +1,16 @@
 class_name Door
 extends Node3D
-## Hinged door. Opened with Interact, or slammed open by sprinting into it.
-## State changes are broadcast by World.door_rpc so every peer sees the same thing.
+## Hinged door (assets/models/door.tscn). Opened with Interact, or slammed open by
+## sprinting into it. State changes are broadcast by World.door_rpc so every peer
+## sees the same thing.
+##
+## The scene is built for a DESIGN_W x DESIGN_H doorway with the hinge at the
+## origin. setup() stretches it to the actual doorway: the Panel is scaled, the
+## collision Shape resized, and the other parts (the knob) moved to match.
 
 const OPEN_ANGLE := 100.0
+const DESIGN_W := 1.7
+const DESIGN_H := 2.45
 
 var idx := 0
 var target := 0.0
@@ -11,9 +18,7 @@ var angle := 0.0
 var speed := 320.0
 var base_yaw := 0.0
 var width := 1.5
-var body: AnimatableBody3D
-
-static var _mesh_cache := {}
+@onready var body: AnimatableBody3D = $Body
 
 
 func setup(i: int, hinge: Vector3, yaw: float, w: float, h: float, col: Color) -> void:
@@ -23,37 +28,20 @@ func setup(i: int, hinge: Vector3, yaw: float, w: float, h: float, col: Color) -
 	name = "Door%d" % i
 	position = hinge
 	rotation.y = yaw
-	body = AnimatableBody3D.new()
-	body.collision_layer = MapBuilder.L_DOOR
-	body.collision_mask = 0
-	body.sync_to_physics = false
-	body.position = Vector3(w * 0.5, h * 0.5, 0.0)
-	add_child(body)
-	var cs := CollisionShape3D.new()
-	var bs := BoxShape3D.new()
-	bs.size = Vector3(w, h, 0.08)
-	cs.shape = bs
-	body.add_child(cs)
-	var mi := MeshInstance3D.new()
-	mi.mesh = _box_mesh(Vector3(w, h, 0.08))
-	mi.material_override = Mats.toon(col)
-	body.add_child(mi)
-	var knob := MeshInstance3D.new()
-	knob.mesh = _box_mesh(Vector3(0.08, 0.08, 0.2))
-	knob.material_override = Mats.toon(Color("d6a83a"))
-	knob.position = Vector3(w * 0.4, -0.1, 0.0)
-	body.add_child(knob)
+	var b: AnimatableBody3D = get_node("Body")  # setup runs before _ready
+	var k := Vector3(w / DESIGN_W, h / DESIGN_H, 1.0)
+	b.position *= k
+	for c in b.get_children():
+		if c is CollisionShape3D and c.shape is BoxShape3D:
+			c.shape.size *= k
+		elif c.name == "Panel":
+			c.scale = k
+		elif c is Node3D:
+			c.position *= k
+	var panel := b.get_node_or_null("Panel") as GeometryInstance3D
+	if panel:
+		panel.material_override = Mats.toon(col)  # the building's door colour
 	set_physics_process(false)
-
-
-static func _box_mesh(s: Vector3) -> BoxMesh:
-	var key := "%.2f_%.2f_%.2f" % [s.x, s.y, s.z]
-	if _mesh_cache.has(key):
-		return _mesh_cache[key]
-	var m := BoxMesh.new()
-	m.size = s
-	_mesh_cache[key] = m
-	return m
 
 
 func is_open() -> bool:

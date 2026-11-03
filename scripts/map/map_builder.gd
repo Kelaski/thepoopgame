@@ -17,7 +17,8 @@ const L_PLAYER := 4
 const L_DOOR := 8
 const L_SOLID := 16  # ground and boundary fence (never passable)
 const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
-const DECOR := 0     # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them); foliage never collides
+const DOOR_SCENE := preload("res://assets/models/door.tscn")
+const DECOR := 0    # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them); foliage never collides
 
 const WALL_T := 0.3
 const SLAB_T := 0.3
@@ -1144,7 +1145,7 @@ func _wall_piece(horizontal: bool, fixed: float, a: float, bb: float, ya: float,
 ## Doors are exactly the size of their opening (w must match the opening width),
 ## so they sit flush with the frame with no gap at the sides or top.
 func _make_door(horizontal: bool, fixed: float, t: float, y0: float, col: Color, w := DOOR_W) -> void:
-	var d := Door.new()
+	var d: Door = DOOR_SCENE.instantiate()
 	var hinge: Vector3
 	var yaw: float
 	if horizontal:
