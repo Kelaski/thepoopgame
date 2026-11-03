@@ -8,6 +8,7 @@ var _status: Label
 var _map_label: Label
 var _codes: Label
 var _port_status: Label
+var _port_edit: LineEdit
 
 
 func _ready() -> void:
@@ -29,6 +30,19 @@ func _ready() -> void:
 		_port_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_port_status.custom_minimum_size.x = 760
 		v.add_child(_port_status)
+		var port_row := UiKit.hbox(10)
+		port_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		port_row.add_child(UiKit.label("Port (UDP)", 16))
+		_port_edit = LineEdit.new()
+		_port_edit.text = str(Net.hosted_port())
+		_port_edit.custom_minimum_size.x = 110
+		_port_edit.max_length = 5
+		_port_edit.text_submitted.connect(func(_t: String): _apply_port())
+		port_row.add_child(_port_edit)
+		port_row.add_child(UiKit.button("Change Port", _apply_port, 150))
+		if not Net.firewall_allowed():
+			port_row.add_child(UiKit.button("Allow Through Firewall", _allow_firewall, 240))
+		v.add_child(port_row)
 		Net.codes_changed.connect(_update_codes)
 		_update_codes()
 	else:
@@ -91,23 +105,27 @@ const MAP_INFO := {
 }
 
 
-## Online code for friends anywhere; LAN code for the same network (joining your
-## own public address from inside your network often doesn't work).
 func _update_codes() -> void:
-	var parts := []
-	if Net.online_code != "":
-		parts.append("Join code:  %s" % Net.online_code)
-	if Net.lan_code != "":
-		parts.append("LAN code:  %s" % Net.lan_code)
-	_codes.text = "      ".join(PackedStringArray(parts)) if not parts.is_empty() else "No network found"
+	_codes.text = "Join code:  %s" % (Net.online_code if Net.online_code != "" else "...")
 	_port_status.text = Net.port_status
 
 
 func _copy_code() -> void:
-	var code := Net.online_code if Net.online_code != "" else Net.lan_code
-	if code != "":
-		DisplayServer.clipboard_set(code)
-		_port_status.text = "Copied %s. %s" % [code, Net.port_status]
+	if Net.online_code != "":
+		DisplayServer.clipboard_set(Net.online_code)
+		_port_status.text = "Copied %s. %s" % [Net.online_code, Net.port_status]
+
+
+## Changing the port re-hosts the lobby, so anyone already here has to rejoin.
+func _apply_port() -> void:
+	var err: String = main.change_port(int(_port_edit.text))
+	if err != "" and is_instance_valid(_port_status):
+		_port_status.text = err
+
+
+func _allow_firewall() -> void:
+	Net.request_firewall_access()
+	_port_status.text = "Accept the Windows prompt to let players connect. %s" % Net.port_status
 
 
 func _on_map_size_changed(_size: String) -> void:

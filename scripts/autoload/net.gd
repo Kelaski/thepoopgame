@@ -2,9 +2,9 @@ extends Node
 ## Multiplayer using ENet. The host is also a player (peer id 1).
 ## The server owns the roster (names, teams, loadouts, K/D) and broadcasts it.
 ##
-## Joining is by code (see JoinCode). When you host, the game asks your router to
-## open the port with UPnP and builds an online code from your public address;
-## a LAN code is always available for players on the same network.
+## Online only: joining is by code (see JoinCode). When you host, the game looks up
+## your public address, asks your router to open the port with UPnP, and tells you
+## in the lobby what (if anything) still stands in the way.
 
 signal roster_changed
 signal joined_ok
@@ -12,25 +12,32 @@ signal join_failed(reason: String)
 signal disconnected(reason: String)
 signal chat_message(from_id: int, text: String, team_only: bool)
 signal spray_updated(id: int)
-signal codes_changed  # the UPnP lookup finished (online_code / port_status updated)
+signal codes_changed  # online_code / port_status updated (lookups finished)
 
-# 27015 is the usual Source / Steam game server port, so many routers and players
-# already have it open; when they don't, UPnP opens it.
+# 27015 is the usual Source / Steam game server port, so many players already have
+# it forwarded; when they don't, UPnP opens it. The host can change it in the lobby.
 const DEFAULT_PORT := 27015
 const MAX_PER_TEAM := 8
 const MAX_PLAYERS := 16
 const UPNP_TIMEOUT_MS := 2000
 const REGISTER_TIMEOUT := 5.0  # seconds a new connection has to register (and show its version)
+const PUBLIC_IP_URL := "https://api.ipify.org"  # replies with your public IPv4 address as plain text
+const FIREWALL_RULE := "Tag Rush"
 
-var lan_code := ""     # host: code for players on the same network
-var online_code := ""  # host: code for players anywhere (needs the port open)
-var port_status := ""  # host: what happened with the router, shown in the lobby
+var online_code := ""  # host: the join code (public address + port)
+var port_status := ""  # host: what's happening with the router / firewall, shown in the lobby
+var public_ip := ""
+var _ip_lookup_done := false
+var _upnp_state := 0    # 0 = working, 1 = port opened, -1 = failed
+var _upnp_ip := ""      # address the router reports (differs from public_ip behind CGNAT)
+var _upnp_msg := ""
 var _upnp: UPNP = null  # router we opened the port on
 var _mapped_port := 0
 var _host_port := 0
 var _upnp_gen := 0
 var _upnp_thread: Thread = null
 var _close_thread: Thread = null
+var _ip_http: HTTPRequest = null
 var _reject_reason := ""
 
 var players := {}  # peer id -> {name, team, weapon, addon, kills, deaths}
@@ -52,7 +59,8 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	_request_firewall_access()
+	if not firewall_allowed():
+		request_firewall_access()
 
 
 func _exit_tree() -> void:
@@ -64,15 +72,43 @@ func _exit_tree() -> void:
 		_close_thread.wait_to_finish()
 
 
-## Windows asks for firewall access the first time a program listens for
-## connections. Listening for a moment at startup makes that prompt appear as soon
-## as the game opens, instead of in the middle of hosting.
-func _request_firewall_access() -> void:
-	if OS.get_name() != "Windows" or DisplayServer.get_name() == "headless":
+# ------------------------------------------------------------ Windows Firewall
+
+func _firewall_applies() -> bool:
+	return OS.get_name() == "Windows" and DisplayServer.get_name() != "headless"
+
+
+## True if our inbound allow rule for this exact executable exists (or this isn't
+## Windows). Reading the rules needs no admin rights.
+func firewall_allowed() -> bool:
+	if not _firewall_applies():
+		return true
+	var out := []
+	if OS.execute("netsh", ["advfirewall", "firewall", "show", "rule", "name=" + FIREWALL_RULE, "verbose"], out) != 0:
+		return false
+	var exe := OS.get_executable_path().replace("/", "\\").to_lower()
+	return "".join(PackedStringArray(out)).to_lower().contains(exe)
+
+
+## Asks Windows (an administrator / UAC prompt) to let the game accept connections:
+## removes any inbound rules Windows made for this program earlier (a dismissed
+## "allow access" prompt leaves a block rule behind, and block rules win), then
+## adds an allow rule for every network type.
+func request_firewall_access() -> void:
+	if not _firewall_applies():
 		return
-	var probe := PacketPeerUDP.new()
-	if probe.bind(DEFAULT_PORT) == OK:
-		probe.close()
+	var exe := OS.get_executable_path().replace("/", "\\")
+	var script := "@echo off\r\n"
+	script += "netsh advfirewall firewall delete rule name=all dir=in program=\"%s\"\r\n" % exe
+	script += "netsh advfirewall firewall add rule name=\"%s\" dir=in action=allow program=\"%s\" enable=yes profile=any\r\n" % [FIREWALL_RULE, exe]
+	var path := ProjectSettings.globalize_path("user://allow_firewall.cmd").replace("/", "\\")
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(script)
+	f.close()
+	var ps := "Start-Process -FilePath '%s' -Verb RunAs -WindowStyle Hidden" % path.replace("'", "''")
+	OS.create_process("powershell.exe", ["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps])
 
 
 func my_id() -> int:
@@ -103,16 +139,22 @@ func host(port: int) -> String:
 	roster_changed.emit()
 	upload_my_spray()
 	_host_port = port
-	var ips := local_ips()
-	lan_code = JoinCode.encode(ips[0], port) if not ips.is_empty() else ""
-	online_code = ""
-	port_status = "Opening port %d on your router..." % port
+	_upnp_state = 0
+	_upnp_ip = ""
+	_upnp_msg = ""
+	_ip_lookup_done = false
+	_refresh_status()
+	_lookup_public_ip()
 	if _upnp_thread:
 		_upnp_thread.wait_to_finish()  # a previous lookup is still finishing (rare)
 	_upnp_gen += 1
 	_upnp_thread = Thread.new()
 	_upnp_thread.start(_upnp_open.bind(port, _upnp_gen))
 	return ""
+
+
+func hosted_port() -> int:
+	return _host_port
 
 
 func join(ip: String, port: int) -> String:
@@ -130,9 +172,11 @@ func join(ip: String, port: int) -> String:
 
 func leave() -> void:
 	_release_port()
-	lan_code = ""
+	if _ip_http:
+		_ip_http.cancel_request()
 	online_code = ""
 	port_status = ""
+	_host_port = 0
 	sprays.clear()
 	_spray_tex.clear()
 	_chat_times.clear()
@@ -144,36 +188,81 @@ func leave() -> void:
 	players.clear()
 
 
-## LAN addresses, most likely home-network ones (192.168.x / 10.x) first.
-func local_ips() -> Array:
-	var out := []
-	for ip in IP.get_local_addresses():
-		if ip.count(".") == 3 and not ip.begins_with("127.") and not ip.begins_with("169.254"):
-			out.append(ip)
-	out.sort_custom(func(a, b): return _lan_rank(a) < _lan_rank(b))
-	return out
+# ------------------------------------------------------------ public address
+
+func _lookup_public_ip() -> void:
+	if _ip_http == null:
+		_ip_http = HTTPRequest.new()
+		_ip_http.timeout = 8.0
+		add_child(_ip_http)
+		_ip_http.request_completed.connect(_on_ip_reply)
+	else:
+		_ip_http.cancel_request()
+	if _ip_http.request(PUBLIC_IP_URL) != OK:
+		_ip_lookup_done = true
+		_refresh_status()
 
 
-func _lan_rank(ip: String) -> int:
-	if ip.begins_with("192.168."):
-		return 0
-	if ip.begins_with("10."):
-		return 1
-	return 2
+func _on_ip_reply(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	var ip := body.get_string_from_utf8().strip_edges()
+	if result == HTTPRequest.RESULT_SUCCESS and code == 200 and JoinCode.encode(ip, DEFAULT_PORT) != "":
+		public_ip = ip
+	_ip_lookup_done = true
+	_refresh_status()
+
+
+## Private / shared ranges: an address like this from the router means there's
+## another router (or the internet provider's CGNAT) in front of it.
+static func is_private_ip(ip: String) -> bool:
+	var p := ip.split(".")
+	if p.size() != 4:
+		return true
+	var a := int(p[0])
+	var b := int(p[1])
+	return a == 10 or a == 127 or (a == 172 and b >= 16 and b <= 31) or (a == 192 and b == 168) or (a == 100 and b >= 64 and b <= 127) or (a == 169 and b == 254)
+
+
+## Builds the join code and the lobby's explanation from the two lookups.
+func _refresh_status() -> void:
+	if not is_server():
+		return
+	var addr := public_ip
+	if addr == "" and _upnp_ip != "" and not is_private_ip(_upnp_ip):
+		addr = _upnp_ip
+	online_code = JoinCode.encode(addr, _host_port) if addr != "" else ""
+	var lines := []
+	if not _ip_lookup_done and addr == "":
+		lines.append("Looking up your public address...")
+	elif addr == "":
+		lines.append("Couldn't look up your public address. Check your internet connection.")
+	match _upnp_state:
+		0:
+			lines.append("Opening UDP port %d on your router..." % _host_port)
+		1:
+			if _upnp_ip != "" and public_ip != "" and _upnp_ip != public_ip:
+				lines.append("Your router opened port %d, but your internet provider shares your address with other customers (CGNAT), so players probably can't reach you. Ask your provider for a public IP, or let someone else host." % _host_port)
+			else:
+				lines.append("Port %d opened on your router automatically." % _host_port)
+		-1:
+			lines.append("%s Forward UDP port %d to this PC in your router's settings (or change the port below to one you've already forwarded)." % [_upnp_msg, _host_port])
+	if not firewall_allowed():
+		lines.append("Windows Firewall may block players: accept the prompt, or press Allow Through Firewall.")
+	port_status = " ".join(PackedStringArray(lines))
+	codes_changed.emit()
 
 
 # ------------------------------------------------------------ UPnP (router port)
 
-## Runs on a thread: finds the router, opens the port and asks for the public
-## address. Discovery can take a couple of seconds.
+## Runs on a thread: finds the router, opens the port and asks for the address it
+## has on the internet. Discovery can take a couple of seconds.
 func _upnp_open(port: int, gen: int) -> void:
 	var u := UPNP.new()
 	var res := {"ok": false, "ip": "", "msg": ""}
 	var err := u.discover(UPNP_TIMEOUT_MS, 2, "InternetGatewayDevice")
 	if err != UPNP.UPNP_RESULT_SUCCESS or u.get_gateway() == null or not u.get_gateway().is_valid_gateway():
-		res.msg = "Couldn't find your router (UPnP is off or unsupported)."
+		res.msg = "Couldn't open the port automatically (UPnP is off or unsupported on your router)."
 	elif u.add_port_mapping(port, port, "Tag Rush", "UDP", 0) != UPNP.UPNP_RESULT_SUCCESS:
-		res.msg = "Your router refused to open port %d." % port
+		res.msg = "Your router refused to open port %d automatically." % port
 	else:
 		res.ok = true
 		res.ip = u.query_external_address()
@@ -189,22 +278,20 @@ func _upnp_done(u: UPNP, port: int, res: Dictionary, gen: int) -> void:
 	_upnp_thread.wait_to_finish()
 	_upnp_thread = null
 	var still_hosting := is_server() and port == _host_port
-	if not res.ok:
-		if still_hosting:
-			port_status = "%s Friends on other networks need UDP port %d forwarded to this PC." % [res.msg, port]
-			codes_changed.emit()
-		return
-	if not still_hosting:
+	if res.ok and not still_hosting:
 		_close_port_async(u, port)  # left before the router answered
 		return
-	_upnp = u
-	_mapped_port = port
-	online_code = JoinCode.encode(str(res.ip), port)
-	if online_code == "":
-		port_status = "Port %d is open, but your router didn't report a public address." % port
+	if not still_hosting:
+		return
+	if res.ok:
+		_upnp = u
+		_mapped_port = port
+		_upnp_state = 1
+		_upnp_ip = str(res.ip)
 	else:
-		port_status = "Port %d opened on your router automatically." % port
-	codes_changed.emit()
+		_upnp_state = -1
+		_upnp_msg = str(res.msg)
+	_refresh_status()
 
 
 func _release_port() -> void:

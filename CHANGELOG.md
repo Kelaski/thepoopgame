@@ -7,6 +7,26 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.3.0
+
+### New
+- **Firewall permission:** on Windows the game now asks for firewall access through an administrator (UAC) prompt when it opens, if its rule is missing. Accepting it also removes any block rule Windows left behind from a dismissed prompt. The lobby has an **Allow Through Firewall** button if you said no.
+- **Port setting:** the lobby has a **Port** box with a **Change Port** button. The port is remembered, and changing it restarts the lobby.
+- **Public address lookup:** the join code now always uses your public address, looked up online, even when your router won't open the port automatically.
+- **Connection help:** the lobby explains what's in the way: port not opened (forward it by hand), shared internet address (CGNAT, so someone else has to host), or no internet connection.
+- **Busier streets:**
+  - Stopped traffic (cars, taxis, vans and buses) in both lanes, with gaps to cross through.
+  - Zebra crossings at clear junctions.
+  - Sidewalks lined with lamps and trees, plus benches, bins, hydrants, newspaper boxes, mailboxes and bus shelters.
+  - Tidy squares with planters, benches and kiosks.
+  - Car parks in empty lots on the smaller maps.
+  - Nothing is placed in front of doors.
+
+### Changed
+- **Online only:** the LAN code is gone, and the join code is the only code.
+- **Street props:** the random clutter is gone (crates, barriers, roadworks, booths and scattered props).
+- **Tall buildings:** the 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are now 75% as wide and 75% as long. Their rooftop bridges are longer to match.
+
 ## 0.2.1
 
 ### Changed

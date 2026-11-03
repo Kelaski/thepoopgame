@@ -16,17 +16,20 @@ The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** 
 
 ### Hosting / joining
 
-- **Host:** click **Host Game**. The lobby shows a **join code** to give your friends, with a **Copy Code** button.
-  - The game asks your router to open its port (UDP **27015**) automatically using UPnP, then builds an online code from your public address. The lobby says whether that worked.
-  - The **LAN code** is for players on the same network as you. Joining your own online code from inside your network often doesn't work on home routers, so use the LAN code there.
-  - If your router has UPnP turned off, friends on other networks need UDP port 27015 forwarded to your PC by hand.
+- The game is online only.
+- **Host:** click **Host Game**. The lobby shows your **join code** with a **Copy Code** button, and explains anything that still stands in the way of players connecting:
+  - It looks up your public address (from `api.ipify.org`) to build the code.
+  - It asks your router to open the port automatically with UPnP. If that isn't possible, forward the UDP port to your PC in your router's settings.
+  - It warns you if your internet provider shares your address with other customers (CGNAT). Then nobody can reach you no matter what you forward, so someone else should host.
+- **Port:** UDP **27015** by default. You can change it in the lobby (the **Port** box and **Change Port**), for example to a port you've already forwarded. The game remembers it. Changing it restarts the lobby, so anyone already in has to rejoin with the new code.
+- **Firewall:** on Windows the game checks for its firewall rule when it opens. If the rule is missing, it asks for permission through a Windows administrator (UAC) prompt. Saying yes removes any old rule Windows made for the game (a dismissed "allow access" prompt leaves a *block* rule behind, which overrides allow rules) and allows incoming connections on every network type. If you said no, the lobby has an **Allow Through Firewall** button.
 - **Join:** click **Play Game**, type the code and press **Join**. A plain IP address (or `IP:PORT`) also works in the code box.
-- **Firewall:** on Windows the game asks for firewall access when it opens, so hosting works straight away. Allow it on private networks (and public ones if you host from those).
+- You can't join your own code from the PC or network that's hosting, because most home routers don't loop the connection back. Test with a friend on another network.
 - A code is just the host's address written in a short form, not a password, so only share it with people you want to play with.
 - Only players on the same version can play together. A player on a different version is told the host's version and sent back to the menu. This also covers builds from before 0.2.0, which can't report a version: the host drops anyone who hasn't registered within 5 s, and a client whose host never accepts it gives up after about 6 s.
 - The host chooses teams (or shuffles them) and clicks **START MATCH**. Players who join mid-match spawn in after the respawn timer.
 
-To test multiplayer on one machine, run two instances and join `127.0.0.1`.
+To test two copies on one machine, run two instances and enter `127.0.0.1` as the code.
 Optional command-line flags (after `--`):
 
 ```
@@ -145,7 +148,7 @@ The host picks **Small**, **Medium** or **Large** in the lobby (the last choice 
 | Medium | ~130 × 136 m | School, Bank, Diner, Arcade, Meridian Tower, Casino + park | 5 | 4 (Park, Bank, Tower, Casino) | Tower–Casino |
 | Large | 200 × 170 m | the whole city (all 18) + park | 10 | 8 | all 6 |
 
-Smaller sizes are cut-outs of the full city. Buildings that fit fully inside are kept and the fence moves in. Empty lots where a building was cut get street clutter, and the minimap zooms to fit. Defined in `MapData.SIZES` (`scripts/map/map_data.gd`).
+Smaller sizes are cut-outs of the full city. Buildings that fit fully inside are kept and the fence moves in. Empty lots where a building was cut become car parks, and the minimap zooms to fit. Defined in `MapData.SIZES` (`scripts/map/map_data.gd`).
 
 ## The map
 
@@ -173,8 +176,15 @@ Teammates' names float above their heads in small text.
 | 18 | Public Library (bookshelves, reading tables) | 2 |
 | 19 | Park (basketball court, pond, playground tower, trees) | outdoor |
 
-Buildings are at most 5 storeys. Each has a two-lane ramp stairwell from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
+Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane ramp stairwell from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
 Exterior doors are on the ground floor, open windows of varied size and position are spread out on every floor (leaving long stretches of wall for wall running), and residential and school floors have corridors with rooms behind doors.
+**Streets** look like a busy city:
+- **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses). There are 1.6–3.2 m gaps between vehicles to slip through, and longer breaks every few vehicles.
+- **Junctions:** kept clear, with zebra crossings.
+- **Sidewalks:** along every curb, a lamp post and street trees alternate every 6 m. In between there are benches, bins, fire hydrants with newspaper boxes, mailboxes and the odd bus shelter.
+- **Open squares:** a few big tree planters, bench pairs, kiosks and dumpsters.
+- **Kept clear:** nothing is placed in front of a building door, on a spawn zone or on a Tag spot.
+
 Six tower cranes hang planks or sheet metal between rooftops as bridges: Warehouse–School, Apartments–Meridian Tower, Meridian Tower–Casino, the two Tenements, Theater–Bank, and Water Treatment–Library. Crates on each roof help you climb onto them.
 The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).
 
@@ -189,7 +199,7 @@ The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are t
 
 ## Networking model
 
-ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015. The host opens the port with UPnP when it can.
+ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015 by default (the host can change it). The host opens the port with UPnP when it can.
 A joining player sends their version number, and the host turns away anyone on a different version, or anyone who doesn't register within 5 s (older builds).
 Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
 Shooting is resolved on the shooter's client, and the server validates every hit (alive, enemy team, not spawn-protected, damage clamped to the weapon maximum) before applying damage.

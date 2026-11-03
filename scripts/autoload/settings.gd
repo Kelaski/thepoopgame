@@ -32,6 +32,7 @@ const ACTIONS := [
 const DEFAULTS := {
 	"player_name": "Player",
 	"last_code": "",  # last join code you used
+	"host_port": 27015,  # UDP port you host on (changeable in the lobby)
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
 	"addon": "trackstar",

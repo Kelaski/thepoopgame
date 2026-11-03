@@ -62,6 +62,8 @@ const CARDBOARD := Color("b48a5a")
 const GRASS := Color("6aa84f")
 const CONCRETE := Color("b9b4a6")
 const ASPHALT := Color("3c3d42")
+const TAXI := Color("f2c230")
+const CAR_COLORS := [Color("c0453a"), Color("4f7fae"), Color("e0b13c"), Color("ece6da"), Color("3a3d42"), Color("5a8a4a"), Color("9aa3a8"), Color("1f2a44")]
 
 var root: Node3D
 var rng := RandomNumberGenerator.new()
@@ -104,6 +106,11 @@ var _forbid: Array = []
 # Furniture-style props use the "detail" MultiMesh (with a visibility range) inside
 # buildings; outdoor clutter must stay visible from anywhere, so it turns this off.
 var _detail := true
+# Street dressing
+var _avoid: Array = []       # Vector3: spawn zones + Tag spots
+var _junctions: Array = []   # Rect2: where roads cross
+var _door_pts: Array = []    # Vector2: ground-floor door centres (props keep clear)
+var _lots: Array = []        # Rect2: lots of buildings cut from a smaller map
 
 
 func build(parent: Node3D, size := MapData.DEFAULT_SIZE) -> void:
@@ -120,6 +127,9 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE) -> void:
 			_active.append(b)
 		else:
 			excluded.append(br)
+			var lot := br.intersection(bounds.grow(-2.0))
+			if lot.size.x > 8.0 and lot.size.y > 8.0:
+				_lots.append(lot)
 	_box_mesh = BoxMesh.new()
 	_cyl_mesh = CylinderMesh.new()
 	_cyl_mesh.top_radius = 0.5
@@ -157,13 +167,17 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE) -> void:
 
 	_begin_chunk("Streets")
 	_build_ground()
-	_build_street_props()
 	_end_chunk()
 
 	for b in _active:
 		_begin_chunk(b[1])
 		_build_building(b)
 		_end_chunk()
+
+	# After the buildings, so street props can keep clear of their doors.
+	_begin_chunk("StreetProps")
+	_build_street_props()
+	_end_chunk()
 
 	if has_park:
 		_begin_chunk("Park")
@@ -377,124 +391,278 @@ func _near_any(p: Vector2, pts: Array, d: float) -> bool:
 	return false
 
 
+## Street dressing, built after the buildings so nothing ends up in front of a door:
+##  * stop-and-go traffic in both lanes of every road (cars, taxis, vans, buses),
+##    with gaps you can slip through and clear junctions,
+##  * zebra crossings at the junctions,
+##  * a sidewalk strip along every road: lamps and street trees at regular spacing,
+##    with benches, bins, hydrants, newspaper boxes, mailboxes and bus shelters,
+##  * parking lots where a building was cut out (smaller maps),
+##  * a few planters, benches and kiosks in the open squares, dumpsters in alleys.
 func _build_street_props() -> void:
-	var car_cols := [Color("c0453a"), Color("4f7fae"), Color("e0b13c"), Color("ece6da"), Color("3a3d42"), Color("5a8a4a")]
-	for r: Rect2 in road_rects:
-		var horizontal := r.size.x > r.size.y
-		var length := r.size.x if horizontal else r.size.y
-		var t := 10.0
-		while t < length - 8.0:
-			t += rng.randf_range(7.0, 15.0)
-			if t > length - 6.0:
-				break
-			var lane := rng.randf_range(-1.0, 1.0)
-			var off := (r.size.y if horizontal else r.size.x) * 0.22 * (1.0 if lane > 0.0 else -1.0)
-			var c2 := Vector2(r.position.x + t, r.get_center().y + off) if horizontal else Vector2(r.get_center().x + off, r.position.y + t)
-			if _near_any(c2, spawn_dots, 7.0) or _near_any(c2, objectives.map(func(o): return o.pos), 7.0):
-				continue
-			if _in_building(c2, 1.5):
-				continue
-			if rng.randf() < 0.25:
-				_van(Vector3(c2.x, 0, c2.y), horizontal, car_cols[rng.randi() % car_cols.size()])
-			else:
-				_car(Vector3(c2.x, 0, c2.y), horizontal, car_cols[rng.randi() % car_cols.size()])
-	# Street lights along the main roads
-	for r: Rect2 in road_rects:
-		var horizontal := r.size.x > r.size.y
-		var length := r.size.x if horizontal else r.size.y
-		var t := 8.0
-		while t < length:
-			var far_side := int(t / 12.0) % 2 == 1
-			var c2: Vector2
-			if horizontal:
-				c2 = Vector2(r.position.x + t, (r.end.y + 0.6) if far_side else (r.position.y - 0.6))
-			else:
-				c2 = Vector2((r.end.x + 0.6) if far_side else (r.position.x - 0.6), r.position.y + t)
-			if not _in_building(c2, 0.5) and bounds.grow(-1.0).has_point(c2):
-				cyl(Vector3(c2.x, 2.75, c2.y), 0.14, 5.5, DARKMETAL, L_WALL)
-				box(Vector3(c2.x, 5.5, c2.y), Vector3(0.6, 0.18, 0.6), Color("fff2b0"), L_WALL)
-			t += 12.0
-	# Dumpsters in alleys near the tenements and warehouse
+	_detail = false
+	_avoid = spawn_dots.duplicate()
+	for o in objectives:
+		_avoid.append(o.pos)
+	_find_junctions()
+	_build_crosswalks()
+	_build_traffic()
+	_build_sidewalks()
+	_build_parking_lots()
+	_build_squares()
 	for p in [[1480, 1560], [1820, 1580], [480, 120], [1300, 900], [420, 860], [1030, 1380]]:
 		var c := MapData.px(p[0], p[1])
-		if not _in_building(c, 0.8) and bounds.grow(-2.0).has_point(c):
+		if _street_clear(c, 0.8, 1.2) and not _on_road(c, 0.5):
 			box(Vector3(c.x, 0.7, c.y), Vector3(2.0, 1.4, 1.2), Color("3f6a4a"), L_WALL)
-	_scatter_clutter()
+	_detail = true
 
 
-## Sidewalk / open-ground clutter to break up long sight lines.
-## Keeps clear of building entrances, spawn zones and objectives.
-func _scatter_clutter() -> void:
-	_detail = false
+## True if a prop of radius r at p stands on open ground: inside the fence, bmargin
+## away from buildings, clear of doors, spawn zones and Tag spots, out of the park.
+func _street_clear(p: Vector2, bmargin: float, r: float) -> bool:
+	if not bounds.grow(-1.0 - r).has_point(p) or _in_building(p, bmargin + r):
+		return false
+	if has_park and park_rect.grow(0.5 + r).has_point(p):
+		return false
+	for d: Vector2 in _door_pts:
+		if d.distance_to(p) < 2.6 + r:
+			return false
+	return not _near_any(p, _avoid, 5.0 + r)
+
+
+func _on_road(p: Vector2, grow: float) -> bool:
+	for r: Rect2 in road_rects:
+		if r.grow(grow).has_point(p):
+			return true
+	return false
+
+
+func _in_junction(p: Vector2, grow: float) -> bool:
+	for j: Rect2 in _junctions:
+		if j.grow(grow).has_point(p):
+			return true
+	return false
+
+
+## Size of a prop laid out along a road: a = along the road, d = across it.
+func _along(along_x: bool, a: float, h: float, d: float) -> Vector3:
+	return Vector3(a, h, d) if along_x else Vector3(d, h, a)
+
+
+func _find_junctions() -> void:
+	_junctions.clear()
+	for i in road_rects.size():
+		for k in range(i + 1, road_rects.size()):
+			var a: Rect2 = road_rects[i]
+			var b: Rect2 = road_rects[k]
+			if a.intersects(b):
+				var o := a.intersection(b)
+				if o.size.x > 2.0 and o.size.y > 2.0:
+					_junctions.append(o)
+
+
+## Zebra crossings across every road just outside each junction it runs into.
+func _build_crosswalks() -> void:
+	var paint := Color("e8e4d8")
+	for j: Rect2 in _junctions:
+		for r: Rect2 in road_rects:
+			if not r.intersects(j):
+				continue
+			var horizontal := r.size.x > r.size.y
+			var width := r.size.y if horizontal else r.size.x
+			for side: float in [-1.0, 1.0]:
+				var mid: Vector2
+				if horizontal:
+					mid = Vector2(j.position.x - 1.6 if side < 0 else j.end.x + 1.6, r.get_center().y)
+				else:
+					mid = Vector2(r.get_center().x, j.position.y - 1.6 if side < 0 else j.end.y + 1.6)
+				if not r.has_point(mid) or _in_junction(mid, 0.3):
+					continue
+				var n := int(width / 0.9)
+				for k in n:
+					var o := (k + 0.5) * width / n - width * 0.5
+					if horizontal:
+						box(Vector3(mid.x, 0.034, mid.y + o), Vector3(2.4, 0.02, 0.45), paint, DECOR)
+					else:
+						box(Vector3(mid.x + o, 0.034, mid.y), Vector3(0.45, 0.02, 2.4), paint, DECOR)
+
+
+## Both lanes of every road hold queues of stopped traffic. Gaps of 1.6-3.2 m
+## between vehicles let you cross, every few vehicles there's a longer break, and
+## junctions, crossings, spawn zones and Tag spots stay clear.
+func _build_traffic() -> void:
+	for r: Rect2 in road_rects:
+		var horizontal := r.size.x > r.size.y
+		var length := r.size.x if horizontal else r.size.y
+		var width := r.size.y if horizontal else r.size.x
+		for lane: float in [-1.0, 1.0]:
+			var off := lane * width * 0.25
+			var t := rng.randf_range(1.0, 6.0)
+			while t < length - 2.0:
+				var roll := rng.randf()
+				var vlen := 10.5 if roll < 0.07 else (5.4 if roll < 0.25 else 4.3)
+				var mid_t := t + vlen * 0.5
+				var c2 := Vector2(r.position.x + mid_t, r.get_center().y + off) if horizontal else Vector2(r.get_center().x + off, r.position.y + mid_t)
+				var fits := t + vlen < length - 0.5 and not _near_any(c2, _avoid, 7.0 + vlen * 0.5)
+				for s: float in [-0.5, 0.0, 0.5]:
+					var q := c2 + (Vector2(vlen * s, 0.0) if horizontal else Vector2(0.0, vlen * s))
+					if _in_junction(q, 3.2) or not bounds.grow(-1.0).has_point(q):
+						fits = false
+				if not fits:
+					t += 2.0
+					continue
+				if rng.randf() < 0.8:
+					var c := Vector3(c2.x, 0.0, c2.y)
+					if vlen > 10.0:
+						_bus(c, horizontal, [Color("c0453a"), Color("3f6fa8"), Color("e0b13c")][rng.randi() % 3])
+					elif vlen > 5.0:
+						_van(c, horizontal, CAR_COLORS[rng.randi() % CAR_COLORS.size()])
+					elif rng.randf() < 0.2:
+						_car(c, horizontal, TAXI)
+						box(c + Vector3(0, 1.93, 0), _along(horizontal, 0.5, 0.2, 0.25), Color("fff2b0"), L_WALL)
+					else:
+						_car(c, horizontal, CAR_COLORS[rng.randi() % CAR_COLORS.size()])
+					t += vlen + rng.randf_range(1.6, 3.2)
+				else:
+					t += rng.randf_range(6.0, 12.0)
+
+
+## Every 6 m along both curbs: lamp, tree, furniture, tree, lamp...
+func _build_sidewalks() -> void:
+	for r: Rect2 in road_rects:
+		var horizontal := r.size.x > r.size.y
+		var length := r.size.x if horizontal else r.size.y
+		for side: float in [-1.0, 1.0]:
+			var edge: float
+			if horizontal:
+				edge = r.end.y if side > 0 else r.position.y
+			else:
+				edge = r.end.x if side > 0 else r.position.x
+			var slot := 0
+			var t := 3.0
+			while t < length - 1.0:
+				var a := (r.position.x if horizontal else r.position.y) + t
+				var p := Vector2(a, edge + side * 0.7) if horizontal else Vector2(edge + side * 0.7, a)
+				_sidewalk_item(p, horizontal, side, slot)
+				slot += 1
+				t += 6.0
+
+
+## One sidewalk slot at p (on the curb line). "out" points away from the road.
+func _sidewalk_item(p: Vector2, along_x: bool, side: float, slot: int) -> void:
+	if _on_road(p, 0.3) or not _street_clear(p, 0.6, 0.5):
+		return
+	var c := Vector3(p.x, 0.0, p.y)
+	var out := Vector3(0, 0, side) if along_x else Vector3(side, 0, 0)
+	match slot % 4:
+		0:
+			cyl(c + Vector3(0, 2.75, 0), 0.12, 5.5, DARKMETAL, L_WALL)
+			box(c + Vector3(0, 5.5, 0) - out * 0.45, Vector3(0.5, 0.16, 0.5), Color("fff2b0"), L_WALL)
+		1, 3:
+			box(c + Vector3(0, 0.25, 0), Vector3(1.3, 0.5, 1.3), Color("9a958a"), L_WALL)
+			cyl(c + Vector3(0, 1.4, 0), 0.12, 2.0, Color("6b4a32"), L_WALL)
+			sphere(c + Vector3(0, 3.1, 0), rng.randf_range(1.1, 1.4), Color("4f8a3a").lerp(Color("7ab04a"), rng.randf()))
+		2:
+			_street_furniture(c, out, along_x)
+
+
+func _street_furniture(c: Vector3, out: Vector3, along_x: bool) -> void:
+	var dir := Vector3(1, 0, 0) if along_x else Vector3(0, 0, 1)
+	var roll := rng.randf()
+	var shelter_at := c + out * 1.0
+	if roll < 0.15 and _street_clear(Vector2(shelter_at.x, shelter_at.z), 0.6, 1.8):
+		# Bus shelter: glass back away from the road, roof on two front posts, bench.
+		box(shelter_at + Vector3(0, 1.3, 0) + out * 0.7, _along(along_x, 3.2, 2.5, 0.06), Color("bfe3ef"), L_WALL)
+		box(shelter_at + Vector3(0, 2.6, 0), _along(along_x, 3.4, 0.1, 1.6), DARKMETAL, L_WALL)
+		box(shelter_at + Vector3(0, 0.25, 0) + out * 0.4, _along(along_x, 2.6, 0.5, 0.45), WOOD, L_WALL)
+		for s: float in [-1.0, 1.0]:
+			cyl(shelter_at + dir * 1.6 * s - out * 0.7 + Vector3(0, 1.3, 0), 0.05, 2.6, METAL, L_WALL)
+	elif roll < 0.45:
+		# Bench facing the road.
+		box(c + Vector3(0, 0.25, 0), _along(along_x, 1.8, 0.5, 0.6), WOOD, L_WALL)
+		box(c + Vector3(0, 0.7, 0) + out * 0.28, _along(along_x, 1.8, 0.5, 0.08), WOOD, L_WALL)
+	elif roll < 0.65:
+		cyl(c + Vector3(0, 0.5, 0), 0.32, 1.0, Color("3a5a3a"), L_WALL)
+		cyl(c + Vector3(0, 1.02, 0), 0.35, 0.06, DARKMETAL, L_WALL)
+	elif roll < 0.85:
+		# Fire hydrant with a pair of newspaper boxes.
+		cyl(c + Vector3(0, 0.4, 0), 0.14, 0.8, RED, L_WALL)
+		cyl(c + Vector3(0, 0.82, 0), 0.1, 0.1, RED, L_WALL)
+		box(c + dir * 0.9 + Vector3(0, 0.55, 0), Vector3(0.45, 1.1, 0.45), BLUE, L_WALL)
+		box(c + dir * 1.45 + Vector3(0, 0.55, 0), Vector3(0.45, 1.1, 0.45), Color("e0b13c"), L_WALL)
+	else:
+		box(c + Vector3(0, 0.6, 0), Vector3(0.5, 1.2, 0.45), Color("3f5f9a"), L_WALL)
+
+
+## Lots of buildings that were cut from a smaller map become car parks: rows of
+## bays back to back, 6 m aisles, about 70% of the bays taken.
+func _build_parking_lots() -> void:
+	var line := Color("d8d4c8")
+	for lot: Rect2 in _lots:
+		var inner := lot.grow(-1.0)
+		if inner.size.x < 6.0 or inner.size.y < 6.0:
+			continue
+		box(Vector3(lot.get_center().x, 0.012, lot.get_center().y), Vector3(lot.size.x, 0.024, lot.size.y), ASPHALT, DECOR)
+		var rows_x := inner.size.x >= inner.size.y
+		var row_len := inner.size.x if rows_x else inner.size.y
+		var depth := inner.size.y if rows_x else inner.size.x
+		var bays := int(row_len / 2.7)
+		var row := 0
+		var d := 2.3
+		while d < depth - 2.0 and bays > 0:
+			for k in bays + 1:
+				var u := k * row_len / bays
+				var lc := Vector2(inner.position.x + u, inner.position.y + d) if rows_x else Vector2(inner.position.x + d, inner.position.y + u)
+				box(Vector3(lc.x, 0.03, lc.y), Vector3(0.1, 0.02, 4.4) if rows_x else Vector3(4.4, 0.02, 0.1), line, DECOR)
+			for k in bays:
+				var u := (k + 0.5) * row_len / bays
+				var c2 := Vector2(inner.position.x + u, inner.position.y + d) if rows_x else Vector2(inner.position.x + d, inner.position.y + u)
+				if rng.randf() < 0.7 and _street_clear(c2, 0.5, 1.2):
+					_car(Vector3(c2.x, 0.0, c2.y), not rows_x, CAR_COLORS[rng.randi() % CAR_COLORS.size()])
+			d += 4.6 if row % 2 == 0 else 10.6
+			row += 1
+
+
+## Open ground away from the roads: a few big tree planters, benches around a bin
+## and kiosks, spread out (at least 9 m apart). Dumpsters go next to buildings.
+func _build_squares() -> void:
 	var placed: Array = []
-	var avoid_pts: Array = spawn_dots.duplicate()
-	for o in objectives:
-		avoid_pts.append(o.pos)
+	var target := maxi(20, int(90.0 * bounds.get_area() / (200.0 * 170.0)))
 	var tries := 0
-	# 420 props on the full 200 x 170 m map; scaled by area for smaller sizes.
-	var target := maxi(80, int(420.0 * bounds.get_area() / (200.0 * 170.0)))
-	while placed.size() < target and tries < 6000:
+	while placed.size() < target and tries < 3000:
 		tries += 1
 		var p := Vector2(rng.randf_range(bounds.position.x + 2.0, bounds.end.x - 2.0), rng.randf_range(bounds.position.y + 2.0, bounds.end.y - 2.0))
-		if _in_building(p, 2.6) or (has_park and park_rect.grow(0.5).has_point(p)):
+		if _on_road(p, 4.0) or not _street_clear(p, 2.6, 1.5):
 			continue
-		if _near_any(p, avoid_pts, 6.0):
-			continue
-		var too_close := false
+		var crowded := false
+		for lot: Rect2 in _lots:
+			if lot.grow(1.0).has_point(p):
+				crowded = true
 		for q: Vector2 in placed:
-			if q.distance_to(p) < 4.0:
-				too_close = true
-				break
-		if too_close:
+			if q.distance_to(p) < 9.0:
+				crowded = true
+		if crowded:
 			continue
-		var on_road := false
-		for r: Rect2 in road_rects:
-			if r.grow(0.3).has_point(p):
-				on_road = true
-				break
 		var c := Vector3(p.x, 0.0, p.y)
-		var rot := rng.randf() < 0.5
+		var along_x := rng.randf() < 0.5
 		var roll := rng.randf()
-		if on_road:
-			# Only roadworks / crashes on the road itself.
-			if roll < 0.12:
-				_p(c, rot, 0, 0.45, 0, 2.2, 0.9, 0.6, Color("c9c4b6"))
-			elif roll < 0.18:
-				for i in 3:
-					cyl(c + Vector3(i * 0.7 - 0.7, 0.35, 0), 0.18, 0.7, Color("e06a2a"), L_WALL, false)
-			else:
-				continue
-		elif roll < 0.18:
-			_bush(c)
-		elif roll < 0.30:
-			cyl(c + Vector3(0, 0.5, 0), 0.35, 1.0, Color("3a5a3a"), L_WALL, false)
-			cyl(c + Vector3(0, 1.02, 0), 0.38, 0.06, DARKMETAL, L_WALL, false)
-		elif roll < 0.42:
-			_p(c, rot, 0, 0.85, 0, 3.2, 1.7, 0.9, Color("4f7a3a"))
-		elif roll < 0.52:
-			_p(c, rot, 0, 0.4, 0, 1.4, 0.8, 1.4, Color("8a8478"))
-			sphere(c + Vector3(0, 1.6, 0), 1.1, Color("5a9a45"))
-			cyl(c + Vector3(0, 1.0, 0), 0.1, 0.8, Color("6b4a32"), L_WALL, false)
-		elif roll < 0.62:
-			_p(c, rot, 0, 0.37, 0, 1.6, 0.74, 0.8, Color("6a7a8a"))
-			_p(c, rot, 0, 0.23, 0.8, 0.45, 0.46, 0.45, DARKMETAL, L_WALL)
-			_p(c, rot, 0, 0.23, -0.8, 0.45, 0.46, 0.45, DARKMETAL, L_WALL)
-		elif roll < 0.70:
-			_p(c, rot, 0, 0.55, 0, 0.5, 1.1, 0.45, [Color("3f6fa8"), Color("c0453a"), Color("e0b13c")][rng.randi() % 3])
-		elif roll < 0.80:
-			_crates(c)
-		elif roll < 0.86:
-			_p(c, rot, 0, 0.45, 0, 2.2, 0.9, 0.6, Color("c9c4b6"))
-		elif roll < 0.93:
-			_p(c, rot, 0, 1.25, -0.6, 3.2, 2.5, 0.06, Color("bfe3ef"))
-			_p(c, rot, 0, 2.55, 0, 3.4, 0.1, 1.5, DARKMETAL, L_WALL)
-			_p(c, rot, 0, 0.25, -0.3, 2.6, 0.5, 0.45, WOOD)
+		if _in_building(p, 6.0) and roll < 0.25:
+			box(c + Vector3(0, 0.7, 0), _along(along_x, 2.0, 1.4, 1.2), Color("3f6a4a"), L_WALL)
+		elif roll < 0.55:
+			box(c + Vector3(0, 0.3, 0), Vector3(2.4, 0.6, 2.4), Color("9a958a"), L_WALL)
+			cyl(c + Vector3(0, 1.6, 0), 0.15, 2.2, Color("6b4a32"), L_WALL)
+			sphere(c + Vector3(0, 3.4, 0), rng.randf_range(1.5, 1.9), Color("4f8a3a").lerp(Color("7ab04a"), rng.randf()))
+		elif roll < 0.8:
+			var side := Vector3(0, 0, 1) if along_x else Vector3(1, 0, 0)
+			for s: float in [-1.0, 1.0]:
+				box(c + side * 1.2 * s + Vector3(0, 0.25, 0), _along(along_x, 1.8, 0.5, 0.6), WOOD, L_WALL)
+				box(c + side * 1.48 * s + Vector3(0, 0.7, 0), _along(along_x, 1.8, 0.5, 0.08), WOOD, L_WALL)
+			cyl(c + Vector3(0, 0.5, 0), 0.32, 1.0, Color("3a5a3a"), L_WALL)
 		else:
-			_p(c, rot, 0, 0.45, 0, 1.6, 0.9, 1.0, WOOD)
-			_p(c, rot, 0, 2.3, 0, 2.4, 0.08, 2.4, [Color("c0453a"), Color("e0b13c"), Color("4f7fae")][rng.randi() % 3], L_WALL)
-			cyl(c + Vector3(0, 1.35, 0), 0.05, 1.9, METAL, L_WALL, false)
+			# Kiosk with a striped awning.
+			box(c + Vector3(0, 1.1, 0), _along(along_x, 2.4, 2.2, 1.8), Color("ece6da"), L_WALL)
+			box(c + Vector3(0, 2.3, 0), _along(along_x, 2.8, 0.12, 2.4), [Color("c0453a"), Color("3f6fa8"), Color("4a8a5a")][rng.randi() % 3], L_WALL)
 		placed.append(p)
-	_detail = true
 
 
 ## Leafy bush: blocks sight but not bullets.
@@ -516,6 +684,18 @@ func _van(c: Vector3, along_x: bool, col: Color) -> void:
 		for sz: float in [-1.0, 1.0]:
 			var w_off := Vector3(sx * L * 0.32, 0.35, sz * W * 0.5) if along_x else Vector3(sz * W * 0.5, 0.35, sx * L * 0.32)
 			box(c + w_off, Vector3(0.7, 0.7, 0.25) if along_x else Vector3(0.25, 0.7, 0.7), BLACK, L_WALL)
+
+
+func _bus(c: Vector3, along_x: bool, col: Color) -> void:
+	var L := 10.5
+	var W := 2.5
+	box(c + Vector3(0, 1.75, 0), Vector3(L, 2.9, W) if along_x else Vector3(W, 2.9, L), col, L_WALL)
+	# Window band (inside the body's collision) and wheels.
+	box(c + Vector3(0, 2.3, 0), Vector3(L * 0.96, 0.8, W * 1.02) if along_x else Vector3(W * 1.02, 0.8, L * 0.96), Color("2b3a4a"), DECOR)
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			var off := Vector3(sx * L * 0.36, 0.42, sz * W * 0.5) if along_x else Vector3(sz * W * 0.5, 0.42, sx * L * 0.36)
+			box(c + off, Vector3(0.9, 0.84, 0.25) if along_x else Vector3(0.25, 0.84, 0.9), BLACK, L_WALL)
 
 
 func _car(c: Vector3, along_x: bool, col: Color) -> void:
@@ -945,6 +1125,9 @@ func _make_door(horizontal: bool, fixed: float, t: float, y0: float, col: Color,
 	d.setup(doors.size(), hinge, yaw, w, DOOR_H, col)
 	_chunk.add_child(d)
 	doors.append(d)
+	if y0 < 1.0:
+		var centre := hinge + Basis(Vector3.UP, yaw).x * w * 0.5
+		_door_pts.append(Vector2(centre.x, centre.z))
 
 
 # ================================================================ furniture

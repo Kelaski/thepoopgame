@@ -31,13 +31,15 @@ const BUILDINGS := [
 	[7, "Arcade", "arcade", [1525, 645, 1715, 780], 2, 4.0],
 	[8, "Nightclub", "club", [1725, 645, 1895, 770], 2, 4.5],
 	[9, "Bar", "bar", [1905, 645, 1985, 770], 1, 4.0],
-	[10, "Riverside Apartments", "apartments", [75, 905, 375, 1300], 5, 4.0],
+	# The three 5-storey buildings are 75% of their sketch width and length (centred
+	# on the sketch footprint): the height already makes them big enough.
+	[10, "Riverside Apartments", "apartments", [113, 954, 337, 1251], 5, 4.0],
 	[11, "Mall", "mall", [105, 1375, 395, 1680], 3, 5.0],
 	[12, "Motel 6", "motel", [1865, 945, 1985, 1350], 2, 4.0],
 	[13, "Eastside Tenements", "rundown", [1495, 1405, 1810, 1540], 4, 4.0],
 	[14, "Southside Tenements", "rundown2", [1495, 1600, 1850, 1680], 3, 4.0],
-	[15, "Meridian Tower", "office", [600, 945, 1025, 1195], 5, 4.0],
-	[16, "Golden Rapids Casino", "casino", [1175, 950, 1625, 1235], 5, 4.5],
+	[15, "Meridian Tower", "office", [653, 976, 972, 1164], 5, 4.0],
+	[16, "Golden Rapids Casino", "casino", [1231, 986, 1569, 1199], 5, 4.5],
 	[17, "Water Treatment Center", "water", [585, 1400, 985, 1630], 1, 7.0],
 	[18, "Public Library", "library", [1060, 1405, 1305, 1630], 2, 4.5],
 ]

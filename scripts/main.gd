@@ -66,7 +66,7 @@ func _add_version_label() -> void:
 func _handle_cmdline() -> bool:
 	var host := false
 	var join_addr := ""
-	var port := Net.DEFAULT_PORT
+	var port := int(Settings.g("host_port"))
 	for a in OS.get_cmdline_user_args():
 		if a == "--host":
 			host = true
@@ -131,12 +131,32 @@ func show_connecting() -> void:
 	_set_screen(c)
 
 
-func host_game(port := Net.DEFAULT_PORT) -> void:
+func host_game(port := 0) -> void:
+	if port <= 0:
+		port = int(Settings.g("host_port"))
 	var err: String = Net.host(port)
 	if err != "":
 		show_main_menu(err)
 		return
 	show_lobby()
+
+
+## Lobby "Port" box: re-hosts on the new port (everyone connected is dropped and
+## has to rejoin with the new code).
+## Returns an error message, or "" on success.
+func change_port(port: int) -> String:
+	if port < 1024 or port > 65535:
+		return "Pick a port between 1024 and 65535."
+	if port == Net.hosted_port():
+		return ""
+	var old := Net.hosted_port()
+	var err: String = Net.host(port)
+	if err != "":
+		Net.host(old)  # the lobby screen stays up; its code updates when the lookups finish
+		return err
+	Settings.s("host_port", port)
+	show_lobby()
+	return ""
 
 
 ## Join with a code (or a plain IP / IP:PORT).
