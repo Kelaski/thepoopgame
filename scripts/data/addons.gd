@@ -32,7 +32,7 @@ const DATA := {
 	},
 	"grapple": {
 		"name": "Grapple",
-		"desc": "Ability key: throw a grappling hook (30m range). It latches onto whatever it hits and reels you in while you steer: hook something above you to swing, and get a pop up at the end to climb ledges. Jump or the ability key lets go with your momentum. Hooking an enemy yanks them towards you. 9s cooldown from a hit; a miss only costs 1s.",
+		"desc": "Hold the ability key: throw a grappling hook (30m range). It latches onto whatever it hits and reels you in while you steer: hook something above you to swing, and get a pop up at the end to climb ledges. Release the key (or jump) to let go with your momentum. Hooking an enemy yanks them towards you. 9s cooldown from a hit; a miss only costs 1s.",
 		"active": true,
 	},
 }
