@@ -14,9 +14,8 @@ class_name Prefabs
 ##                    75 m draw distance); otherwise it follows where it's placed
 ##       glow         true = lit from within (bulbs, screens, neon): drawn unshaded
 ##                    and bright enough to bloom
-##       material     a material in assets/materials/ to draw the part with, such as
-##                    "water" (rippling still water) or "waterfall" (flowing water);
-##                    the part's colour tints it
+##       material     the name of a material in assets/materials/ (<name>.tres) to
+##                    draw the part with; the part's colour tints it
 ##   * OmniLight3D: a real light, placed with the prefab (colour, energy and range
 ##     are used; shadows stay off). The player's Interior lights setting thins them.
 ##     With the night_only metadata it only shines in the evening and at night.

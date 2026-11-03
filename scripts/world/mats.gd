@@ -76,7 +76,7 @@ static func vertex_glow() -> StandardMaterial3D:
 
 
 ## A material from assets/materials/ by name (for prefab parts with a
-## "material" meta, such as "water"). Falls back to the plain toon material.
+## "material" meta). Falls back to the plain toon material.
 static func named(name: String) -> Material:
 	var key := "named_" + name
 	if _cache.has(key):

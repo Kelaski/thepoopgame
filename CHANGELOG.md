@@ -7,6 +7,11 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.17.3
+
+### Changed
+- **Pond:** the rippling water effect is gone, so the pond is plain, still water like the fountain.
+
 ## 0.17.2
 
 ### Changed
