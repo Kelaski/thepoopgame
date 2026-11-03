@@ -15,7 +15,7 @@ const ACTIONS := [
 	["move_left", "Move Left", "k", KEY_A],
 	["move_right", "Move Right", "k", KEY_D],
 	["jump", "Jump / Double Jump", "k", KEY_SPACE],
-	["crouch", "Crouch", "k", KEY_CTRL],
+	["crouch", "Crouch / Slide", "k", KEY_CTRL],
 	["lean_left", "Lean Left", "k", KEY_Q],
 	["lean_right", "Lean Right", "k", KEY_E],
 	["addon", "Use Addon (ability)", "k", KEY_SHIFT],

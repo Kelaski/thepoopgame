@@ -32,7 +32,7 @@ Optional command-line flags (after `--`):
 |---|---|
 | Move | W A S D |
 | Jump / double jump (Skywalker) | Space |
-| Crouch (duck) | Ctrl |
+| Crouch / slide (crouch while running) | Ctrl |
 | Lean left / right | Q / E |
 | Addon ability | Shift |
 | Interact (doors) | F |
@@ -131,13 +131,14 @@ Ground and air movement is a port of the GoldSrc (Half-Life 1) player physics in
 - **Air strafing works:** in the air you only gain speed sideways, so strafing while turning the mouse curves you around and builds speed.
 - **Bunny hopping works:** jumping on the exact frame you land skips ground friction. Jump has to be pressed again for each hop (holding it does nothing), so many players bind Jump to the mouse wheel as well (Settings > Keybinds).
 - **Half-Life's bunny-hop cap** applies: jumping above 1.7 × max speed scales you down to 65% of that.
-- There is no slide and no ground coyote time, as in Half-Life. Crouch is a plain duck.
+- There is no ground coyote time, as in Half-Life.
+- **Sliding** (added on top of GoldSrc): crouch while moving faster than 5.5 m/s (so while running, or in mid-air) to slide. A ground slide starts at 1.25 × max speed or more (up to 14 m/s) and slows with its own friction. Sliding downhill keeps accelerating the longer you stay on the slope (up to 22 m/s). Mid-air slides carry on after you land until your momentum runs out. Jumping out of a slide keeps all of its speed (the bunny-hop cap doesn't apply to slide-jumps). Crouching while slower than 5.5 m/s is a plain duck.
 - Holding a lean key walks (0.52 ×, like Counter-Strike's walk key). Aiming also slows you.
 
 **Wall running** (kept from before): jump into a wall at speed while holding forward to run along it for up to 1.6 s.
-Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run or a bunny hop. Crouch drops you off. There is no limit on how many walls you can chain before landing. Wall jumps have 0.1 s of coyote time, so you can still kick off just after leaving a wall.
+Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a bunny hop. Crouch drops you off. There is no limit on how many walls you can chain before landing. Wall jumps have 0.1 s of coyote time, so you can still kick off just after leaving a wall.
 **Leaning** (Q / E) peeks around corners. Your head hitbox moves with the lean, and walls limit how far you can lean.
-Doors swing open, away from you and at full speed, when you run into them. **F** opens and closes them normally.
+Doors fill their doorways exactly and swing open, away from you and at full speed, when you run or slide into them. **F** opens and closes them normally.
 
 ## Map sizes
 

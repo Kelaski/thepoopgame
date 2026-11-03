@@ -708,7 +708,7 @@ func _build_building(b: Array) -> void:
 			for i in nrooms:
 				var dc: float = (i + 0.5) * rw
 				var along: float = (_o.x if _ax else _o.y) + dc
-				_make_door(_ax, (_o.y if _ax else _o.x) + 6.5, along, y0, st.door, DOOR_W - 0.2)
+				_make_door(_ax, (_o.y if _ax else _o.x) + 6.5, along, y0, st.door, DOOR_W - 0.1)
 
 	# --- Furnish every storey (and specials)
 	for k in floors:
@@ -920,7 +920,9 @@ func _wall_piece(horizontal: bool, fixed: float, a: float, bb: float, ya: float,
 		box(Vector3(fixed, (ya + yb) * 0.5, (a + bb) * 0.5), Vector3(thick, hgt, length), col, L_WALL)
 
 
-func _make_door(horizontal: bool, fixed: float, t: float, y0: float, col: Color, w := DOOR_W - 0.1) -> void:
+## Doors are exactly the size of their opening (w must match the opening width),
+## so they sit flush with the frame with no gap at the sides or top.
+func _make_door(horizontal: bool, fixed: float, t: float, y0: float, col: Color, w := DOOR_W) -> void:
 	var d := Door.new()
 	var hinge: Vector3
 	var yaw: float
@@ -930,7 +932,7 @@ func _make_door(horizontal: bool, fixed: float, t: float, y0: float, col: Color,
 	else:
 		hinge = Vector3(fixed, y0, t - w * 0.5)
 		yaw = -PI * 0.5
-	d.setup(doors.size(), hinge, yaw, w, DOOR_H - 0.05, col)
+	d.setup(doors.size(), hinge, yaw, w, DOOR_H, col)
 	_chunk.add_child(d)
 	doors.append(d)
 

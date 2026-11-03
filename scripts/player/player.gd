@@ -25,6 +25,16 @@ const GS_BHOP_PENALTY := 0.65        # ...and going over it scales you down to 6
 const GRAVITY := 800.0 * HU          # sv_gravity
 const JUMP_V := 268.3 * HU           # sqrt(2 * 800 * 45): a 45-unit jump
 const ADS_MULT := 0.62
+# Momentum slide (not part of GoldSrc): crouch while moving fast.
+const SLIDE_START_MIN := 5.5         # minimum speed to start a slide
+const SLIDE_BOOST := 1.25            # a ground slide starts at >= 1.25 x max speed...
+const SLIDE_START_CAP := 14.0        # ...but the start boost never goes above this
+const SLIDE_FRICTION := 4.6
+const SLIDE_GRAVITY := 16.0          # downhill pull while sliding
+const SLOPE_ACCEL_RAMP := 0.6        # extra downhill acceleration per second spent on the slope
+const SLIDE_END := 3.6
+const SLIDE_CD := 0.6
+const MAX_SLIDE_SPEED := 22.0
 const DJUMP_V := 7.5
 const WALLJUMP_BOOST := 2.5
 const SPAWN_PROTECTION := 3.0
@@ -87,8 +97,11 @@ var vm_flash: MeshInstance3D
 var yaw := 0.0
 var pitch := 0.0
 var crouching := false
-var sliding := false     # GoldSrc movement has no slide; always false (F_SLIDE kept in the protocol)
+var sliding := false
 var sprinting := false   # running forward on the ground (viewmodel / FOV only)
+var slide_dir := Vector3.ZERO
+var slide_cd := 0.0
+var _slope_t := 0.0
 var dj_ready := true
 var aiming := false
 var ads_t := 0.0
@@ -612,7 +625,7 @@ func _physics_process(delta: float) -> void:
 	var forward_in := move_in.y < -0.3
 	# Full speed is the default pace (GoldSrc "run"). Holding a lean key walks.
 	var lean_held := can_input and (Input.is_action_pressed("lean_left") or Input.is_action_pressed("lean_right"))
-	sprinting = forward_in and on_floor and not aiming and not want_crouch and not lean_held  # visuals only
+	sprinting = forward_in and on_floor and not aiming and not want_crouch and not lean_held and not sliding  # visuals only
 
 	# --- Wall contact coyote time (0.1 s)
 	_wall_touch_t -= delta
@@ -631,7 +644,18 @@ func _physics_process(delta: float) -> void:
 			wall_normal = Vector3(n.x, 0.0, n.z).normalized()
 			wallrun_t = WALLRUN_TIME
 			velocity.y = maxf(velocity.y, 2.0)
+			sliding = false
 			_on_moved()
+
+	# --- Slide start: crouch while moving fast (on the ground or in mid-air)
+	if crouch_tap and not sliding and not wallrunning and slide_cd <= 0.0 and speed_now > SLIDE_START_MIN:
+		sliding = true
+		_slope_t = 0.0
+		slide_dir = hvel.normalized()
+		if on_floor:
+			var boosted := maxf(speed_now + 2.2, GS_MAXSPEED * SLIDE_BOOST * _speed_mult())
+			hvel = slide_dir * maxf(speed_now, minf(boosted, SLIDE_START_CAP))
+		_on_moved()
 
 	var jump_tap := can_input and not frozen and Input.is_action_just_pressed("jump")
 	if wallrunning:
@@ -645,6 +669,38 @@ func _physics_process(delta: float) -> void:
 		if wallrun_t <= 0.0 or not still_on_wall or not forward_in or crouch_tap:
 			_end_wallrun()
 		crouching = false
+	elif sliding:
+		var spd := hvel.length()
+		if on_floor:
+			var n := get_floor_normal()
+			var downhill := Vector3(n.x, 0.0, n.z).dot(slide_dir)
+			if downhill > 0.05:
+				# Sliding downhill: accelerate, and keep accelerating the longer you stay on the slope.
+				_slope_t += delta
+				spd += SLIDE_GRAVITY * downhill * (1.0 + _slope_t * SLOPE_ACCEL_RAMP) * delta
+			else:
+				_slope_t = 0.0
+				spd += SLIDE_GRAVITY * downhill * delta
+				spd -= SLIDE_FRICTION * delta
+		if wish != Vector3.ZERO:
+			slide_dir = (slide_dir + wish * delta * 1.2).normalized()
+		hvel = slide_dir * clampf(spd, 0.0, MAX_SLIDE_SPEED)
+		if jump_tap and on_floor:
+			# Slide-jump: keeps all of the slide's speed (no bunny-hop cap).
+			sliding = false
+			slide_cd = SLIDE_CD
+			velocity.y = JUMP_V
+			if _can_stand():
+				crouching = false
+				_crouch_toggle = false
+			_on_moved()
+		else:
+			# Midair slides carry on until you land; on the ground they run until momentum is gone.
+			var end_slide: bool = (on_floor and spd < SLIDE_END) or (not bool(Settings.g("toggle_crouch")) and not want_crouch)
+			if end_slide:
+				sliding = false
+				slide_cd = SLIDE_CD
+			crouching = sliding or want_crouch
 	else:
 		# --- GoldSrc ground / air movement (PM_PlayerMove)
 		crouching = want_crouch or (crouching and not _can_stand())
@@ -694,6 +750,9 @@ func _physics_process(delta: float) -> void:
 			# Extra height, current momentum kept as-is (no added speed).
 			dj_ready = false
 			velocity.y = DJUMP_V
+			if sliding:
+				sliding = false
+				slide_cd = SLIDE_CD
 			Sfx.play("jump", -4.0, 1.4)
 			_on_moved()
 	if grapple_state == Hook.FLYING:
@@ -767,6 +826,7 @@ func _physics_process(delta: float) -> void:
 
 func _tick_timers(delta: float) -> void:
 	fire_cd = maxf(0.0, fire_cd - delta)
+	slide_cd = maxf(0.0, slide_cd - delta)
 	wallrun_cd = maxf(0.0, wallrun_cd - delta)
 	prot_left = maxf(0.0, prot_left - delta)
 	damage_flash = maxf(0.0, damage_flash - delta * 2.0)

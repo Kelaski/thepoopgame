@@ -16,8 +16,8 @@ const SLOTS := [
 	["team_red", "Red team", Color("c0453a"), "Teams & Tag"],
 	["team_blue", "Blue team", Color("4f7fae"), "Teams & Tag"],
 	["tag", "The Tag / Runner", Color("ffd23f"), "Teams & Tag"],
-	["sky_top", "Sky (top)", Color("5b8fd0"), "Sky"],
-	["sky_horizon", "Sky (horizon) / fog", Color("cfe3f2"), "Sky"],
+	["sky_top", "Sky (top)", Color("4a77b0"), "Sky"],
+	["sky_horizon", "Sky (horizon) / fog", Color("a9bfd0"), "Sky"],
 ]
 
 const PRESETS := {
