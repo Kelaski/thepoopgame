@@ -7,6 +7,11 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.4.2
+
+### Fixed
+- **Louder guns, for real:** the AR, SMG and Shotgun are now about 35% louder to the ear (+4 to +5 dB). In 0.4.1 the extra volume pushed the shots past full scale, so it was clipped off and you couldn't hear it. The shots are now shaped to be louder while staying under full scale. The sniper is unchanged.
+
 ## 0.4.1
 
 ### Changed

@@ -15,9 +15,10 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 99
-	streams["ar"] = _gunshot(rng, 0.16, 0.55, 140.0, 1.0)
-	streams["smg"] = _gunshot(rng, 0.10, 0.75, 220.0, 0.85)
-	streams["shotgun"] = _gunshot(rng, 0.34, 0.35, 90.0, 1.0)
+	# Drive 2.2: about +4.3 dB of loudness (35% louder to the ear) with no clipping.
+	streams["ar"] = _gunshot(rng, 0.16, 0.55, 140.0, 1.0, GUN_DRIVE)
+	streams["smg"] = _gunshot(rng, 0.10, 0.75, 220.0, 0.85, GUN_DRIVE)
+	streams["shotgun"] = _gunshot(rng, 0.34, 0.35, 90.0, 1.0, GUN_DRIVE)
 	streams["sniper"] = _gunshot(rng, 0.5, 0.25, 70.0, 1.0)
 	streams["bat"] = _whoosh(rng, 0.18)
 	streams["bat_hit"] = _thud(rng, 0.12, 180.0)
@@ -62,9 +63,11 @@ func _exit_tree() -> void:
 
 
 ## Per-sound volume boosts, applied everywhere the sound plays (your own shots and
-## other players'). Gunshots are 35% louder (x1.35 amplitude = +2.61 dB); the
-## sniper has its own +60% (x1.6 = +4.08 dB).
-const GAIN_DB := {"ar": 2.61, "smg": 2.61, "shotgun": 2.61, "sniper": 4.08}
+## other players'). The sniper is 60% louder (x1.6 = +4.08 dB). The other guns get
+## their extra loudness from GUN_DRIVE in the synthesis instead: a playback boost
+## just pushed them past full scale, where it got clipped off and wasn't heard.
+const GAIN_DB := {"sniper": 4.08}
+const GUN_DRIVE := 2.2
 
 
 func play(sound: String, vol_db := 0.0, pitch := 1.0, bus := "SFX") -> void:
@@ -107,7 +110,10 @@ func _wav(samples: PackedFloat32Array) -> AudioStreamWAV:
 	return w
 
 
-func _gunshot(rng: RandomNumberGenerator, length: float, brightness: float, thump_hz: float, vol: float) -> AudioStreamWAV:
+## drive > 0 soft-clips the shot (tanh): the quieter body of the bang comes up while
+## the peak stays under full scale, so it sounds louder without clipping.
+## drive 0 keeps the plain hard clip (the sniper's original sound).
+func _gunshot(rng: RandomNumberGenerator, length: float, brightness: float, thump_hz: float, vol: float, drive := 0.0) -> AudioStreamWAV:
 	var n := int(length * RATE)
 	var s := PackedFloat32Array()
 	s.resize(n)
@@ -118,7 +124,8 @@ func _gunshot(rng: RandomNumberGenerator, length: float, brightness: float, thum
 		var noise := rng.randf_range(-1.0, 1.0)
 		lp = lerpf(lp, noise, brightness)
 		var thump := sin(TAU * thump_hz * t * (1.0 - t)) * exp(-t * 30.0)
-		s[i] = (lp * 0.8 + thump * 0.7) * env * vol
+		var raw := (lp * 0.8 + thump * 0.7) * env * vol
+		s[i] = tanh(raw * drive) if drive > 0.0 else raw
 	return _wav(s)
 
 
