@@ -19,6 +19,8 @@ const L_PLAYER := 4
 const L_DOOR := 8
 const L_SOLID := 16  # ground and boundary fence (never passable)
 const L_BOUNCE := 32 # bounce pads (umbrella and awning tops): landing on one launches you up
+const L_SKY := 64    # sky barrier: stops players, but grapples, shots and pings pass through
+const SKY_CLEARANCE := 35.0  # the sky barrier is this far above the tallest structure
 const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
 const DOOR_SCENE := preload("res://assets/models/door.tscn")
 const DECOR := 0    # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them); foliage never collides
@@ -37,6 +39,7 @@ const STAIR_RISE := 0.5
 const STAIR_W := 5.8        # stairwell width across its two lanes (stair_segment is STAIR_W / 2 - 0.05 wide)
 const STAIR_LANDING := 2.6  # landing before and after each flight: the way onto the stairs
 const ROOM_V := STAIR_W + 1.5  # rooms start this far in, leaving a corridor past the stairwell
+const STAIR_GUARD_H := 1.3  # sloped wall between the stair lanes: this high above the steps (body, not head)
 const ROOM_MODULES := 3  # interior rooms are 3 modules (6 m) wide
 const WINDOW_PIECES := ["building/wall_window_small", "building/wall_window_wide", "building/wall_window_tall"]
 const FURNITURE_VIS_RANGE := 140.0
@@ -139,6 +142,8 @@ var _car_rects: Array = []   # Rect2: footprint of every vehicle placed so far
 var _dumpsters: Array = []   # sketch-pixel points from the layout
 var park_name := MapData.PARK_NAME
 var bridges: Array = []      # [building A id, building B id, material]
+var sky_height := 0.0        # height of the sky barrier
+var _tallest := 0.0          # top of the tallest structure built so far
 
 
 ## seed 0 builds the classic hand-made city; any other seed a random one
@@ -227,6 +232,10 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE, seed := 0) -> void:
 
 	_begin_chunk("Cranes")
 	_build_cranes()
+	_end_chunk()
+
+	_begin_chunk("Boundary")
+	_build_boundary()
 	_end_chunk()
 
 	_build_spawn_points()
@@ -504,9 +513,38 @@ func _build_ground() -> void:
 		var top := Vector3(mid, 3.45, fixed) if horizontal else Vector3(fixed, 3.45, mid)
 		var top_size := Vector3(length, 0.1, 0.12) if horizontal else Vector3(0.12, 0.1, length)
 		box(top, top_size, post_col, L_WALL)
-		var wall_c := Vector3(mid, 40, fixed + outward * 0.6) if horizontal else Vector3(fixed + outward * 0.6, 40, mid)
-		var wall_s := Vector3(length + 4.0, 80, 1.0) if horizontal else Vector3(1.0, 80, length + 4.0)
-		_add_shape(L_SOLID, _box_shape(wall_s), Transform3D(Basis.IDENTITY, wall_c))
+
+
+## Invisible walls round the map, flush with the inside of the fence posts so
+## there's nothing to stand on along the top of the fence, rising up to a sky
+## barrier SKY_CLEARANCE above the tallest structure. The sky barrier stops
+## players but nothing else: grapples, shots, sprays and pings pass through it.
+func _build_boundary() -> void:
+	for b in buildings:
+		_tallest = maxf(_tallest, float(b.top) + 1.1)  # roof + parapet
+	sky_height = _tallest + SKY_CLEARANCE
+	var bc := bounds.get_center()
+	const POST_HALF := 0.075  # fence posts are 0.15 m thick, centred on the fence line
+	const THICK := 2.0
+	for side in 4:
+		var horizontal := side < 2
+		var fixed: float = [bounds.position.y, bounds.end.y, bounds.position.x, bounds.end.x][side]
+		var outward := -1.0 if side % 2 == 0 else 1.0
+		var mid := bc.x if horizontal else bc.y
+		var length := bounds.size.x if horizontal else bounds.size.y
+		var off := fixed + outward * (THICK * 0.5 - POST_HALF)  # inner face flush with the posts' inner side
+		var c := Vector3(mid, sky_height * 0.5, off) if horizontal else Vector3(off, sky_height * 0.5, mid)
+		var s := Vector3(length + THICK * 2.0, sky_height + 4.0, THICK) if horizontal else Vector3(THICK, sky_height + 4.0, length + THICK * 2.0)
+		_add_shape(L_SOLID, _box_shape(s), Transform3D(Basis.IDENTITY, c))
+	var sky := StaticBody3D.new()
+	sky.name = "SkyBarrier"
+	sky.collision_layer = L_SKY
+	sky.collision_mask = 0
+	_chunk.add_child(sky)
+	var shape := CollisionShape3D.new()
+	shape.shape = _box_shape(Vector3(bounds.size.x + 8.0, 2.0, bounds.size.y + 8.0))
+	shape.position = Vector3(bc.x, sky_height + 1.0, bc.y)
+	sky.add_child(shape)
 
 
 func _near_any(p: Vector2, pts: Array, d: float) -> bool:
@@ -1112,9 +1150,14 @@ func _build_stairwell(floors: int, fh: float, run: float, top: float, st: Dictio
 			var u := STAIR_LANDING + STAIR_RUN * i if lane_a else STAIR_LANDING + run - STAIR_RUN * i
 			var p := _uv(u, vc)
 			_prefab("building/stair_segment", _at(Vector3(p.x, h0 + STAIR_RISE * i, p.y), _yaw_x(ud if lane_a else -ud)), steps)
-		# Divider between the two lanes for this storey
+		# Between the lanes: a sloped wall that follows this flight, STAIR_GUARD_H
+		# above the steps (stair_divider is a 1 m box standing on its origin,
+		# tilted to the flight and stretched along it).
 		var dp := _uv(STAIR_LANDING + run * 0.5, STAIR_W * 0.5)
-		_prefab("building/stair_divider", _at(Vector3(dp.x, h0, dp.y), u_yaw, Vector3(run, fh - SLAB_T, 1)), trim)
+		var slope := atan2(fh, run)
+		var tilt := Basis(Vector3(0, 0, 1), slope if lane_a else -slope)
+		var guard := Basis(Vector3.UP, u_yaw) * tilt * Basis.from_scale(Vector3(sqrt(run * run + fh * fh), STAIR_GUARD_H * cos(slope), 1))
+		_prefab("building/stair_divider", Transform3D(guard, Vector3(dp.x, h0 + fh * 0.5 - 0.05, dp.y)), trim)
 		# Railing on the open edge of the hole (upper floors)
 		if k >= 1:
 			_stair_rail(h0, rails, u_yaw, trim)
@@ -1921,6 +1964,7 @@ func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: Stri
 	var base := mid + out * 5.0
 	base.y = 0.0
 	var top_y := maxf(p0.y, p1.y) + 9.0
+	_tallest = maxf(_tallest, top_y + 4.0)  # the crane top (cab and jib) stands ~4 m above top_y
 	# Footing, mast (props/crane/mast is 10 m tall, stretched to this crane) and
 	# one set of braces every 1.4 m.
 	_prefab("props/crane/footing", _at(base))

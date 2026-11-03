@@ -19,7 +19,7 @@ const AIR_ACCEL := 19.2  # air strafing (was 16, +20%)
 const GRAVITY := 16.0
 const JUMP_V := 6.4
 const DJUMP_V := 7.0
-const BOUNCE_V := JUMP_V * 1.2247  # bounce pads: sqrt(1.5) x jump speed = 1.5x the jump height
+const BOUNCE_V := JUMP_V * 1.4142  # bounce pads: sqrt(2) x jump speed = 2x the jump height
 const WALLJUMP_BOOST := 2.5
 const SLOPE_ACCEL_RAMP := 0.6  # extra downhill acceleration per second spent on the slope
 const MAX_SLIDE_SPEED := 22.0
@@ -40,8 +40,8 @@ const FATIGUE_GRAVITY_MAX := 6.0   # up to 600%
 const LEAN_DIST := 0.4           # sideways head offset at full lean (m)
 const LEAN_PIVOT := 1.0          # the lean pivots this far below your eyes (the waist)
 const LEAN_ROLL := 15.0          # view tilt at full lean (degrees)
-const LEAN_SPEED := 5.5          # lean amount per second (0 -> full lean in ~0.18 s)
-const LEAN_SWITCH_SPEED := 9.0   # full left -> full right in ~0.22 s
+const LEAN_SPEED := 11.0         # lean amount per second (0 -> full lean in ~0.09 s)
+const LEAN_SWITCH_SPEED := 18.0  # full left -> full right in ~0.11 s, straight through the middle
 const SLIDE_START_MIN := 5.5
 const SLIDE_FRICTION := 4.6
 const SLIDE_END := 3.6
@@ -50,9 +50,10 @@ const MAX_GROUND_SPEED := 14.0
 const NET_INTERVAL := 1.0 / 30.0
 const DOOR_SLAM_SPEED := 5.5
 
-const MASK_FULL := 1 | 2 | 8 | 16 | 32
-const MASK_PHASE := 1 | 16 | 32
-const MASK_PHASE_DOWN := 16
+const MASK_FULL := 1 | 2 | 8 | 16 | 32 | 64   # 64 = the sky barrier: it stops you...
+const MASK_PHASE := 1 | 16 | 32 | 64
+const MASK_PHASE_DOWN := 16 | 64
+const MASK_AIM := MASK_FULL & ~64               # ...but grapples, sprays, pings and shots go through it
 const MASK_SHOT := 1 | 2 | 4 | 8 | 16
 
 const F_CROUCH := 1
@@ -152,6 +153,7 @@ var wall_jumps := 0               # wall jumps since you last touched the floor
 var lean := 0.0          # -1 (left) .. 1 (right), smoothed
 var _lean_side := 0      # where you want to lean: -1, 0 or 1 (toggled or held)
 var lean_drop := 0.0     # how far the lean lowers your head (m)
+var _prev_lean := 0.0    # lean_offset on the previous physics tick (the camera interpolates)
 var lean_offset := 0.0   # metres, clamped against walls
 var _step_t := 0.0
 
@@ -300,7 +302,8 @@ func _check_bounce_pad() -> void:
 	for i in get_slide_collision_count():
 		var c := get_slide_collision(i)
 		var body := c.get_collider() as CollisionObject3D
-		if body and body.collision_layer & MapBuilder.L_BOUNCE and c.get_normal().y > 0.6:
+		# Edge landings count too (the round bottom of your capsule meets the rim at an angle).
+		if body and body.collision_layer & MapBuilder.L_BOUNCE and c.get_normal().y > 0.3:
 			velocity.y = BOUNCE_V
 			coyote = 0.0
 			dj_ready = true
@@ -432,6 +435,7 @@ func set_alive(a: bool) -> void:
 		lean_offset = 0.0
 		_lean_side = 0
 		lean_drop = 0.0
+		_prev_lean = 0.0
 		if invisible:
 			invisible = false
 		phasing = 0.0
@@ -476,6 +480,7 @@ func respawn(pos: Vector3, protect: bool) -> void:
 	lean_offset = 0.0
 	_lean_side = 0
 	lean_drop = 0.0
+	_prev_lean = 0.0
 	prot_pending = false
 	# Protection runs for 3 s from the moment you spawn, and ends early as soon
 	# as you move or shoot.
@@ -778,18 +783,20 @@ func _physics_process(delta: float) -> void:
 	if lean_in != 0.0 and lean != 0.0 and signf(lean_in) != signf(lean):
 		lean_rate = LEAN_SWITCH_SPEED
 	lean = move_toward(lean, lean_in, delta * lean_rate)
-	# Eased in and out, along an arc round the waist.
+	# Along an arc round the waist. (No easing round the middle, so swapping sides
+	# goes straight through without a pause.)
 	var max_angle := asin(LEAN_DIST / LEAN_PIVOT)
-	var want_off := sin(signf(lean) * smoothstep(0.0, 1.0, absf(lean)) * max_angle) * LEAN_PIVOT
+	var want_off := sin(lean * max_angle) * LEAN_PIVOT
 	if absf(want_off) > 0.01:
 		var right := Basis(Vector3.UP, yaw).x
 		var eye := global_position + Vector3(0, head.position.y, 0)
 		var space := get_world_3d().direct_space_state
-		var q := PhysicsRayQueryParameters3D.create(eye, eye + right * signf(want_off) * (absf(want_off) + 0.3), MASK_FULL, [get_rid()])
+		var q := PhysicsRayQueryParameters3D.create(eye, eye + right * signf(want_off) * (absf(want_off) + 0.3), MASK_AIM, [get_rid()])
 		var r := space.intersect_ray(q)
 		if not r.is_empty():
 			var hit: Vector3 = r.position
 			want_off = signf(want_off) * maxf(0.0, eye.distance_to(hit) - 0.3)
+	_prev_lean = lean_offset
 	lean_offset = want_off
 	lean_drop = LEAN_PIVOT - sqrt(LEAN_PIVOT * LEAN_PIVOT - lean_offset * lean_offset)
 	head_col.position.x = lean_offset
@@ -989,8 +996,8 @@ func _remote_update(delta: float) -> void:
 	rotation.y = lerp_angle(rotation.y, net_yaw, clampf(delta * 18.0, 0.0, 1.0))
 	head.rotation.x = net_pitch
 	_set_crouch_shape((net_flags & (F_CROUCH | F_SLIDE)) != 0)
-	head_col.position.x = net_lean
-	body_root.rotation.z = -asin(clampf(net_lean / 1.7, -1.0, 1.0))  # tilt the body so the head is where they lean
+	head_col.position.x = lerpf(head_col.position.x, net_lean, clampf(delta * 25.0, 0.0, 1.0))
+	body_root.rotation.z = -asin(clampf(head_col.position.x / 1.7, -1.0, 1.0))  # tilt the body so the head is where they lean
 	var me := multiplayer.get_unique_id()
 	nameplate.visible = alive and Game.in_match and Net.team_of(me) == team
 	if nameplate.visible:
@@ -1046,15 +1053,19 @@ func _local_visuals(delta: float) -> void:
 	elif wallrunning:
 		var right_v := Basis(Vector3.UP, yaw).x
 		roll_target = -signf(wall_normal.dot(right_v)) * deg_to_rad(10.0)
-	roll_target += -lean_offset / LEAN_DIST * deg_to_rad(LEAN_ROLL)
 	cam_roll = lerpf(cam_roll, roll_target, clampf(delta * 10.0, 0.0, 1.0))
 	recoil = maxf(0.0, recoil - delta * 10.0)
 	rotation.y = yaw
 	head.rotation.x = pitch
 	var f := Engine.get_physics_interpolation_fraction()
 	var p := _prev_pos.lerp(_cur_pos, f) if alive else global_position
-	var lean_v := Basis(Vector3.UP, yaw).x * lean_offset
-	cam.global_transform = Transform3D(Basis.from_euler(Vector3(pitch + deg_to_rad(recoil * 1.2), yaw, cam_roll)), p + Vector3(0, head.position.y - lean_drop, 0) + lean_v)
+	# The lean is interpolated between physics ticks like the position, and its
+	# tilt follows it directly (not smoothed), so it never steps or lags.
+	var lean_now := lerpf(_prev_lean, lean_offset, f)
+	var lean_roll := -lean_now / LEAN_DIST * deg_to_rad(LEAN_ROLL)
+	var drop := LEAN_PIVOT - sqrt(LEAN_PIVOT * LEAN_PIVOT - lean_now * lean_now)
+	var lean_v := Basis(Vector3.UP, yaw).x * lean_now
+	cam.global_transform = Transform3D(Basis.from_euler(Vector3(pitch + deg_to_rad(recoil * 1.2), yaw, cam_roll + lean_roll)), p + Vector3(0, head.position.y - drop, 0) + lean_v)
 	if viewmodel == null:
 		return
 	var hspeed := Vector2(velocity.x, velocity.z).length()
@@ -1221,7 +1232,7 @@ func _hitscan(from: Vector3, dir: Vector3, max_dist: float, wall_pierce: int, pi
 		if walls < wall_pierce:
 			# Find where the ray exits this obstacle (walls are thin; >1m is too thick).
 			var probe := hit_pos + dir * 1.0
-			var q2 := PhysicsRayQueryParameters3D.create(probe, hit_pos, MASK_FULL)
+			var q2 := PhysicsRayQueryParameters3D.create(probe, hit_pos, MASK_AIM)
 			var r2 := space.intersect_ray(q2)
 			if r2.is_empty():
 				return {"hits": hits, "end": r.position}
@@ -1279,7 +1290,7 @@ func _tick_hook(delta: float) -> void:
 	var step := minf(Addons.GRAPPLE_HOOK_SPEED * delta, Addons.GRAPPLE_RANGE - _hook_dist)
 	var from := _hook_pos + _hook_dir * _hook_dist
 	var to := from + _hook_dir * step
-	var q := PhysicsRayQueryParameters3D.create(from, to, MASK_FULL | MapBuilder.L_PLAYER, [get_rid()])
+	var q := PhysicsRayQueryParameters3D.create(from, to, MASK_AIM | MapBuilder.L_PLAYER, [get_rid()])
 	var r := get_world_3d().direct_space_state.intersect_ray(q)
 	if not r.is_empty():
 		_attach_grapple(r.position, r.collider)
@@ -1332,7 +1343,7 @@ func _apply_grapple(delta: float, hvel: Vector3, wish: Vector3, jump_tap: bool, 
 		_end_grapple()
 		return Vector3(v.x, 0.0, v.z) + Vector3(n.x, 0.0, n.z) * 2.0
 	# The rope snaps if something gets between you and the hook.
-	var q := PhysicsRayQueryParameters3D.create(chest, grapple_point - n * 0.35, MASK_FULL, [get_rid()])
+	var q := PhysicsRayQueryParameters3D.create(chest, grapple_point - n * 0.35, MASK_AIM, [get_rid()])
 	if not get_world_3d().direct_space_state.intersect_ray(q).is_empty():
 		_end_grapple()
 		return hvel
@@ -1554,7 +1565,7 @@ func _try_spray() -> void:
 		return
 	var from := cam.global_position
 	var dir := aim_dir()
-	var q := PhysicsRayQueryParameters3D.create(from, from + dir * SPRAY_REACH, MASK_FULL, [get_rid()])
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * SPRAY_REACH, MASK_AIM, [get_rid()])
 	var r := get_world_3d().direct_space_state.intersect_ray(q)
 	if r.is_empty():
 		return
@@ -1582,7 +1593,7 @@ func _try_ping() -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	var from := cam.global_position
 	var dir := aim_dir()
-	var q := PhysicsRayQueryParameters3D.create(from, from + dir * PING_RANGE, MASK_FULL | MapBuilder.L_PLAYER, [get_rid()])
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * PING_RANGE, MASK_AIM | MapBuilder.L_PLAYER, [get_rid()])
 	var r := get_world_3d().direct_space_state.intersect_ray(q)
 	var pos: Vector3 = r.position if not r.is_empty() else from + dir * PING_RANGE * 0.5
 	var kind := "spot"

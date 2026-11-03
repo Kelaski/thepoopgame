@@ -44,18 +44,6 @@ text = "LOBBY"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Codes" type="Label" parent="Center/Panel/Content/Header" unique_id=907554511]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-text = "Join code:  ..."
-
-[node name="CopyButton" type="Button" parent="Center/Panel/Content/Header" unique_id=1427007242]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(130, 44)
-layout_mode = 2
-text = "Copy Code"
-
 [node name="Waiting" type="Label" parent="Center/Panel/Content/Header" unique_id=98345341]
 unique_name_in_owner = true
 layout_mode = 2
@@ -66,6 +54,18 @@ text = "Waiting for the host to start the match."
 [node name="SettingsRow" type="HBoxContainer" parent="Center/Panel/Content" unique_id=587581695]
 layout_mode = 2
 theme_override_constants/separation = 10
+
+[node name="Codes" type="Label" parent="Center/Panel/Content/SettingsRow" unique_id=907554511]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Join code:  ..."
+
+[node name="CopyButton" type="Button" parent="Center/Panel/Content/SettingsRow" unique_id=1427007242]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 44)
+layout_mode = 2
+text = "Copy Code"
 
 [node name="FirewallButton" type="Button" parent="Center/Panel/Content/SettingsRow" unique_id=1570962904]
 unique_name_in_owner = true
@@ -223,7 +223,7 @@ layout_mode = 2
 theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 15
 
-[connection signal="pressed" from="Center/Panel/Content/Header/CopyButton" to="." method="_on_copy_pressed"]
+[connection signal="pressed" from="Center/Panel/Content/SettingsRow/CopyButton" to="." method="_on_copy_pressed"]
 [connection signal="pressed" from="Center/Panel/Content/SettingsRow/FirewallButton" to="." method="_on_firewall_pressed"]
 [connection signal="item_selected" from="Center/Panel/Content/SettingsRow/MapPick" to="." method="_on_map_selected"]
 [connection signal="item_selected" from="Center/Panel/Content/SettingsRow/CityPick" to="." method="_on_city_selected"]

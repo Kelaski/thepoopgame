@@ -8,24 +8,9 @@ script = ExtResource("1_ping")
 
 [node name="Icon" type="Sprite3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-pixel_size = 0.0009
+pixel_size = 0.00045
 billboard = 1
 no_depth_test = true
 fixed_size = true
 render_priority = 12
 texture = ExtResource("2_icon")
-
-[node name="Label" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
-offset = Vector2(0, -26)
-pixel_size = 0.0016
-billboard = 1
-no_depth_test = true
-fixed_size = true
-render_priority = 12
-outline_render_priority = 11
-outline_modulate = Color(0, 0, 0, 0.85)
-text = "12 m"
-font_size = 26
-outline_size = 12
-vertical_alignment = 0

@@ -141,7 +141,5 @@ common/max_physics_steps_per_frame=4
 
 [rendering]
 
-lights_and_shadows/directional_shadow/size=4096
-lights_and_shadows/directional_shadow/soft_shadow_filter_quality=2
 environment/defaults/default_clear_color=Color(0.55, 0.72, 0.88, 1)
 anti_aliasing/quality/screen_space_aa=1

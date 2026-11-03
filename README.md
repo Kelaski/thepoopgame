@@ -150,11 +150,11 @@ Press Jump to kick off the wall. The kick keeps your speed and adds a little, so
 **Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
 **Leaning** (Q / E) works like Rainbow Six Siege:
 - **Toggle by default:** tap Q or E to lean, and you stay leaned until you tap the same key again or the other side. Turn off **Toggle lean** in Settings > Controls to lean only while holding the key.
-- **From the waist:** your head swings out 0.4 m in an arc, drops slightly, and the view tilts 15°. It takes about 0.2 s, and the same to swap sides.
+- **From the waist:** your head swings out 0.4 m in an arc, drops slightly, and the view tilts 15°. It's quick: about 0.1 s to lean out, and about 0.1 s to swap sides, straight through the middle with no pause.
 - **While leaning** you walk (no sprint), and you can aim and shoot. Sliding or wall running stands you back up.
 - Your head hitbox and third-person body move with the lean, and walls limit how far you can lean.
 
-**Pings** (middle mouse) work like Fortnite's. Ping where you're aiming to put a marker there for you and your team, with its distance. It shows through walls and on the minimap, with a sound.
+**Pings** (middle mouse) work like Fortnite's. Ping where you're aiming to put a small marker there for you and your team. It shows through walls and on the minimap, with a sound. Like teammate names, it fades while you aim right at it, so it never covers a fight.
 - **Aim at an enemy** to mark them (red **ENEMY** ping). **Aim at the Tag** to mark it.
 - **Double tap** for a red **DANGER** ping.
 - Pings last 4.5–6 s. Each player can have 3 at once, and older ones disappear. The server limits pings to 5 every 3 s.
@@ -185,7 +185,7 @@ The minimap zooms to fit either way. Sizes are defined in `MapData.SIZES` (`scri
 ## The map
 
 The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.
-A fence with tall invisible collision surrounds it.
+A fence surrounds it, with invisible walls flush against it so you can't stand on top of it. The walls rise to a **sky barrier** 35 m above the tallest building or crane. The sky barrier stops players, but grapples, shots, sprays and pings go straight through it.
 Every object has collision (furniture, props, tree trunks, lamps and so on) except anything leafy. Cranes block you and your shots only where there's a bar: you can shoot through the gaps in the mast's lattice. Tree crowns, potted plants and bushes are visual only: you can walk and shoot through them, but they block sight. Flat floor markings and the bleacher steps (a smooth ramp covers them) have no collision either.
 Teammates' names float above their heads (`NAMEPLATE_SCALE` in `scripts/player/player.gd`). A name fades out while you aim near it, so it never covers a fight (`NAMEPLATE_FADE_NEAR` / `NAMEPLATE_FADE_FAR`).
 
@@ -208,7 +208,7 @@ Teammates' names float above their heads (`NAMEPLATE_SCALE` in `scripts/player/p
 | 18 | Public Library (bookshelves, reading tables) | 2 |
 | 19 | Park (paths, fountain plaza, basketball court, pond, playground, picnic tables, trees) | outdoor |
 
-Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end. Each lane is 2.85 m wide, with a 2.6 m landing at each end of every flight, so the way onto the stairs is roomy (`STAIR_W` and `STAIR_LANDING` in `scripts/map/map_builder.gd`).
+Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end. Each lane is 2.85 m wide, with a 2.6 m landing at each end of every flight, so the way onto the stairs is roomy (`STAIR_W` and `STAIR_LANDING` in `scripts/map/map_builder.gd`). Between the two lanes runs a sloped wall that follows each flight, 1.3 m above the steps (`STAIR_GUARD_H`). It covers your body but not your head, so you can see and shoot across the stairwell.
 
 **Time of day:** each match starts at a random Morning, Afternoon, Evening or Night. After each round, the host picks a different one, and everyone's sun, sky, fog and ambient light blend into it over 10 seconds. The presets are the `TIMES` table in `scripts/world/world.gd`. Street lamps light up in the evening and at night.
 Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**):
@@ -225,7 +225,7 @@ Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**
 
 **The park** is laid out like a real one: two paved paths crossing at a fountain plaza with flower beds, benches, bins and lamp posts along the paths, a row of trees round the edge, the basketball court, a playground on a sandpit, the pond, and picnic tables with umbrellas on the lawns.
 
-**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up 1.5 times as high as a jump.
+**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up twice as high as a jump. Umbrella tops are 2.05 m up, within reach of a double jump, a wall jump or a grapple, and landing on the rim counts.
 
 Six tower cranes hang planks or sheet metal between rooftops as bridges: Warehouse–School, Apartments–Meridian Tower, Meridian Tower–Casino, the two Tenements, Theater–Bank, and Water Treatment–Library. Crates on each roof help you climb onto them.
 The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).

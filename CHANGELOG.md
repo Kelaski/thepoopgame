@@ -22,6 +22,17 @@ The current version is set in `scripts/data/game_version.gd` and shown on the ma
 - **Movement updates:** broken numbers (NaN or infinity) are dropped, and lean and look angles are clamped. A huge lean could move a head hitbox far from the body.
 - **Re-registering:** a connected player could register again to reset their team mid-match. Extra registrations are ignored.
 - **Ping spam:** double-tap danger pings skipped the ping rate limit. They now count toward it.
+- **Standing on the fence:** you could stand on top of the map's fence posts and rail. The invisible boundary walls are now flush with the inside of the fence.
+
+### Added
+- **Sky barrier:** an invisible ceiling 35 m above the tallest building or crane stops players from flying off the top of the map. Grapples, shots, sprays and pings pass straight through it.
+
+### Changed
+- **Umbrellas:** much easier to land on. The top is now 2.05 m up instead of 2.65 m, it's wider, and landing on the rim counts. They bounce you **twice** as high as a jump, up from 1.5 times (so do kiosk awnings).
+- **Pings:** half the size, the text under them is gone, and they fade while you aim right at them, like teammate names.
+- **Leaning:** twice as fast (about 0.1 s), and swapping from one side to the other is now smooth and snappy. The pause in the middle is gone, and the camera no longer steps between physics updates on high-refresh screens. Other players' leans look smoother too.
+- **Stairs:** the full wall between the two lanes is now a sloped wall that follows each flight, 1.3 m above the steps. It covers your body but not your head.
+- **Lobby:** the join code and Copy Code button sit on the same row as the map settings, so the top of the lobby no longer has an empty gap.
 
 ## 0.14.1
 
