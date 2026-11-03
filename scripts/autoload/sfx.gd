@@ -246,9 +246,10 @@ func _heartbeat() -> AudioStreamWAV:
 
 
 # ================================================================ music
-# Built-in songs, all synthesized: kick + clap snare, hats, a side-chained saw
-# bass with off-beat octave jumps and a square-wave arpeggio over a 4-chord loop
-# (one chord per 2 bars). They're rendered on a background thread at startup.
+# Built-in music, synthesized: kick + clap snare, hats, a side-chained saw bass
+# with off-beat octave jumps and a square-wave arpeggio over a 4-chord loop (one
+# chord per 2 bars). Rendered on a background thread at startup. There's one
+# song, the Tag Rush Theme; more can be added here in the same format.
 #   roots: bass note per chord (Hz); minor: chord quality per chord
 #   kick / snare: 16th steps in a bar; kick_odd: extra kicks on odd bars
 #   hats: 16 (sixteenths) or 8 (eighths); arp_from: bar the arpeggio comes in
@@ -257,15 +258,6 @@ const SONGS := [
 	{"title": "Tag Rush Theme", "bpm": 160.0, "bars": 8, "roots": [55.0, 43.65, 65.41, 49.0],
 		"minor": [true, false, false, false], "kick": [0, 4, 8, 12, 14], "kick_odd": [7],
 		"snare": [4, 12], "hats": 16, "arp_from": 2, "roll": true, "break": [], "seed": 160},
-	{"title": "Rooftop Run", "bpm": 174.0, "bars": 16, "roots": [73.42, 58.27, 43.65, 65.41],
-		"minor": [true, false, false, false], "kick": [0, 10], "kick_odd": [6],
-		"snare": [4, 12], "hats": 16, "arp_from": 4, "roll": true, "break": [8, 9], "seed": 174},
-	{"title": "Neon Chase", "bpm": 128.0, "bars": 16, "roots": [41.2, 65.41, 49.0, 73.42],
-		"minor": [true, false, false, false], "kick": [0, 4, 8, 12], "kick_odd": [],
-		"snare": [4, 12], "hats": 8, "arp_from": 2, "roll": false, "break": [12, 13], "seed": 128},
-	{"title": "Last Stand", "bpm": 140.0, "bars": 16, "roots": [46.25, 73.42, 55.0, 41.2],
-		"minor": [true, false, false, true], "kick": [0, 6, 10], "kick_odd": [14],
-		"snare": [8], "hats": 16, "arp_from": 4, "roll": true, "break": [6, 7], "seed": 140},
 ]
 
 var _music: AudioStreamPlayer

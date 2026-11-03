@@ -69,7 +69,7 @@ If you played an older version, the old default binds for lean right (C), addon 
 - **Labels and order:** the names and order shown in the Keybinds tab are in `Settings.ACTIONS` (`scripts/autoload/settings.gd`).
 - **Left Shift:** the ability key is set to *Left* Shift in the Input Map, because Right Shift + Enter is team chat.
 
-Four built-in songs play during matches: **Tag Rush Theme** (160 BPM), **Rooftop Run** (174 BPM), **Neon Chase** (128 BPM) and **Last Stand** (140 BPM). They are synthesized in code on a background thread when the game starts. Each one plays for a minute before moving on to the next, and music has its own volume slider.
+The **Tag Rush Theme**, a fast 160 BPM loop, plays during matches. It's synthesized in code on a background thread when the game starts and has its own volume slider.
 
 ### Custom music & playlist (Customization → Music & Playlist, from the main menu, lobby or pause menu)
 
@@ -78,7 +78,7 @@ Four built-in songs play during matches: **Tag Rush Theme** (160 BPM), **Rooftop
 - Importing runs in the background, so the game keeps running (important when you're the host) and you can close the menu while it works.
 - **Formats:** OGG, MP3 and WAV (8/16/24/32-bit integer or 32/64-bit float PCM) work out of the box; other WAV encodings fall back to ffmpeg. FLAC, M4A/AAC, Opus, WMA, AIFF, WebM/MKA, ALAC and more are converted on import, which needs [ffmpeg](https://ffmpeg.org) installed and on your PATH.
 - In the playlist you can turn songs on and off, reorder them, preview them and remove them.
-- **Play during matches** chooses between the built-in songs, your playlist, or both. There's also a shuffle option. The pause menu has a music player in the bottom-right corner (previous, play/pause, next and volume), and a "Now playing" toast shows each new song. Editing the playlist mid-match keeps the current song playing unless you disable or remove it.
+- **Play during matches** chooses between the Tag Rush Theme, your playlist, or both. With both, the theme takes a one-minute turn in the playlist. There's also a shuffle option. The pause menu has a music player in the bottom-right corner (previous, play/pause, next and volume), and a "Now playing" toast shows each new song. Editing the playlist mid-match keeps the current song playing unless you disable or remove it.
 
 ### Colour customization (Customization → Colours, from the main menu, lobby or pause menu)
 

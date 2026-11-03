@@ -47,7 +47,7 @@ theme_override_constants/separation = 12
 script = ExtResource("3_kntgo")
 setting = "music_mode"
 label_text = "Play during matches"
-items = PackedStringArray("Built-in songs", "My playlist", "My playlist + built-in songs")
+items = PackedStringArray("Tag Rush Theme", "My playlist", "My playlist + Tag Rush Theme")
 values = ["builtin", "custom", "both"]
 
 [node name="Shuffle" type="HBoxContainer" parent="Center/Panel/Content" unique_id=1090346451 instance=ExtResource("4_cxsym")]

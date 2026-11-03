@@ -7,6 +7,12 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.9.2
+
+### Changed
+- **Music:** removed the built-in songs Rooftop Run, Neon Chase and Last Stand. The **Tag Rush Theme** is the only built-in music again, and it loops for the whole match. Your own playlist works as before.
+- **Music menu:** the options are now "Tag Rush Theme", "My playlist" and "My playlist + Tag Rush Theme".
+
 ## 0.9.1
 
 ### Changed
