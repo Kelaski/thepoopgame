@@ -36,7 +36,7 @@ func _ready() -> void:
 	name = "World"
 	_build_environment()
 	builder = MapBuilder.new()
-	builder.build(self, Game.map_size)
+	builder.build(self, Game.map_size, Game.map_seed)
 	players_node = Node3D.new()
 	players_node.name = "Players"
 	add_child(players_node)

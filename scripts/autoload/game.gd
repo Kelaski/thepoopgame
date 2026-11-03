@@ -4,9 +4,12 @@ extends Node
 ## Round flow:
 ##   PREROUND  - teams frozen at their spawn zones, objective revealed.
 ##   RUSH      - first player to touch the Tag becomes the Runner; their team defends.
+##               The clock doesn't run until that first pickup.
 ##   HELD      - the timer counts down while a Runner carries the Tag.
-##   DROPPED   - Runner died; timer paused. Enemy pickup: +10s, teammate pickup: +15s.
-##   ROUND_END - holding team wins when the timer hits 0. First to 4 wins the match.
+##   DROPPED   - Runner died; the timer keeps running. Enemy pickup: +10s,
+##               teammate pickup: +15s.
+##   ROUND_END - the team that held the Tag last wins when the timer hits 0.
+##               First to 4 wins the match.
 
 signal match_started
 signal match_ended
@@ -37,6 +40,7 @@ const KILL_HEAL := 30.0  # health given back to the killer
 
 var world = null  # World node while a match is loaded
 var map_size := MapData.DEFAULT_SIZE  # chosen by the host; replicated to everyone
+var map_seed := 0  # 0 = classic city, otherwise the random city's seed (new every match)
 var in_match := false
 var ui_open := false
 var typing := false  # chat box has focus: gameplay keys are ignored
@@ -113,7 +117,8 @@ func server_start_match() -> void:
 		Net.players[id].kills = 0
 		Net.players[id].deaths = 0
 	Net.broadcast_roster()
-	_start_match.rpc(map_size)
+	map_seed = randi_range(1, 2000000000) if Settings.g("map_random") else 0
+	_start_match.rpc(map_size, map_seed)
 	get_tree().create_timer(1.0).timeout.connect(_server_begin_round)
 
 
@@ -128,7 +133,7 @@ func on_player_joined(id: int) -> void:
 	alive_ids[id] = false
 	hp[id] = max_hp_of(id)
 	respawn_left[id] = RESPAWN_TIME
-	_start_match.rpc_id(id, map_size)
+	_start_match.rpc_id(id, map_size, map_seed)
 	_late_sync.rpc_id(id, alive_ids, objective, scores, round_num)
 	_push_state()
 
@@ -204,7 +209,7 @@ func _physics_process(delta: float) -> void:
 	_now += delta
 	if not multiplayer.is_server():
 		# Clients just run the clocks locally between syncs.
-		if phase == Phase.HELD:
+		if phase == Phase.HELD or phase == Phase.DROPPED:
 			timer = maxf(0.0, timer - delta)
 		if phase in [Phase.PREROUND, Phase.ROUND_END, Phase.MATCH_END]:
 			phase_time = maxf(0.0, phase_time - delta)
@@ -222,8 +227,17 @@ func _server_tick(delta: float) -> void:
 				phase = Phase.RUSH
 				_push_state()
 				_announce.rpc("GO! Grab the Tag!", Color.WHITE)
-		Phase.RUSH, Phase.DROPPED:
-			_check_pickups()
+		Phase.RUSH:
+			_check_pickups()  # the clock only starts at the first pickup
+		Phase.DROPPED:
+			# The clock keeps running while the Tag is on the ground; if it runs out,
+			# the team that held it last wins the round.
+			timer -= delta
+			if timer <= 0.0:
+				timer = 0.0
+				_server_round_won(holding_team)
+			else:
+				_check_pickups()
 		Phase.HELD:
 			if world.players.has(holder):
 				tag_pos = world.players[holder].global_position
@@ -470,8 +484,9 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 # ==================================================================== broadcasts
 
 @rpc("authority", "call_local", "reliable")
-func _start_match(size: String) -> void:
+func _start_match(size: String, seed: int) -> void:
 	_set_map_size_local(size)
+	map_seed = seed
 	in_match = true
 	phase = Phase.LOBBY
 	scores = [0, 0]

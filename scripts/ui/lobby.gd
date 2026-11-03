@@ -62,6 +62,14 @@ func _ready() -> void:
 		settings.add_child(_map_pick)
 	_map_label = UiKit.label("", 16, UiKit.TEXT)
 	settings.add_child(_map_label)
+	if multiplayer.is_server():
+		var city := OptionButton.new()
+		city.add_item("Random city")
+		city.add_item("Classic city")
+		city.selected = 0 if Settings.g("map_random") else 1
+		city.tooltip_text = "Random: a new city is generated every match. Classic: the hand-made city."
+		city.item_selected.connect(func(i: int): Settings.s("map_random", i == 0))
+		settings.add_child(city)
 	v.add_child(settings)
 	Game.map_size_changed.connect(_on_map_size_changed)
 	_update_map_label()
@@ -115,9 +123,9 @@ func _ready() -> void:
 
 ## Short map description next to the map size; the full one is the tooltip.
 const MAP_INFO := {
-	"small": ["80 x 100 m", "Bank, Meridian Tower and the park (about 80 x 100 m)."],
-	"medium": ["130 x 135 m", "School, Bank, Diner, Arcade, Meridian Tower, Casino and the park (about 130 x 135 m)."],
-	"large": ["200 x 170 m", "The whole city: 18 buildings and the park (200 x 170 m)."],
+	"small": ["80 x 100 m", "About 80 x 100 m. Classic city: Bank, Meridian Tower and the park."],
+	"medium": ["130 x 135 m", "About 130 x 135 m. Classic city: School, Bank, Diner, Arcade, Meridian Tower, Casino and the park."],
+	"large": ["200 x 170 m", "200 x 170 m. Classic city: all 18 buildings and the park."],
 }
 
 

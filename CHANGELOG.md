@@ -7,6 +7,27 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.4.0
+
+### New
+- **Random cities:** a new city is generated for every match, at any map size.
+  - Roads form a grid of uneven blocks, and blocks hold buildings, plazas and car parks with alleys between them.
+  - Each city has a park, crane bridges between rooftops, and spread-out spawn zones and Tag spots.
+  - Every player gets the same city, generated from the same seed.
+  - The lobby has a **Random city / Classic city** choice. Classic is the old hand-made map.
+- **More music:** three new built-in songs, **Rooftop Run** (174 BPM), **Neon Chase** (128 BPM) and **Last Stand** (140 BPM), alongside the Tag Rush Theme. They play one after another, about a minute each.
+- **Music player:** the pause menu has one in its bottom-right corner, with previous, play/pause, next and a volume slider.
+
+### Changed
+- **Timer:** it now keeps running while the Tag is on the ground. It still doesn't start until the Tag's first pickup. If time runs out while the Tag is down, the team that held it last wins the round.
+- **Pause menu:** now just Resume, Settings, Customization, End Match (host only) and Quit (Close Server for the host).
+- **Sniper:** its shot is 60% louder.
+- **Teammate names:** 50% bigger.
+- **Foliage:** tree crowns, potted plants and bushes no longer have collision. Tree trunks still do.
+
+### Fixed
+- **Router port:** leaving a lobby now actually closes the port that UPnP opened. Before, it stayed open on the router.
+
 ## 0.3.1
 
 ### Fixed

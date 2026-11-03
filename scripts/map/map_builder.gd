@@ -17,7 +17,7 @@ const L_PLAYER := 4
 const L_DOOR := 8
 const L_SOLID := 16  # ground and boundary fence (never passable)
 const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
-const DECOR := 0     # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them), bushes
+const DECOR := 0     # visual only, no collision: flat floor markings, bleacher steps (a ramp covers them); foliage never collides
 
 const WALL_T := 0.3
 const SLAB_T := 0.3
@@ -80,7 +80,7 @@ var has_park := true
 var map_size := MapData.DEFAULT_SIZE
 var bounds := Rect2()            # playable area (inside the fence), metres
 var min_spawn_dist := 70.0       # minimum distance between the two teams' spawn zones
-var _active: Array = []          # MapData.BUILDINGS entries built for this size
+var _active: Array = []          # layout building entries built for this size
 
 # Chunk accumulators
 var _chunk: Node3D
@@ -110,18 +110,29 @@ var _detail := true
 var _avoid: Array = []       # Vector3: spawn zones + Tag spots
 var _junctions: Array = []   # Rect2: where roads cross
 var _door_pts: Array = []    # Vector2: ground-floor door centres (props keep clear)
-var _lots: Array = []        # Rect2: lots of buildings cut from a smaller map
+var _lots: Array = []        # Rect2: car parks (cut building lots, or from the layout)
+var _dumpsters: Array = []   # sketch-pixel points from the layout
+var park_name := MapData.PARK_NAME
+var bridges: Array = []      # [building A id, building B id, material]
 
 
-func build(parent: Node3D, size := MapData.DEFAULT_SIZE) -> void:
+## seed 0 builds the classic hand-made city; any other seed a random one
+## (CityGen). Every peer passes the same size and seed, so they get the same map.
+func build(parent: Node3D, size := MapData.DEFAULT_SIZE, seed := 0) -> void:
 	root = parent
-	rng.seed = 424242
+	rng.seed = 424242 if seed == 0 else seed
 	map_size = size if MapData.valid_size(size) else MapData.DEFAULT_SIZE
 	bounds = MapData.size_bounds(map_size)
 	min_spawn_dist = MapData.SIZES[map_size].min_spawn_dist
+	var layout := MapData.classic_layout() if seed == 0 else CityGen.generate(map_size, seed)
+	park_name = str(layout.park_name)
+	bridges = layout.bridges
+	_dumpsters = layout.dumpsters
+	for p in layout.parking:
+		_lots.append(MapData.px_rect([p.position.x, p.position.y, p.end.x, p.end.y]))
 	# Only buildings that fit entirely inside the fence are built.
 	var excluded: Array = []
-	for b in MapData.BUILDINGS:
+	for b in layout.buildings:
 		var br := MapData.px_rect(b[3])
 		if bounds.encloses(br):
 			_active.append(b)
@@ -150,20 +161,22 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE) -> void:
 	root.add_child(_solid_body)
 
 	# Spawn zones and Tag spots: inside the fence and not in a removed building's lot.
-	for d in MapData.SPAWN_DOTS:
+	for d in layout.spawn_dots:
 		var p := MapData.px(d[0], d[1])
 		if _usable_point(p, excluded):
 			spawn_dots.append(Vector3(p.x, 0.0, p.y))
-	for o in MapData.OBJECTIVES:
+	for o in layout.objectives:
 		var p := MapData.px(o[0], o[1])
 		if _usable_point(p, excluded):
 			objectives.append({"pos": Vector3(p.x, 0.0, p.y), "name": o[2]})
-	for r in MapData.ROADS:
+	for r in layout.roads:
 		var clipped := MapData.px_rect(r).intersection(bounds)
 		if clipped.size.x > 1.0 and clipped.size.y > 1.0:
 			road_rects.append(clipped)
-	park_rect = MapData.px_rect(MapData.PARK_RECT)
-	has_park = bounds.encloses(park_rect)
+	has_park = not layout.park.is_empty()
+	if has_park:
+		park_rect = MapData.px_rect(layout.park)
+		has_park = bounds.encloses(park_rect)
 
 	_begin_chunk("Streets")
 	_build_ground()
@@ -300,17 +313,10 @@ func cyl(c: Vector3, r: float, h: float, col: Color, layer := L_WALL, detail := 
 		_add_shape(layer, _cyl_shape(r, h), Transform3D(Basis.IDENTITY, c))
 
 
-## Squashed sphere (tree crowns, plants, bushes). Collides as a sphere that fits
-## inside it; bushes pass DECOR so you can walk through them.
-func sphere(c: Vector3, r: float, col: Color, layer := L_WALL) -> void:
+## Squashed sphere: only used for foliage (tree crowns, potted plants, bushes),
+## and nothing leafy has collision, so these are visual only. Trunks still collide.
+func sphere(c: Vector3, r: float, col: Color) -> void:
 	_spheres.append([Transform3D(Basis.from_scale(Vector3(r, r * 0.85, r) * 2.0), c), col])
-	if layer != DECOR:
-		var key := "s%d" % roundi(r * 85.0)
-		if not _shape_cache.has(key):
-			var sh := SphereShape3D.new()
-			sh.radius = r * 0.85
-			_shape_cache[key] = sh
-		_add_shape(layer, _shape_cache[key], Transform3D(Basis.IDENTITY, c))
 
 
 func _label(text: String, pos: Vector3, yaw: float, size := 96, col := Color.WHITE) -> void:
@@ -410,7 +416,7 @@ func _build_street_props() -> void:
 	_build_sidewalks()
 	_build_parking_lots()
 	_build_squares()
-	for p in [[1480, 1560], [1820, 1580], [480, 120], [1300, 900], [420, 860], [1030, 1380]]:
+	for p in _dumpsters:
 		var c := MapData.px(p[0], p[1])
 		if _street_clear(c, 0.8, 1.2) and not _on_road(c, 0.5):
 			box(Vector3(c.x, 0.7, c.y), Vector3(2.0, 1.4, 1.2), Color("3f6a4a"), L_WALL)
@@ -668,8 +674,8 @@ func _build_squares() -> void:
 ## Leafy bush: blocks sight but not bullets.
 func _bush(c: Vector3) -> void:
 	var r := rng.randf_range(0.9, 1.3)
-	sphere(c + Vector3(0, r * 0.75, 0), r, Color("4f8a3a").lerp(Color("6aa84f"), rng.randf()), DECOR)
-	sphere(c + Vector3(r * 0.6, r * 0.6, r * 0.3), r * 0.7, Color("5a9a45"), DECOR)
+	sphere(c + Vector3(0, r * 0.75, 0), r, Color("4f8a3a").lerp(Color("6aa84f"), rng.randf()))
+	sphere(c + Vector3(r * 0.6, r * 0.6, r * 0.3), r * 0.7, Color("5a9a45"))
 
 
 func _van(c: Vector3, along_x: bool, col: Color) -> void:
@@ -1509,10 +1515,14 @@ func _build_park() -> void:
 	var r := park_rect
 	var x0 := r.position.x
 	var z0 := r.position.y
+	# Layout positions are from the classic 37 x 44 m park, scaled to this one
+	# (the court, playground and pond keep their size).
+	var kx := r.size.x / 37.0
+	var kz := r.size.y / 44.0
 	box(Vector3(r.get_center().x, 0.02, r.get_center().y), Vector3(r.size.x, 0.04, r.size.y), GRASS, DECOR)
-	_label(MapData.PARK_NAME.to_upper(), Vector3(r.get_center().x, 3.0, r.end.y + 0.5), 0.0, 96, Color("d8f0c0"))
+	_label(park_name.to_upper(), Vector3(r.get_center().x, 3.0, r.end.y + 0.5), 0.0, 96, Color("d8f0c0"))
 	# Basketball court (left side)
-	var court := Rect2(x0 + 2.5, z0 + 13.0, 14.0, 26.0)
+	var court := Rect2(x0 + 2.5 * kx, z0 + minf(13.0 * kz, r.size.y - 27.0), 14.0, 26.0)
 	var cc := court.get_center()
 	box(Vector3(cc.x, 0.05, cc.y), Vector3(court.size.x, 0.06, court.size.y), Color("c0703a"), DECOR)
 	box(Vector3(cc.x, 0.085, cc.y), Vector3(court.size.x, 0.02, 0.12), WHITE, DECOR)
@@ -1526,7 +1536,7 @@ func _build_park() -> void:
 	for s: float in [-1.0, 1.0]:
 		box(Vector3(cc.x, 1.2, court.position.y - 0.4 if s < 0 else court.end.y + 0.4), Vector3(court.size.x - 4.0, 2.4, 0.08), Color("55625a"), L_WALL)
 	# Playground tower (orange block on the sketch) - verticality
-	var pg := MapData.px_rect([815, 360, 895, 412])
+	var pg := Rect2(x0 + 6.5 * kx - 4.0, z0 + 5.1 * kz - 2.6, 8.0, 5.2)
 	var pc := pg.get_center()
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
@@ -1540,12 +1550,13 @@ func _build_park() -> void:
 	box(Vector3(pc.x + 1.6 + 2.1, 1.25, pc.y), Vector3(5.0, 0.2, 1.2), Color("3f6fa8"), L_FLOOR, false, Basis(Vector3(0, 0, 1), -th))
 	box(Vector3(pc.x - 1.6 - 2.1, 1.25, pc.y), Vector3(5.0, 0.2, 1.2), Color("e06a2a"), L_FLOOR, false, Basis(Vector3(0, 0, 1), th))
 	# Pond (blue blobs on the sketch) - shallow water, walkable
-	for blob in [[1075, 620, 3.8], [1060, 665, 3.6], [1035, 700, 3.4], [1050, 725, 2.6]]:
-		var p := MapData.px(blob[0], blob[1])
+	for blob in [[28.5, 28.5, 3.8], [27.0, 33.0, 3.6], [24.5, 36.5, 3.4], [26.0, 39.0, 2.6]]:
+		var p := Vector2(x0 + blob[0] * kx, z0 + blob[1] * kz)
 		cyl(Vector3(p.x, 0.05, p.y), blob[2] + 0.4, 0.06, Color("9a8a6a"), DECOR)
 		cyl(Vector3(p.x, 0.07, p.y), blob[2], 0.06, Color("3fa8e0"), DECOR)
 	# Trees and benches
-	var avoid := [court.grow(1.5), pg.grow(3.0), MapData.px_rect([990, 580, 1110, 750]).grow(1.0)]
+	var pond := Rect2(x0 + 20.0 * kx, z0 + 24.5 * kz, 12.0 * kx, 17.0 * kz)
+	var avoid := [court.grow(1.5), pg.grow(3.0), pond.grow(1.0)]
 	for o in objectives:
 		avoid.append(Rect2(o.pos.x - 3.0, o.pos.z - 3.0, 6.0, 6.0))
 	var placed := 0
@@ -1574,17 +1585,6 @@ func _build_park() -> void:
 
 # ================================================================ cranes & rooftop bridges
 
-# [building A id, building B id, material]
-const BRIDGES := [
-	[1, 2, "planks"],
-	[10, 15, "planks"],
-	[15, 16, "metal"],
-	[13, 14, "metal"],
-	[4, 5, "planks"],
-	[17, 18, "metal"],
-]
-
-
 func _building(id: int) -> Dictionary:
 	for b in buildings:
 		if b.id == id:
@@ -1599,7 +1599,7 @@ func _build_cranes() -> void:
 	var avoid: Array = spawn_dots.duplicate()
 	for o in objectives:
 		avoid.append(o.pos)
-	for br in BRIDGES:
+	for br in bridges:
 		var a := _building(br[0])
 		var b := _building(br[1])
 		if a.is_empty() or b.is_empty():

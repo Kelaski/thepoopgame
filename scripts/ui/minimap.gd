@@ -50,7 +50,7 @@ func _draw_labels(builder) -> void:
 	for b in builder.buildings:
 		_draw_label(font, fs, str(b.name), _r(b.rect))
 	if builder.has_park:
-		_draw_label(font, fs, MapData.PARK_NAME, _r(builder.park_rect))
+		_draw_label(font, fs, builder.park_name, _r(builder.park_rect))
 
 
 func _draw_label(font: Font, fs: int, text: String, rect: Rect2) -> void:

@@ -306,7 +306,13 @@ func _close_port_async(u: UPNP, port: int) -> void:
 	if _close_thread:
 		_close_thread.wait_to_finish()
 	_close_thread = Thread.new()
-	_close_thread.start(u.delete_port_mapping.bind(port, "UDP"))
+	# The router object is passed as an argument so the thread keeps it alive (a
+	# Callable on its method alone doesn't hold a reference).
+	_close_thread.start(_delete_mapping.bind(u, port))
+
+
+static func _delete_mapping(u: UPNP, port: int) -> void:
+	u.delete_port_mapping(port, "UDP")
 
 
 func team_count(team: int) -> int:

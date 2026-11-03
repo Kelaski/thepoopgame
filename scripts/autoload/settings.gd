@@ -35,6 +35,7 @@ const DEFAULTS := {
 	"host_port": 27015,  # UDP port you host on (changeable in the lobby)
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
+	"map_random": true,   # host: a new random city every match (false = the classic city)
 	"addon": "trackstar",
 	# Controls
 	"sensitivity": 0.10,

@@ -62,7 +62,7 @@ const VM_ADS := Vector3(0.0, -0.135, -0.36)
 const VM_ADS_HOLO := Vector3(0.0, -0.118, -0.3)
 const VM_ADS_IRONS := Vector3(0.0, -0.08, -0.3)
 const GLINT_MIN_DOT := 0.6  # sniper glint shows when they aim within ~53 degrees of you
-const NAMEPLATE_SCALE := 0.1  # teammate names are 10% of their old size (shrunk by 90%)
+const NAMEPLATE_SCALE := 0.15  # teammate name size vs the original (0.1 was too small; +50%)
 
 static var _mesh_cache := {}
 

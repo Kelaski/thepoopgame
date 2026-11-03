@@ -12,7 +12,7 @@ Everything (map, furniture, sounds, UI) is generated in code, so the repository 
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** (Run Project).
 
-The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** and **Quit**. Your player name is set in Customization. The game version is shown in the bottom-left corner of every screen (patch notes are in [CHANGELOG.md](CHANGELOG.md)).
+The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** and **Quit**. In a match, **Esc** opens the pause menu: **Resume**, **Settings**, **Customization**, **End Match** (host only) and **Quit**, which leaves to the main menu (the host's button is **Close Server**). A music player sits in its bottom-right corner. Your player name is set in Customization. The game version is shown in the bottom-left corner of every screen (patch notes are in [CHANGELOG.md](CHANGELOG.md)).
 
 ### Hosting / joining
 
@@ -57,7 +57,7 @@ Optional command-line flags (after `--`):
 There is no sprint key: moving forward is always a sprint. Aiming, crouching or holding a lean key slows you to a walk.
 If you played an older version, the old default binds for lean right (C), addon (F) and interact (E) move to the new defaults automatically. Binds you changed yourself are kept.
 
-A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and has its own volume slider.
+Four built-in songs play during matches: **Tag Rush Theme** (160 BPM), **Rooftop Run** (174 BPM), **Neon Chase** (128 BPM) and **Last Stand** (140 BPM). They are synthesized in code on a background thread when the game starts. Each one plays for a minute before moving on to the next, and music has its own volume slider.
 
 ### Custom music & playlist (Customization → Music & Playlist, from the main menu, lobby or pause menu)
 
@@ -66,7 +66,7 @@ A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and 
 - Importing runs in the background, so the game keeps running (important when you're the host) and you can close the menu while it works.
 - **Formats:** OGG, MP3 and WAV (8/16/24/32-bit integer or 32/64-bit float PCM) work out of the box; other WAV encodings fall back to ffmpeg. FLAC, M4A/AAC, Opus, WMA, AIFF, WebM/MKA, ALAC and more are converted on import, which needs [ffmpeg](https://ffmpeg.org) installed and on your PATH.
 - In the playlist you can turn songs on and off, reorder them, preview them and remove them.
-- **Play during matches** chooses between the built-in beat, your playlist, or both. There's also a shuffle option. Use **Skip Song** in the pause menu to move on, and a "Now playing" toast shows each new song. Editing the playlist mid-match keeps the current song playing unless you disable or remove it.
+- **Play during matches** chooses between the built-in songs, your playlist, or both. There's also a shuffle option. The pause menu has a music player in the bottom-right corner (previous, play/pause, next and volume), and a "Now playing" toast shows each new song. Editing the playlist mid-match keeps the current song playing unless you disable or remove it.
 
 ### Colour customization (Customization → Colours, from the main menu, lobby or pause menu)
 
@@ -89,11 +89,11 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
   The objective is the red-dot location whose distance to the two teams is most even, with some randomness.
   Players are frozen for a 5 s countdown, then everyone rushes.
 - **The Tag:** the first player to touch it becomes the **Runner**. Their team defends and the timer starts at 2:00.
-- **Dropping:** when the Runner dies, the Tag drops where they died and the timer pauses.
+- **Dropping:** when the Runner dies, the Tag drops where they died and **the timer keeps running**. The clock only waits at the start of a round: it doesn't run until the Tag is picked up for the first time.
   - An enemy picks it up: their team becomes the defenders, and the timer resumes from the value at the drop **+10 s**.
   - A teammate picks it up: the timer resumes **+15 s**.
   - The timer is capped at 2:00.
-- **Winning a round:** the timer reaches 0 while the Tag is held. The holding team wins. First to 4 wins the match.
+- **Winning a round:** the timer reaches 0. The team holding the Tag wins, or, if it's on the ground, the team that held it last. First to 4 wins the match.
 - **Runner self-defence:** every kill the Runner gets takes 5 s off their team's timer.
 - **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
 - **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s). Every kill gives you back 30 HP (up to your max).
@@ -112,7 +112,7 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 | Assault Rifle | 33 body / 45 head, 22 / 30 beyond 25 m | 9.5 rps | 1.5x holo | 30-round magazine |
 | SMG | 19 / 26, 12 / 19 beyond 18 m | 13 rps | 1.2x holo | 40-round magazine |
 | Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1 rps | 1.15x irons | 12° cone, 6 shells |
-| Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready |
+| Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready. Its shot is 60% louder than before |
 | Spiked Bat | 35 per swing, ×1.1 for every m/s you're moving above your own sprint speed (compounding: +1 m/s 38.5, +2 42, +3 47, +5 56, +10 91, +14 133; capped at 300). Measured from your horizontal speed when you swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
 
 Every player holds a visible model of their weapon (the same model as your own first-person view), aimed up and down with where they're looking. When someone scopes in with the Sniper, their scope **glints**. The glint is brightest when they're aiming straight at you, shows only when they're looking within about 53° of you, and walls hide it.
@@ -148,14 +148,24 @@ The host picks **Small**, **Medium** or **Large** in the lobby (the last choice 
 | Medium | ~130 × 136 m | School, Bank, Diner, Arcade, Meridian Tower, Casino + park | 5 | 4 (Park, Bank, Tower, Casino) | Tower–Casino |
 | Large | 200 × 170 m | the whole city (all 18) + park | 10 | 8 | all 6 |
 
-Smaller sizes are cut-outs of the full city. Buildings that fit fully inside are kept and the fence moves in. Empty lots where a building was cut become car parks, and the minimap zooms to fit. Defined in `MapData.SIZES` (`scripts/map/map_data.gd`).
+The lobby also chooses the city:
+- **Random city** (the default): a new city is generated for every match, at the chosen size. The host picks the seed and every player builds the same city from it (`scripts/map/city_gen.gd`).
+  - Roads form a grid of uneven blocks, and each block is split into lots with alleys between them.
+  - A lot holds a building (16 types with random names, height and footprint), a plaza or a car park. Buildings of 4 storeys or more are capped at 30 × 25 m.
+  - One block near the middle becomes the park.
+  - Spawn zones are spread out over the junctions and plazas, and Tag spots over the park, open-plan buildings and plazas, away from the spawns.
+  - Cranes bridge the roofs of buildings facing each other across a road.
+  - Large maps get about 15–25 buildings, Medium 8–13 and Small 3–4.
+- **Classic city:** the hand-made city described below. Smaller sizes are cut-outs of it: buildings that fit fully inside are kept, the fence moves in, and empty lots where a building was cut become car parks.
+
+The minimap zooms to fit either way. Sizes are defined in `MapData.SIZES` (`scripts/map/map_data.gd`).
 
 ## The map
 
 The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.
 A fence with tall invisible collision surrounds it.
-Every object has collision: furniture, props, trees, lamps, the crane parts and so on. The exceptions are bushes (you can walk through them, but they block sight), flat floor markings and the bleacher steps, which a smooth ramp covers.
-Teammates' names float above their heads in small text.
+Every object has collision (furniture, props, tree trunks, lamps, the crane parts and so on) except anything leafy. Tree crowns, potted plants and bushes are visual only: you can walk and shoot through them, but they block sight. Flat floor markings and the bleacher steps (a smooth ramp covers them) have no collision either.
+Teammates' names float above their heads in small text (`NAMEPLATE_SCALE` in `scripts/player/player.gd`).
 
 | # | Building | Floors |
 |---|---|---|
@@ -220,7 +230,8 @@ scripts/
   data/addons.gd            # addon stats
   data/game_version.gd      # version number (major.minor.patch)
   data/join_code.gd         # join codes <-> IP address and port
-  map/map_data.gd           # layout transcribed from the sketch
+  map/map_data.gd           # classic layout transcribed from the sketch, map sizes
+  map/city_gen.gd           # random city layouts (one per match, from a seed)
   map/map_builder.gd        # procedural city, interiors, furniture, spawn points
   world/world.gd            # environment, players, Tag, FX, trails, heartbeat, respawn search
   world/door.gd             # hinged doors
@@ -264,8 +275,8 @@ You can also upload a **custom crosshair image** (with a scale slider) and a **c
 - **Reloading and magazine sizes** were added (R key), with the values above.
 - **Sniper:** inaccurate unless aimed. **Shotgun and sniper** pellets and rounds deal the same damage to the head (headshots still break Hider invisibility).
 - **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.
-- **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Bushes block sight but not bullets.
-- **Dropped-Tag timer:** the timer pauses while the Tag is on the ground. On pickup it resumes from the value at the drop +10 s (enemy) or +15 s (teammate), capped at 2:00.
+- **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Foliage blocks sight but not bullets.
+- **Dropped-Tag timer:** the timer keeps running while the Tag is on the ground (it only waits for the first pickup of a round). A pickup adds +10 s (enemy) or +15 s (teammate), capped at 2:00. If it runs out while the Tag is down, the team that held it last wins.
 - **Phantom's** 23 s cooldown starts when the phase ends. Trackstar's 30 s cooldown starts at activation, as specified.
 - Skywalker's double jump and Stalker's trails are passive, so the ability key does nothing for them.
 - **Grapple's** cooldown starts when the hook hits (like Trackstar's, from activation). A miss only costs 1 s so you can try again.

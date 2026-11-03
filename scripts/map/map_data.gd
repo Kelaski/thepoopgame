@@ -81,6 +81,36 @@ const ROADS := [
 ]
 
 
+# Crane bridges between rooftops: [building A id, building B id, material]
+const BRIDGES := [
+	[1, 2, "planks"],
+	[10, 15, "planks"],
+	[15, 16, "metal"],
+	[13, 14, "metal"],
+	[4, 5, "planks"],
+	[17, 18, "metal"],
+]
+
+# Dumpsters in the alleys near the tenements and warehouse (sketch pixels).
+const DUMPSTERS := [[1480, 1560], [1820, 1580], [480, 120], [1300, 900], [420, 860], [1030, 1380]]
+
+
+## The hand-made city from the sketch, in the layout format MapBuilder builds
+## (CityGen.generate makes random ones in the same format).
+static func classic_layout() -> Dictionary:
+	return {
+		"buildings": BUILDINGS,
+		"roads": ROADS,
+		"spawn_dots": SPAWN_DOTS,
+		"objectives": OBJECTIVES,
+		"park": PARK_RECT,
+		"park_name": PARK_NAME,
+		"bridges": BRIDGES,
+		"dumpsters": DUMPSTERS,
+		"parking": [],
+	}
+
+
 static func px(x: float, y: float) -> Vector2:
 	return Vector2(x * SCALE - HALF_X, y * SCALE - HALF_Z)
 
