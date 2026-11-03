@@ -118,10 +118,10 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 ### Movement
 
 Snappy ground acceleration, sprinting by default (9 m/s forward; 5 m/s strafing, backwards or leaning; 2.8 m/s crouched), crouch, and a momentum slide (crouch while sprinting). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
-Slide-jumping keeps your speed. Turning is quick: in the air your momentum swings towards the direction you're pressing (about 260°/s) without losing speed, slides steer at about 170°/s, and extra speed carried onto the ground turns at about 515°/s. Pulling backwards in the air brakes instead of turning.
+Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved.
 **Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
 Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
-**Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Touching the floor resets it.
+**Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
 **Leaning** (Q / E) peeks around corners and slows you to a walk. Your head hitbox moves with the lean, and walls limit how far you can lean.
 Doors fill their doorways exactly and swing open, away from you and at full speed, when you sprint or slide into them. **F** opens and closes them normally.
 

@@ -16,9 +16,6 @@ const ADS_MULT := 0.62
 const ACCEL := 60.0
 const DECEL := 45.0
 const AIR_ACCEL := 16.0
-const AIR_TURN_RATE := 4.5     # rad/s your air momentum turns towards your input
-const SLIDE_TURN_RATE := 3.0   # rad/s a slide steers (was ~1.2)
-const GROUND_TURN_RATE := 9.0  # rad/s while carrying extra speed on the ground
 const GRAVITY := 16.0
 const JUMP_V := 6.4
 const DJUMP_V := 7.0
@@ -33,6 +30,8 @@ const WALLJUMP_OUT := 6.0
 const WALLJUMP_UP := 6.2
 const WALLJUMP_FREE := 3           # wall jumps before fatigue sets in
 const WALLJUMP_FATIGUE := 0.75     # each later wall jump keeps 75% of the previous one's speed
+const FATIGUE_GRAVITY_STEP := 0.5  # ...and adds +50% gravity
+const FATIGUE_GRAVITY_MAX := 6.0   # up to 600%
 const LEAN_DIST := 0.45
 const LEAN_ROLL := 12.0
 const SLIDE_START_MIN := 5.5
@@ -668,7 +667,8 @@ func _physics_process(delta: float) -> void:
 			tangent = -tangent
 		# Wall runs hold you at running speed, but not once wall-jump fatigue sets in.
 		hvel = tangent * maxf(hvel.length(), SPRINT * _speed_mult() * 0.95 * _wall_fatigue()) - wall_normal * 1.0
-		velocity.y = maxf(velocity.y - WALLRUN_GRAVITY * delta, -1.5)
+		var fg := _fatigue_gravity()
+		velocity.y = maxf(velocity.y - WALLRUN_GRAVITY * fg * delta, -1.5 * fg)
 		var still_on_wall := _ray_hits(global_position + Vector3(0, 1.0, 0), -wall_normal * (RADIUS + 0.4))
 		if wallrun_t <= 0.0 or not still_on_wall or not forward_in or crouch_tap:
 			_end_wallrun()
@@ -686,7 +686,8 @@ func _physics_process(delta: float) -> void:
 				_slope_t = 0.0
 				spd += GRAVITY * downhill * delta
 				spd -= SLIDE_FRICTION * delta
-		slide_dir = _turn_toward(slide_dir, wish, SLIDE_TURN_RATE, delta)
+		if wish != Vector3.ZERO:
+			slide_dir = (slide_dir + wish * delta * 1.2).normalized()
 		hvel = slide_dir * clampf(spd, 0.0, MAX_SLIDE_SPEED)
 		# Midair slides carry on until you land; on the ground they run until momentum is gone.
 		var end_slide: bool = (on_floor and spd < SLIDE_END) or (not bool(Settings.g("toggle_crouch")) and not want_crouch)
@@ -707,13 +708,12 @@ func _physics_process(delta: float) -> void:
 		var target := wish * base
 		if on_floor:
 			if wish != Vector3.ZERO and speed_now > base + 0.2 and hvel.normalized().dot(wish) > 0.5:
-				# Keep some slide-jump momentum when landing (but turn quickly with it).
-				hvel = _turn_toward(hvel, wish, GROUND_TURN_RATE, delta).move_toward(target, 14.0 * delta)
+				# Keep some slide-jump momentum when landing.
+				hvel = hvel.move_toward(target, 14.0 * delta)
 			else:
 				hvel = hvel.move_toward(target, (ACCEL if wish != Vector3.ZERO else DECEL) * delta)
 		else:
 			var cap := maxf(speed_now, base)
-			hvel = _turn_toward(hvel, wish, AIR_TURN_RATE, delta)
 			hvel += wish * AIR_ACCEL * delta
 			if hvel.length() > cap:
 				hvel = hvel.normalized() * cap
@@ -721,7 +721,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- Gravity & jumping
 	if not on_floor and not wallrunning:
-		velocity.y -= GRAVITY * delta
+		velocity.y -= GRAVITY * _fatigue_gravity() * delta
 	var jump_tap := can_input and not frozen and Input.is_action_just_pressed("jump")
 	if jump_tap:
 		if wallrunning or (_wall_jump_t > 0.0 and not on_floor):
@@ -874,18 +874,10 @@ func _wall_fatigue() -> float:
 	return pow(WALLJUMP_FATIGUE, maxi(0, wall_jumps - WALLJUMP_FREE))
 
 
-## Rotates a horizontal velocity (or direction) towards the move input at up to
-## rate radians per second, keeping its speed. Inputs more than ~115 degrees away
-## (pulling back) aren't turned towards; those just brake through acceleration.
-func _turn_toward(v: Vector3, wish: Vector3, rate: float, delta: float) -> Vector3:
-	if wish == Vector3.ZERO or v.length() < 0.3:
-		return v
-	var cur := Vector2(v.x, v.z)
-	var ang := cur.angle_to(Vector2(wish.x, wish.z))
-	if absf(ang) > deg_to_rad(115.0):
-		return v
-	cur = cur.rotated(clampf(ang, -rate * delta, rate * delta))
-	return Vector3(cur.x, v.y, cur.y)
+## Gravity multiplier from wall-jump fatigue: 1.0 for your first WALLJUMP_FREE wall
+## jumps, then +50% per extra one (1.5, 2.0, 2.5...) up to 6x, until you touch the floor.
+func _fatigue_gravity() -> float:
+	return minf(1.0 + FATIGUE_GRAVITY_STEP * maxi(0, wall_jumps - WALLJUMP_FREE), FATIGUE_GRAVITY_MAX)
 
 
 func _end_wallrun() -> void:
