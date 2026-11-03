@@ -7,6 +7,22 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.12.0
+
+### Added
+- **Time of day:** every match starts at a random time of day: **Morning**, **Afternoon**, **Evening** or **Night**. After each round, the host picks a different one, and over 10 seconds everyone's sun, sky, fog and ambient light blend smoothly into it.
+  - **Morning:** low, warm sun from the east and a soft sky.
+  - **Afternoon:** the classic bright look.
+  - **Evening:** an orange sunset from the west. The street lamps start to come on.
+  - **Night:** dim moonlight and a dark blue sky, with street lamps lighting the sidewalks. Bulbs, screens and neon stand out.
+  - Your sky colours from Customization are tinted to match. Picture skyboxes get dimmer at night.
+- **Street lamp lights:** street lamps cast real light in the evening and at night. They follow the **Interior lights** setting: Off turns them off, and Low keeps every other one.
+
+### Changed
+- **Wider stairs:** each stair lane is 2.85 m wide instead of 2.45 m (the whole stairwell is 5.8 m instead of 5 m), and the landings at the bottom and top of every flight are 1.6 m deep instead of 1.2 m.
+- **Rooms moved back:** rooms on residential and school floors start 0.8 m further from the wall to keep the corridor past the wider stairwell clear. A building now needs to be 0.8 m deeper to get rooms.
+- **Tag spots inside buildings:** these now need a building at least 14 m wide, so the Tag never lands on the stairwell.
+
 ## 0.11.0
 
 ### Added

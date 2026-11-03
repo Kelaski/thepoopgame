@@ -178,8 +178,8 @@ static func generate(size: String, seed: int) -> Dictionary:
 		tag_names.append(park_name)
 	for b in buildings:
 		var r: Array = b[3]
-		# Long enough that the middle is clear of the stairwell at the end.
-		if b[2] in TAG_TYPES and maxf(r[2] - r[0], r[3] - r[1]) >= 240.0:
+		# Big enough that the middle is clear of the stairwell at the end.
+		if b[2] in TAG_TYPES and maxf(r[2] - r[0], r[3] - r[1]) >= 240.0 and minf(r[2] - r[0], r[3] - r[1]) >= 140.0:
 			tag_cands.append(Vector2((r[0] + r[2]) * 0.5, (r[1] + r[3]) * 0.5))
 			tag_names.append(b[1])
 	for i in plazas.size():

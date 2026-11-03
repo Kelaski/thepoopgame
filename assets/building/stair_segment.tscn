@@ -10,10 +10,10 @@ rim = 0.35
 rim_tint = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_sh7r8"]
-size = Vector3(0.9633981, 0.3, 2.45)
+size = Vector3(0.9633981, 0.3, 2.85)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_yjcxg"]
-size = Vector3(0.9633981, 0.3, 2.45)
+size = Vector3(0.9633981, 0.3, 2.85)
 
 [node name="StairSegment" type="Node3D" unique_id=1431859730]
 

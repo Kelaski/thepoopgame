@@ -20,6 +20,7 @@ signal announce(text: String, color: Color)
 signal local_hit(damage: float, head: bool, killed: bool)
 signal local_damaged(hp: float)
 signal local_damaged_by(shooter: int, pos: Vector3)  # for the damage direction indicator
+signal time_of_day_changed  # World blends to the new time of day
 
 enum Phase { LOBBY, PREROUND, RUSH, HELD, DROPPED, ROUND_END, MATCH_END }
 
@@ -38,9 +39,12 @@ const TEAM_PICKUP_BONUS := 15.0
 const RUNNER_KILL_REWARD := 5.0
 const KILL_HEAL := 30.0  # health given back to the killer
 
+const TIMES_OF_DAY := ["Morning", "Afternoon", "Evening", "Night"]
+
 var world = null  # World node while a match is loaded
 var map_size := MapData.DEFAULT_SIZE  # chosen by the host; replicated to everyone
 var map_seed := 0  # 0 = classic city, otherwise the random city's seed (new every match)
+var time_of_day := 1  # index into TIMES_OF_DAY; the host picks a new one after every round
 var in_match := false
 var ui_open := false
 var typing := false  # chat box has focus: gameplay keys are ignored
@@ -118,7 +122,8 @@ func server_start_match() -> void:
 		Net.players[id].deaths = 0
 	Net.broadcast_roster()
 	map_seed = randi_range(1, 2000000000) if Settings.g("map_random") else 0
-	_start_match.rpc(map_size, map_seed)
+	time_of_day = randi() % TIMES_OF_DAY.size()
+	_start_match.rpc(map_size, map_seed, time_of_day)
 	get_tree().create_timer(1.0).timeout.connect(_server_begin_round)
 
 
@@ -133,7 +138,7 @@ func on_player_joined(id: int) -> void:
 	alive_ids[id] = false
 	hp[id] = max_hp_of(id)
 	respawn_left[id] = RESPAWN_TIME
-	_start_match.rpc_id(id, map_size, map_seed)
+	_start_match.rpc_id(id, map_size, map_seed, time_of_day)
 	_late_sync.rpc_id(id, alive_ids, objective, scores, round_num)
 	_push_state()
 
@@ -329,6 +334,9 @@ func _server_round_won(team: int) -> void:
 		phase = Phase.ROUND_END
 		phase_time = ROUND_END_TIME
 		_announce.rpc("%s team wins round %d" % [Mats.team_name(team), round_num], Mats.team_color(team))
+		# A new time of day for the next round (always a different one).
+		var next := (time_of_day + 1 + randi() % (TIMES_OF_DAY.size() - 1)) % TIMES_OF_DAY.size()
+		_set_time_of_day.rpc(next)
 	_push_state()
 
 
@@ -484,14 +492,21 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 # ==================================================================== broadcasts
 
 @rpc("authority", "call_local", "reliable")
-func _start_match(size: String, seed: int) -> void:
+func _start_match(size: String, seed: int, tod: int) -> void:
 	_set_map_size_local(size)
 	map_seed = seed
+	time_of_day = tod
 	in_match = true
 	phase = Phase.LOBBY
 	scores = [0, 0]
 	round_num = 0
 	match_started.emit()
+
+
+@rpc("authority", "call_local", "reliable")
+func _set_time_of_day(tod: int) -> void:
+	time_of_day = clampi(tod, 0, TIMES_OF_DAY.size() - 1)
+	time_of_day_changed.emit()
 
 
 @rpc("authority", "call_local", "reliable")

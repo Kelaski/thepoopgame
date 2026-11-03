@@ -33,6 +33,9 @@ const MODULE := 2.0
 const MODULE_H := 4.0
 const STAIR_RUN := 0.8
 const STAIR_RISE := 0.5
+const STAIR_W := 5.8        # stairwell width across its two lanes (stair_segment is STAIR_W / 2 - 0.05 wide)
+const STAIR_LANDING := 1.6  # landing before and after each flight
+const ROOM_V := STAIR_W + 1.5  # rooms start this far in, leaving a corridor past the stairwell
 const ROOM_MODULES := 3  # interior rooms are 3 modules (6 m) wide
 const WINDOW_PIECES := ["building/wall_window_small", "building/wall_window_wide", "building/wall_window_tall"]
 const FURNITURE_VIS_RANGE := 75.0
@@ -88,6 +91,7 @@ var objectives: Array = []       # {pos: Vector3, name: String}
 var spawn_points: Array = []     # Vector3 candidate respawn points
 var doors: Array = []            # Door
 var lights: Array = []           # OmniLight3D from lamp prefabs (World thins them per the Interior lights setting)
+var night_lights: Array = []     # OmniLight3D that only shine in the evening and at night (street lamps)
 var buildings: Array = []        # {id, name, rect: Rect2, floors, fh, top, color}
 var road_rects: Array = []       # Rect2 (clipped to the map bounds)
 var park_rect := Rect2()
@@ -396,7 +400,13 @@ func _prefab(name: String, xf: Transform3D, slots := {}) -> void:
 		l.distance_fade_enabled = true
 		l.distance_fade_length = 8.0
 		_chunk.add_child(l)
-		lights.append(l)
+		if li.night:
+			l.set_meta("energy", li.energy)
+			l.distance_fade_begin = 50.0
+			l.visible = false
+			night_lights.append(l)
+		else:
+			lights.append(l)
 
 
 ## Transform for a prop at c: yaw (radians) and optional stretch.
@@ -892,7 +902,7 @@ func _build_building(b: Array) -> void:
 	var vmax := inner.size.y if _ax else inner.size.x
 	_umax = umax
 	var run := fh * 1.6  # = (fh / STAIR_RISE) segments of STAIR_RUN
-	var S := run + 2.4
+	var S := run + STAIR_LANDING * 2.0
 	# Stairwells: one at the start of the long axis, and a second one at the far
 	# end whenever the building is long enough.
 	var flips := [false]
@@ -902,8 +912,8 @@ func _build_building(b: Array) -> void:
 	var holes: Array = []
 	for fl: bool in flips:
 		_flip = fl
-		stairs.append(_uv_rect(0, 0, S, 5.0))
-		holes.append(_uv_rect(1.2, 0, 1.2 + run, 5.0))
+		stairs.append(_uv_rect(0, 0, S, STAIR_W))
+		holes.append(_uv_rect(STAIR_LANDING, 0, STAIR_LANDING + run, STAIR_W))
 	_flip = false
 
 	# --- Objective inside this building?
@@ -919,7 +929,7 @@ func _build_building(b: Array) -> void:
 		room_floors = range(floors)
 	elif type in ["apartments", "rundown", "rundown2"]:
 		room_floors = range(1, floors)
-	var can_rooms := vmax - 6.5 >= 4.5
+	var can_rooms := vmax - ROOM_V >= 4.5
 	var nmod := roundi(umax / MODULE)
 	var nrooms := maxi(1, nmod / ROOM_MODULES)
 	var room_walls := []  # u of the walls between rooms
@@ -993,14 +1003,14 @@ func _build_building(b: Array) -> void:
 	var room_forbid := []
 	if can_rooms and not room_floors.is_empty():
 		# Always keep the corridor beside the partition walkable.
-		room_forbid.append(_uv_rect(0, 4.5, umax, 6.5))
-		# partition line (v = 6.5) and cross walls
-		room_forbid.append(_uv_rect(0, 6.0, umax, 7.0))
+		room_forbid.append(_uv_rect(0, ROOM_V - 2.0, umax, ROOM_V))
+		# partition line (v = ROOM_V) and cross walls
+		room_forbid.append(_uv_rect(0, ROOM_V - 0.5, umax, ROOM_V + 0.5))
 		for cu: float in room_walls:
-			room_forbid.append(_uv_rect(cu - 0.5, 6.5, cu + 0.5, vmax))
+			room_forbid.append(_uv_rect(cu - 0.5, ROOM_V, cu + 0.5, vmax))
 		for dm: int in room_doors:
 			var dc := (dm + 0.5) * MODULE
-			room_forbid.append(_uv_rect(dc - 1.3, 4.8, dc + 1.3, 8.2))
+			room_forbid.append(_uv_rect(dc - 1.3, ROOM_V - 1.7, dc + 1.3, ROOM_V + 1.7))
 		var partition := {"color": st.trim.lerp(WHITE, 0.6)}
 		var cross := {"color": st.wall.lerp(WHITE, 0.5)}
 		var u_yaw := 0.0 if _ax else -PI * 0.5   # walls running along u
@@ -1008,21 +1018,21 @@ func _build_building(b: Array) -> void:
 		for k in room_floors:
 			var y0: float = k * fh
 			var h := fh - SLAB_T
-			# Partition along u at v = 6.5: one module per MODULE, doors in the room middles.
+			# Partition along u at v = ROOM_V: one module per MODULE, doors in the room middles.
 			for m in nmod:
-				var p := _uv((m + 0.5) * MODULE, 6.5)
+				var p := _uv((m + 0.5) * MODULE, ROOM_V)
 				var at := Vector3(p.x, y0, p.y)
 				if m in room_doors:
 					_prefab("building/wall_interior_door", _at(at, u_yaw), partition)
 					_prefab("building/wall_interior", _at(at + Vector3(0, DOOR_H, 0), u_yaw, Vector3(MODULE, h - DOOR_H, 1)), partition)
 					var along: float = (_o.x if _ax else _o.y) + (m + 0.5) * MODULE
-					_make_door(_ax, (_o.y if _ax else _o.x) + 6.5, along, y0, st.door, DOOR_W - 0.1)
+					_make_door(_ax, (_o.y if _ax else _o.x) + ROOM_V, along, y0, st.door, DOOR_W - 0.1)
 				else:
 					_prefab("building/wall_interior", _at(at, u_yaw, Vector3(MODULE, h, 1)), partition)
 			# Walls between rooms, from the partition to the outer wall.
 			for cu: float in room_walls:
-				var p := _uv(cu, (6.5 + vmax) * 0.5)
-				_prefab("building/wall_interior", _at(Vector3(p.x, y0, p.y), v_yaw, Vector3(vmax - 6.5, h, 1)), cross)
+				var p := _uv(cu, (ROOM_V + vmax) * 0.5)
+				_prefab("building/wall_interior", _at(Vector3(p.x, y0, p.y), v_yaw, Vector3(vmax - ROOM_V, h, 1)), cross)
 
 	# --- Furnish every storey (and specials), then decorate
 	var floor_zones := []
@@ -1036,9 +1046,9 @@ func _build_building(b: Array) -> void:
 			zones.append_array(obj_forbid)
 		if k in room_floors and can_rooms:
 			zones.append_array(room_forbid)
-			walls.append(_uv_rect(0, 6.3, umax, 6.7))
+			walls.append(_uv_rect(0, ROOM_V - 0.2, umax, ROOM_V + 0.2))
 			for cu: float in room_walls:
-				walls.append(_uv_rect(cu - 0.2, 6.5, cu + 0.2, vmax))
+				walls.append(_uv_rect(cu - 0.2, ROOM_V, cu + 0.2, vmax))
 		floor_zones.append(zones)
 		floor_walls.append(walls)
 		_occupied = []
@@ -1088,13 +1098,13 @@ func _build_stairwell(floors: int, fh: float, run: float, top: float, st: Dictio
 	for k in floors:
 		var h0 := k * fh
 		var lane_a := k % 2 == 0
-		var vc := 1.25 if lane_a else 3.75
+		var vc := STAIR_W * (0.25 if lane_a else 0.75)
 		for i in segs:
-			var u := 1.2 + STAIR_RUN * i if lane_a else 1.2 + run - STAIR_RUN * i
+			var u := STAIR_LANDING + STAIR_RUN * i if lane_a else STAIR_LANDING + run - STAIR_RUN * i
 			var p := _uv(u, vc)
 			_prefab("building/stair_segment", _at(Vector3(p.x, h0 + STAIR_RISE * i, p.y), _yaw_x(ud if lane_a else -ud)), steps)
 		# Divider between the two lanes for this storey
-		var dp := _uv(1.2 + run * 0.5, 2.5)
+		var dp := _uv(STAIR_LANDING + run * 0.5, STAIR_W * 0.5)
 		_prefab("building/stair_divider", _at(Vector3(dp.x, h0, dp.y), u_yaw, Vector3(run, fh - SLAB_T, 1)), trim)
 		# Railing on the open edge of the hole (upper floors)
 		if k >= 1:
@@ -1104,7 +1114,7 @@ func _build_stairwell(floors: int, fh: float, run: float, top: float, st: Dictio
 
 func _stair_rail(y: float, count: int, yaw: float, cols: Dictionary) -> void:
 	for j in count:
-		var p := _uv(1.2 + STAIR_RUN * (j + 0.5), 5.06)
+		var p := _uv(STAIR_LANDING + STAIR_RUN * (j + 0.5), STAIR_W + 0.06)
 		_prefab("building/rail_section", _at(Vector3(p.x, y, p.y), yaw), cols)
 
 
@@ -1168,11 +1178,11 @@ func _door_hits_rooms(side: int, t: float, x0: float, z0: float, x1: float, z1: 
 		p = Vector2(x0 if side == 2 else x1, t)
 	var u := (p.x - _o.x) if _ax else (p.y - _o.y)
 	var v := (p.y - _o.y) if _ax else (p.x - _o.x)
-	if v > 6.5:
+	if v > ROOM_V:
 		for cu: float in room_walls:
 			if absf(u - cu) < 1.4:
 				return true
-	if absf(v - 6.5) < 1.4 and (u < 0.5 or u > umax - 0.5):
+	if absf(v - ROOM_V) < 1.4 and (u < 0.5 or u > umax - 0.5):
 		return true
 	return false
 

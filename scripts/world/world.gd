@@ -13,7 +13,21 @@ const TAG_SCENE := preload("res://assets/models/tag.tscn")
 const SPRAY_SCENE := preload("res://assets/models/spray_decal.tscn")
 const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # bullet tracers + impacts
 const FX_TRAILS_MAT := preload("res://assets/materials/fx_trails.tres")    # Stalker trails
-
+## Times of day (same order as Game.TIMES_OF_DAY). top / horizon tint the sky
+## colours from Customization; sky scales the sky's brightness; night turns on the
+## street lamps' lights (0 = off, 1 = full).
+const TIMES := [
+	{"pitch": -16.0, "yaw": -115.0, "sun": Color("ffd2a0"), "energy": 0.95, "ambient": 0.6,
+		"top": Color(0.85, 0.9, 1.0), "horizon": Color(1.12, 0.95, 0.85), "sky": 0.85, "night": 0.0},
+	{"pitch": -52.0, "yaw": -38.0, "sun": Color("fff1dc"), "energy": 1.25, "ambient": 0.75,
+		"top": Color(1, 1, 1), "horizon": Color(1, 1, 1), "sky": 1.0, "night": 0.0},
+	{"pitch": -9.0, "yaw": 65.0, "sun": Color("ff9a5a"), "energy": 0.8, "ambient": 0.5,
+		"top": Color(0.62, 0.55, 0.85), "horizon": Color(1.3, 0.78, 0.55), "sky": 0.7, "night": 0.6},
+	{"pitch": -40.0, "yaw": 150.0, "sun": Color("9fb2ff"), "energy": 0.3, "ambient": 0.32,
+		"top": Color(0.1, 0.12, 0.26), "horizon": Color(0.2, 0.22, 0.36), "sky": 0.3, "night": 1.0},
+]
+const TOD_BLEND_TIME := 10.0  # seconds to blend into a new time of day
+const GROUND_BOTTOM := Color("6f7f5a")
 var builder: MapBuilder
 var players := {}  # peer id -> Player
 var players_node: Node3D
@@ -21,6 +35,9 @@ var env: WorldEnvironment
 var sun: DirectionalLight3D
 var _proc_sky: ProceduralSkyMaterial
 var _pano_sky: PanoramaSkyMaterial
+var _tod := {}       # current (blended) time-of-day values
+var _tod_from := {}
+var _tod_t := 1.0     # 0..1 through the blend
 
 var tag_node: Node3D
 var tag_beam: MeshInstance3D
@@ -52,6 +69,7 @@ func _ready() -> void:
 	Net.roster_changed.connect(sync_players)
 	Settings.changed.connect(_apply_settings)
 	Settings.colors_changed.connect(_apply_colors)
+	Game.time_of_day_changed.connect(_on_time_of_day_changed)
 	Net.spray_updated.connect(_on_spray_updated)
 	sync_players()
 	_apply_settings()
@@ -104,17 +122,63 @@ func _build_environment() -> void:
 	sun.directional_shadow_max_distance = 70.0
 	sun.shadow_blur = 1.0
 	add_child(sun)
+	_tod = TIMES[clampi(Game.time_of_day, 0, TIMES.size() - 1)].duplicate()
+	_tod_from = _tod.duplicate()
+	_apply_time_of_day()
 
 
 ## Sky and fog colours follow the colour customization live.
 func _apply_colors() -> void:
+	var top := _tinted(Palette.get_color("sky_top"), _tod.get("top", Color.WHITE))
+	var horizon := _tinted(Palette.get_color("sky_horizon"), _tod.get("horizon", Color.WHITE))
+	var sky: float = _tod.get("sky", 1.0)
 	if _proc_sky:
-		_proc_sky.sky_top_color = Palette.get_color("sky_top")
-		_proc_sky.sky_horizon_color = Palette.get_color("sky_horizon")
-		_proc_sky.ground_horizon_color = Palette.get_color("sky_horizon")
+		_proc_sky.sky_top_color = top
+		_proc_sky.sky_horizon_color = horizon
+		_proc_sky.ground_horizon_color = horizon
+		_proc_sky.ground_bottom_color = GROUND_BOTTOM * sky
+		_proc_sky.energy_multiplier = sky
+	if _pano_sky:
+		_pano_sky.energy_multiplier = float(Settings.g("sky_energy")) * sky
 	if env and env.environment:
-		env.environment.fog_light_color = Palette.get_color("sky_horizon")
+		env.environment.fog_light_color = horizon
 
+
+static func _tinted(c: Color, t: Color) -> Color:
+	return Color(c.r * t.r, c.g * t.g, c.b * t.b)
+
+
+func _on_time_of_day_changed() -> void:
+	_tod_from = _tod.duplicate()
+	_tod_t = 0.0
+
+
+func _update_time_of_day(delta: float) -> void:
+	if _tod_t >= 1.0:
+		return
+	_tod_t = minf(1.0, _tod_t + delta / TOD_BLEND_TIME)
+	var k := smoothstep(0.0, 1.0, _tod_t)
+	var target: Dictionary = TIMES[clampi(Game.time_of_day, 0, TIMES.size() - 1)]
+	for key: String in target:
+		var a: Variant = _tod_from[key]
+		var b: Variant = target[key]
+		if key == "yaw":
+			_tod[key] = rad_to_deg(lerp_angle(deg_to_rad(a), deg_to_rad(b), k))
+		else:
+			_tod[key] = lerp(a, b, k)
+	_apply_time_of_day()
+
+
+## Sun, ambient light, sky and street lamps for the current blended time of day.
+func _apply_time_of_day() -> void:
+	if sun:
+		sun.rotation_degrees = Vector3(_tod.pitch, _tod.yaw, 0.0)
+		sun.light_color = _tod.sun
+		sun.light_energy = _tod.energy
+	if env and env.environment:
+		env.environment.ambient_light_energy = _tod.ambient
+	_apply_colors()
+	_apply_night_lights()
 
 ## Uses the player's custom skybox (an equirectangular panorama) when enabled and
 ## present, otherwise the generated sky. Updates live from the Skybox menu.
@@ -129,6 +193,7 @@ func _apply_sky() -> void:
 		_pano_sky.panorama = tex
 		_pano_sky.energy_multiplier = float(Settings.g("sky_energy"))
 		e.sky.sky_material = _pano_sky
+		_pano_sky.energy_multiplier *= float(_tod.get("sky", 1.0))
 		e.sky_rotation = Vector3(0.0, deg_to_rad(float(Settings.g("sky_rotation"))), 0.0)
 	else:
 		e.sky.sky_material = _proc_sky
@@ -155,7 +220,20 @@ func _apply_lights() -> void:
 		var l: OmniLight3D = builder.lights[i]
 		l.visible = q == 2 or (q == 1 and i % 2 == 0)
 		l.distance_fade_begin = 40.0 if q == 2 else 22.0
+	_apply_night_lights()
 
+
+## Street lamps light up in the evening and at night (they follow the Interior
+## lights setting too: Off turns them off, Low keeps every other one).
+func _apply_night_lights() -> void:
+	if builder == null:
+		return
+	var q := int(Settings.g("interior_lights"))
+	var night: float = _tod.get("night", 0.0)
+	for i in builder.night_lights.size():
+		var l: OmniLight3D = builder.night_lights[i]
+		l.visible = night > 0.02 and (q == 2 or (q == 1 and i % 2 == 0))
+		l.light_energy = float(l.get_meta("energy", 1.0)) * night
 
 ## The Tag (assets/models/tag.tscn): Gem, PickupRing and Beam, tinted with the
 ## Tag colour (which players can customize) at load.
@@ -415,6 +493,7 @@ func _fx_projectile(owner_id: int, start: Vector3, vel: Vector3, victim: int) ->
 # ================================================================ per-frame
 
 func _process(delta: float) -> void:
+	_update_time_of_day(delta)
 	_update_tag_visual(delta)
 	_update_projectiles(delta)
 	_draw_fx(delta)

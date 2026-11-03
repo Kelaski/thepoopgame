@@ -198,7 +198,9 @@ Teammates' names float above their heads in small text (`NAMEPLATE_SCALE` in `sc
 | 18 | Public Library (bookshelves, reading tables) | 2 |
 | 19 | Park (basketball court, pond, playground tower, trees) | outdoor |
 
-Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end.
+Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end. Each lane is 2.85 m wide, with a 1.6 m landing at each end of every flight (`STAIR_W` and `STAIR_LANDING` in `scripts/map/map_builder.gd`).
+
+**Time of day:** each match starts at a random Morning, Afternoon, Evening or Night. After each round, the host picks a different one, and everyone's sun, sky, fog and ambient light blend into it over 10 seconds. The presets are the `TIMES` table in `scripts/world/world.gd`. Street lamps light up in the evening and at night.
 Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**):
 - **Grid:** every building's footprint snaps to the grid around its centre, moving each wall by at most 0.5 m.
 - **Walls:** each storey's walls are a row of 2 m modules. A module is solid, has the building's window style (small, wide or tall), or is a door on the ground floor.
@@ -277,6 +279,7 @@ Edit them in the Godot editor. The next match uses your changes.
   - `slot`: a colour filled in by the game, such as `body` on cars, `leaf` on tree crowns, `main` on sofas and tables, or `blanket` on beds. `slot_darken` / `slot_lighten` shade it.
   - `slot_choices`: a list of colours. One is picked at random for each placement, as with kiosk awnings, arcade cabinets and books.
   - `batch`: `static` or `detail`. Detail parts are hidden beyond 75 m, like the furniture.
+  - `night_only` (on an `OmniLight3D`): the light only shines in the evening and at night, like the street lamps.
   - `glow`: true for parts that light up (bulbs, screens, neon, headlights). They're drawn unshaded and bright enough to bloom.
 - **Lights:** an `OmniLight3D` in a template becomes a real light wherever the piece is placed. Its colour, energy and range are used, and shadows stay off. The lamp scenes in `assets/furniture/decor/` have one each.
 - **Placement:**
@@ -302,7 +305,7 @@ Buildings are put together from the pieces in `assets/building/`. Each piece's c
 
 **Floors and stairs:**
 - `floor_slab` and `floor_finish`: 1 × 1 m pieces, stretched to each floor slab and the ground-floor finish.
-- `stair_segment`: one step of the ramp, rising 0.5 m over 0.8 m. A storey is its height ÷ 0.5 segments.
+- `stair_segment`: one step of the ramp, rising 0.5 m over 0.8 m and 2.85 m wide (one lane). A storey is its height ÷ 0.5 segments. If you change its width, change `STAIR_W` to match (two lanes plus 0.1 m).
 - `stair_divider` and `rail_section`: the wall between the two stair lanes and the railing round the stair hole.
 
 **Interior walls:** `wall_interior` (a 1 × 1 m piece, stretched) and `wall_interior_door` (the door jambs of a 2 m partition module).

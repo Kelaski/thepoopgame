@@ -16,6 +16,7 @@ class_name Prefabs
 ##                    and bright enough to bloom
 ##   * OmniLight3D: a real light, placed with the prefab (colour, energy and range
 ##     are used; shadows stay off). The player's Interior lights setting thins them.
+##     With the night_only metadata it only shines in the evening and at night.
 ##   * StaticBody3D with CollisionShape3D children (BoxShape3D, CylinderShape3D):
 ##     the body's collision_layer is the layer (1 floor, 2 wall, 16 solid).
 ##     Meshes without a body around them are visual only.
@@ -30,7 +31,7 @@ static var _recipes := {}
 
 ## Recipe for "props/vehicles/car" etc. (path under assets/, without .tscn):
 ## {"parts": [{kind, xform, color, slot, darken, lighten, choices, batch, glow}],
-##  "shapes": [{kind, layer, size, xform}], "lights": [{pos, color, energy, range}]}
+##  "shapes": [{kind, layer, size, xform}], "lights": [{pos, color, energy, range, night}]}
 static func recipe(name: String) -> Dictionary:
 	if _recipes.has(name):
 		return _recipes[name]
@@ -57,7 +58,7 @@ static func _collect(n: Node, xf: Transform3D, layer: int, r: Dictionary) -> voi
 		elif c is CollisionShape3D and c.shape and lay != 0 and not c.disabled:
 			_add_shape(c.shape, cxf, lay, r)
 		elif c is OmniLight3D and c.visible:
-			r.lights.append({"pos": cxf.origin, "color": c.light_color, "energy": c.light_energy, "range": c.omni_range})
+			r.lights.append({"pos": cxf.origin, "color": c.light_color, "energy": c.light_energy, "range": c.omni_range, "night": bool(c.get_meta("night_only", false))})
 		_collect(c, cxf, lay, r)
 
 
