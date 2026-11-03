@@ -165,6 +165,10 @@ scripts/
   ui/*.gd                   # menus, lobby, settings, HUD, minimap, crosshair
 ```
 
+## Easter egg
+
+While you're in a match, there's a 1% chance every 30 seconds that a sweaty guy appears on your screen for 2 seconds while birds chirp. Press **Ctrl+F4** to trigger it whenever you like. It only shows for you (`scripts/ui/bird_event.gd`, image in `assets/sweaty_guy.png`; the birdsong is synthesized).
+
 ## Assumptions and choices not covered by the spec
 
 - **Sprint is on Shift.** The spec lists WASD, Ctrl, Space, F and E. Sliding needs a sprint, so a sprint key was added (there is also an "Always sprint" option).

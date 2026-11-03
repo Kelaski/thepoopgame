@@ -27,6 +27,7 @@ func _ready() -> void:
 	ui_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_root.theme = UiKit.make_theme()
 	ui_layer.add_child(ui_root)
+	add_child(BirdEvent.new())
 	Net.joined_ok.connect(_on_joined)
 	Net.join_failed.connect(_on_join_failed)
 	Net.disconnected.connect(_on_disconnected)

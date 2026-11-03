@@ -27,6 +27,7 @@ func _ready() -> void:
 	streams["head"] = _tap(rng, 1700.0, 0.06, 0.5)
 	streams["kill"] = _bell(1250.0, 1.1, 0.5)
 	streams["step"] = _step(rng)
+	streams["birds"] = _birds(rng, 2.0)
 	streams["heartbeat"] = _heartbeat()
 	streams["door"] = _thud(rng, 0.22, 90.0)
 	streams["pickup"] = _chirp(500.0, 1200.0, 0.35, 0.5)
@@ -180,6 +181,40 @@ func _bell(hz: float, length: float, vol: float) -> AudioStreamWAV:
 			v += sin(TAU * hz * float(p[0]) * t) * float(p[1]) * exp(-t * float(p[2]))
 		var attack := minf(1.0, t * 400.0)
 		s[i] = v * vol * 0.45 * attack
+	return _wav(s)
+
+
+## Birdsong: bursts of fast, warbling high-pitched chirps from a few "birds".
+func _birds(rng: RandomNumberGenerator, length: float) -> AudioStreamWAV:
+	var n := int(length * RATE)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for bird in 3:
+		var base := rng.randf_range(2600.0, 4200.0)
+		var t := rng.randf_range(0.0, 0.25)
+		while t < length - 0.1:
+			# A phrase of 2-5 quick chirps
+			var count := rng.randi_range(2, 5)
+			for c in count:
+				var dur := rng.randf_range(0.04, 0.09)
+				var f0 := base * rng.randf_range(0.9, 1.15)
+				var f1 := f0 * rng.randf_range(1.2, 1.7) if rng.randf() < 0.6 else f0 * rng.randf_range(0.6, 0.85)
+				var start := int(t * RATE)
+				var cnt := int(dur * RATE)
+				var phase := 0.0
+				for i in cnt:
+					if start + i >= n:
+						break
+					var u := float(i) / cnt
+					var f := lerpf(f0, f1, u) * (1.0 + 0.04 * sin(TAU * 60.0 * u * dur))
+					phase += TAU * f / RATE
+					s[start + i] += sin(phase) * sin(PI * u) * 0.32
+				t += dur + rng.randf_range(0.02, 0.06)
+			t += rng.randf_range(0.12, 0.4)
+	# Gentle fade in / out
+	for i in n:
+		var edge := minf(float(i), float(n - i)) / (0.05 * RATE)
+		s[i] *= minf(1.0, edge)
 	return _wav(s)
 
 
