@@ -31,6 +31,7 @@ const PICKUP_RADIUS := 1.7
 const ENEMY_PICKUP_BONUS := 10.0
 const TEAM_PICKUP_BONUS := 15.0
 const RUNNER_KILL_REWARD := 5.0
+const KILL_HEAL := 30.0  # health given back to the killer
 
 var world = null  # World node while a match is loaded
 var map_size := MapData.DEFAULT_SIZE  # chosen by the host; replicated to everyone
@@ -324,6 +325,10 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
 		Net.players[victim].deaths += 1
 	if Net.players.has(killer) and killer != victim:
 		Net.players[killer].kills += 1
+		# Kill reward: heal the killer (capped at their max health).
+		if alive_ids.get(killer, false):
+			hp[killer] = minf(max_hp_of(killer), float(hp.get(killer, 0.0)) + KILL_HEAL)
+			_sync_hp.rpc(hp)
 	var victim_pos := Vector3.ZERO
 	if world.players.has(victim):
 		victim_pos = world.players[victim].global_position

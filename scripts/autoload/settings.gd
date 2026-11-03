@@ -16,11 +16,10 @@ const ACTIONS := [
 	["move_right", "Move Right", "k", KEY_D],
 	["jump", "Jump / Double Jump", "k", KEY_SPACE],
 	["crouch", "Crouch / Slide", "k", KEY_CTRL],
-	["sprint", "Sprint", "k", KEY_SHIFT],
 	["lean_left", "Lean Left", "k", KEY_Q],
-	["lean_right", "Lean Right", "k", KEY_C],
-	["addon", "Use Addon", "k", KEY_F],
-	["interact", "Interact / Doors", "k", KEY_E],
+	["lean_right", "Lean Right", "k", KEY_E],
+	["addon", "Use Addon (ability)", "k", KEY_SHIFT],
+	["interact", "Interact / Doors", "k", KEY_F],
 	["fire", "Fire", "m", MOUSE_BUTTON_LEFT],
 	["aim", "Aim Down Sights", "m", MOUSE_BUTTON_RIGHT],
 	["reload", "Reload", "k", KEY_R],
@@ -44,7 +43,6 @@ const DEFAULTS := {
 	"invert_y": false,
 	"toggle_aim": false,
 	"toggle_crouch": false,
-	"auto_sprint": false,
 	# Video
 	"fov": 100.0,
 	"brightness": 1.0,
@@ -68,6 +66,8 @@ const DEFAULTS := {
 	# Colour overrides: key -> html colour (see Palette)
 	"colors": {},
 	# HUD
+	"minimap_scale": 1.0,      # 0.6 - 2.0
+	"minimap_labels": true,    # location names on the minimap
 	"crosshair_color": "ffffff",
 	# Crosshair editor (Counter-Strike style)
 	"xh_style": "classic",      # classic, circle, dot, image
@@ -89,6 +89,13 @@ const DEFAULTS := {
 	"sky_rotation": 0.0,
 	"sky_energy": 1.0,
 	"hitmarker_sound": true,
+}
+
+# Saved keybinds are migrated when the defaults change: a bind still set to an old
+# default moves to the new default (binds the player changed are kept).
+const BINDS_VERSION := 2
+const OLD_DEFAULT_BINDS := {
+	2: {"lean_right": ["k", KEY_C], "addon": ["k", KEY_F], "interact": ["k", KEY_E]},
 }
 
 const MOUSE_NAMES := {
@@ -149,7 +156,19 @@ func load_settings() -> void:
 				var b = cf.get_value("binds", a[0])
 				if b is Array and b.size() == 2:
 					binds[a[0]] = b
+		_migrate_binds(int(cf.get_value("meta", "binds_version", 1)))
 	_apply_binds()
+
+
+func _migrate_binds(saved_version: int) -> void:
+	if saved_version >= BINDS_VERSION:
+		return
+	for a in ACTIONS:
+		for ver: int in OLD_DEFAULT_BINDS:
+			var old: Dictionary = OLD_DEFAULT_BINDS[ver]
+			if ver > saved_version and old.has(a[0]) and binds[a[0]] == old[a[0]]:
+				binds[a[0]] = [a[2], a[3]]
+	save_settings.call_deferred()
 
 
 func save_settings() -> void:
@@ -158,6 +177,7 @@ func save_settings() -> void:
 		cf.set_value("settings", k, values[k])
 	for a in binds.keys():
 		cf.set_value("binds", a, binds[a])
+	cf.set_value("meta", "binds_version", BINDS_VERSION)
 	cf.save(PATH)
 
 

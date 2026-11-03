@@ -32,11 +32,10 @@ Optional command-line flags (after `--`):
 |---|---|
 | Move | W A S D |
 | Jump / double jump (Skywalker) | Space |
-| Crouch / slide (sprint + crouch) | Ctrl |
-| Sprint | Shift |
-| Lean left / right | Q / C |
-| Addon | F |
-| Interact (doors) | E |
+| Crouch / slide (crouch while sprinting) | Ctrl |
+| Lean left / right | Q / E |
+| Addon ability | Shift |
+| Interact (doors) | F |
 | Fire / Aim | Mouse 1 / Mouse 2 |
 | Reload | R |
 | Scoreboard | Tab |
@@ -44,6 +43,9 @@ Optional command-line flags (after `--`):
 | Spray | T |
 | Chat (all / team) | Enter / Y |
 | Pause / settings | Esc |
+
+There is no sprint key: moving forward is always a sprint. Aiming, crouching or holding a lean key slows you to a walk.
+If you played an older version, the old default binds for lean right (C), addon (F) and interact (E) move to the new defaults automatically. Binds you changed yourself are kept.
 
 A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and has its own volume slider.
 
@@ -58,17 +60,18 @@ A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and 
 
 ### Colour customization (Main menu → Customize Colours, also in the lobby and pause menu)
 
-The game has no image textures; every surface is a flat colour, so this is how you retexture the game. You can recolour:
+You can recolour:
 - The menus: accent, panels, buttons, text and backdrop.
 - Team and Tag colours.
-- The world: sky, fog, sunlight, ground, roads, road lines, grass, and the area outside the fence.
-- Every building style: wall, roof, floor and trim.
+- The sky: top colour and horizon / fog colour. For a picture skybox, use Customize → Skybox.
 
-Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu, sky and sunlight colours change instantly. Map and team colours apply when the next match loads. Colours are personal and don't affect other players.
+The map itself (ground, roads, grass and buildings) always uses its built-in colours.
 
-Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch, always-sprint,
+Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu and sky colours change instantly. Team colours apply when the next match loads. Colours are personal and don't affect other players.
+
+Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch,
 FOV (90–120, horizontal), brightness, fullscreen, V-Sync, FPS cap, render scale, MSAA, shadows,
-view distance, master/effects/UI volume, hitmarker sound, crosshair size and colour, and an FPS counter.
+view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, and an FPS counter.
 
 ## Rules
 
@@ -83,7 +86,8 @@ view distance, master/effects/UI volume, hitmarker sound, crosshair size and col
 - **Winning a round:** the timer reaches 0 while the Tag is held. The holding team wins. First to 4 wins the match.
 - **Runner self-defence:** every kill the Runner gets takes 5 s off their team's timer.
 - **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
-- **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s).
+- **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s). Every kill gives you back 30 HP (up to your max).
+- **Minimap:** shows location names on the buildings and park. Its size is adjustable in Settings > HUD.
 - **Respawn:** after a 6 s timer, press **Jump (Space)** to respawn. Use the wait to change loadouts. Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
   A spawn point is rejected if any living enemy has line of sight to it (or is within 12 m).
   You get 3 s of spawn protection from the moment you spawn. Moving or shooting ends it early.
@@ -104,20 +108,21 @@ view distance, master/effects/UI volume, hitmarker sound, crosshair size and col
 
 | Addon | Effect |
 |---|---|
-| Hider | F: 15 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 12 s cooldown after it ends. |
-| Trackstar | Passive +15% speed. F: +35% for 6 s. 30 s cooldown from activation. |
+| Hider | Shift: 15 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 12 s cooldown after it ends. |
+| Trackstar | Passive +15% speed. Shift: +35% for 6 s. 30 s cooldown from activation. |
 | Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
-| Stalker | See red ground trails behind every enemy, fading 15 m behind them. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
-| Phantom | F: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
+| Stalker | See wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. |
+| Phantom | Shift: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
+| Grapple | Shift: fire a grappling hook up to 20 m. It latches onto whatever it hits (walls, floors, doors, props or players) and pulls you towards it at 20 m/s for up to 1.6 s. Jump lets go early, and you keep your momentum. 17 s cooldown after a hit; a miss only costs 1 s. Everyone sees the rope. |
 
 ### Movement
 
-Snappy ground acceleration, sprint, crouch, and a momentum slide (sprint + crouch). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
+Snappy ground acceleration, sprinting by default, crouch, and a momentum slide (crouch while sprinting). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
 Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved.
 **Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
 Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. There is no limit on how many walls you can chain before landing. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
-**Leaning** (Q / C) peeks around corners. Your head hitbox moves with the lean, and walls limit how far you can lean.
-Doors swing open, away from you and at full speed, when you sprint or slide into them. **E** opens and closes them normally.
+**Leaning** (Q / E) peeks around corners and slows you to a walk. Your head hitbox moves with the lean, and walls limit how far you can lean.
+Doors swing open, away from you and at full speed, when you sprint or slide into them. **F** opens and closes them normally.
 
 ## Map sizes
 
@@ -229,11 +234,12 @@ You can also upload a **custom crosshair image** (with a scale slider) and a **c
 
 ## Assumptions and choices not covered by the spec
 
-- **Sprint is on Shift.** The spec lists WASD, Ctrl, Space, F and E. Sliding needs a sprint, so a sprint key was added (there is also an "Always sprint" option).
+- **Sprint is the default pace** (no sprint key). Leaning, aiming and crouching drop you to walking speed.
 - **Reloading and magazine sizes** were added (R key), with the values above.
 - **Sniper:** inaccurate unless aimed. **Shotgun and sniper** pellets and rounds deal the same damage to the head (headshots still break Hider invisibility).
 - **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.
 - **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Bushes block sight but not bullets.
 - **Dropped-Tag timer:** the timer pauses while the Tag is on the ground. On pickup it resumes from the value at the drop +10 s (enemy) or +15 s (teammate), capped at 2:00.
 - **Phantom's** 23 s cooldown starts when the phase ends. Trackstar's 30 s cooldown starts at activation, as specified.
-- Skywalker's double jump and Stalker's trails are passive, so F does nothing for them.
+- Skywalker's double jump and Stalker's trails are passive, so the ability key does nothing for them.
+- **Grapple's** cooldown starts when the hook hits (like Trackstar's, from activation). A miss only costs 1 s so you can try again.

@@ -318,21 +318,21 @@ func _usable_point(p: Vector2, excluded: Array) -> bool:
 func _build_ground() -> void:
 	var bc := bounds.get_center()
 	# Playable ground (concrete / sidewalk)
-	box(Vector3(bc.x, -0.5, bc.y), Vector3(bounds.size.x + 4.0, 1.0, bounds.size.y + 4.0), Palette.get_color("world_ground"), L_SOLID)
+	box(Vector3(bc.x, -0.5, bc.y), Vector3(bounds.size.x + 4.0, 1.0, bounds.size.y + 4.0), CONCRETE, L_SOLID)
 	# Scenery ground outside the fence
-	box(Vector3(0, -0.53, 0), Vector3(700, 1.0, 700), Palette.get_color("world_outside"), 0)
+	box(Vector3(0, -0.53, 0), Vector3(700, 1.0, 700), Color("7f9a5a"), 0)
 	# Roads with dashed centre lines
 	for r: Rect2 in road_rects:
-		box(Vector3(r.get_center().x, 0.012, r.get_center().y), Vector3(r.size.x, 0.024, r.size.y), Palette.get_color("world_road"), 0)
+		box(Vector3(r.get_center().x, 0.012, r.get_center().y), Vector3(r.size.x, 0.024, r.size.y), ASPHALT, 0)
 		var horizontal := r.size.x > r.size.y
 		var length := r.size.x if horizontal else r.size.y
 		var n := int(length / 6.0)
 		for i in n:
 			var t := (i + 0.5) * length / n
 			if horizontal:
-				box(Vector3(r.position.x + t, 0.03, r.get_center().y), Vector3(2.2, 0.02, 0.18), Palette.get_color("world_lines"), 0)
+				box(Vector3(r.position.x + t, 0.03, r.get_center().y), Vector3(2.2, 0.02, 0.18), Color("e8c84a"), 0)
 			else:
-				box(Vector3(r.get_center().x, 0.03, r.position.y + t), Vector3(0.18, 0.02, 2.2), Palette.get_color("world_lines"), 0)
+				box(Vector3(r.get_center().x, 0.03, r.position.y + t), Vector3(0.18, 0.02, 2.2), Color("e8c84a"), 0)
 	# Boundary fence: visual chain-link panels + tall invisible collision walls.
 	var fence_col := Color("55625a")
 	var post_col := Color("8c949a")
@@ -567,14 +567,6 @@ func _slab(r: Rect2, y_top: float, col: Color, layer: int) -> void:
 	box(Vector3(r.get_center().x, y_top - SLAB_T * 0.5, r.get_center().y), Vector3(r.size.x, SLAB_T, r.size.y), col, layer)
 
 
-## Building style with the player's colour overrides applied.
-func _style(type: String) -> Dictionary:
-	var st: Dictionary = STYLES[type].duplicate()
-	for part in Palette.BUILDING_PARTS:
-		st[part] = Settings.color(Palette.building_key(type, part), st[part])
-	return st
-
-
 func _build_building(b: Array) -> void:
 	var bid: int = b[0]
 	var bname: String = b[1]
@@ -582,7 +574,7 @@ func _build_building(b: Array) -> void:
 	var r := MapData.px_rect(b[3])
 	var floors: int = b[4]
 	var fh: float = b[5]
-	var st := _style(type)
+	var st: Dictionary = STYLES[type]
 	var x0 := r.position.x
 	var z0 := r.position.y
 	var x1 := r.end.x
@@ -1322,7 +1314,7 @@ func _build_park() -> void:
 	var r := park_rect
 	var x0 := r.position.x
 	var z0 := r.position.y
-	box(Vector3(r.get_center().x, 0.02, r.get_center().y), Vector3(r.size.x, 0.04, r.size.y), Palette.get_color("world_grass"), 0)
+	box(Vector3(r.get_center().x, 0.02, r.get_center().y), Vector3(r.size.x, 0.04, r.size.y), GRASS, 0)
 	_label(MapData.PARK_NAME.to_upper(), Vector3(r.get_center().x, 3.0, r.end.y + 0.5), 0.0, 96, Color("d8f0c0"))
 	# Basketball court (left side)
 	var court := Rect2(x0 + 2.5, z0 + 13.0, 14.0, 26.0)

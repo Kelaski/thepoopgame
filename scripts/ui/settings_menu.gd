@@ -74,7 +74,6 @@ func _controls() -> VBoxContainer:
 	v.add_child(UiKit.check_row("Invert Y axis", Settings.g("invert_y"), func(x): Settings.s("invert_y", x)))
 	v.add_child(UiKit.check_row("Toggle aim (instead of hold)", Settings.g("toggle_aim"), func(x): Settings.s("toggle_aim", x)))
 	v.add_child(UiKit.check_row("Toggle crouch (instead of hold)", Settings.g("toggle_crouch"), func(x): Settings.s("toggle_crouch", x)))
-	v.add_child(UiKit.check_row("Always sprint", Settings.g("auto_sprint"), func(x): Settings.s("auto_sprint", x)))
 	return v
 
 
@@ -155,5 +154,7 @@ func _audio() -> VBoxContainer:
 func _hud() -> VBoxContainer:
 	var v := UiKit.vbox(10)
 	v.add_child(UiKit.check_row("Show FPS counter", Settings.g("show_fps"), func(x): Settings.s("show_fps", x)))
+	v.add_child(UiKit.slider_row("Minimap size", Minimap.MIN_SCALE, Minimap.MAX_SCALE, 0.05, Settings.g("minimap_scale"), func(x): Settings.s("minimap_scale", x), "%.2fx"))
+	v.add_child(UiKit.check_row("Location names on minimap", Settings.g("minimap_labels"), func(x): Settings.s("minimap_labels", x)))
 	v.add_child(UiKit.label("Crosshair style, colour, size, custom images and sniper scopes are in Customize > Crosshair Editor.", 15, UiKit.MUTED))
 	return v

@@ -128,6 +128,12 @@ var invisible := false
 var phasing := 0.0
 var floor_phase := 0.0
 var _last_crouch_tap := -10.0
+var grappling := false
+var grapple_point := Vector3.ZERO
+var grapple_t := 0.0
+var _grapple_target: Player = null   # hooked player (the hook follows them)
+var _grapple_offset := Vector3.ZERO
+var _rope: MeshInstance3D
 
 # Spawn protection
 var prot_pending := false  # kept for compatibility; protection is now a plain timer
@@ -429,6 +435,9 @@ func set_alive(a: bool) -> void:
 		phasing = 0.0
 		floor_phase = 0.0
 		velocity = Vector3.ZERO
+		if is_local:
+			_end_grapple()
+		grappling = false
 	if body_root:
 		body_root.visible = a and not is_local
 	if viewmodel:
@@ -454,6 +463,8 @@ func respawn(pos: Vector3, protect: bool) -> void:
 	floor_phase = 0.0
 	addon_active = 0.0
 	addon_cd = 0.0
+	grappling = false
+	_grapple_target = null
 	dj_ready = true
 	wallrunning = false
 	wallrun_cd = 0.0
@@ -600,15 +611,11 @@ func _physics_process(delta: float) -> void:
 	var hvel := Vector3(velocity.x, 0.0, velocity.z)
 	var speed_now := hvel.length()
 	var forward_in := move_in.y < -0.3
-	var sprint_in := can_input and (Input.is_action_pressed("sprint") or bool(Settings.g("auto_sprint")))
-	if sprint_in and forward_in and crouching and not sliding and Settings.g("toggle_crouch"):
-		want_crouch = false
-		_crouch_toggle = false
-	sprinting = sprint_in and forward_in and not aiming and not sliding and not want_crouch
-	if aiming and _aim_toggle and sprint_in and forward_in:
-		# Sprinting cancels toggled ADS.
-		_aim_toggle = false
-		aiming = false
+	# Sprint is the default pace: moving forward is always a sprint, except while
+	# aiming, crouching, sliding or holding a lean key (leaning slows you to a walk).
+	var sprint_in := can_input
+	var lean_held := can_input and (Input.is_action_pressed("lean_left") or Input.is_action_pressed("lean_right"))
+	sprinting = sprint_in and forward_in and not aiming and not sliding and not want_crouch and not lean_held
 
 	# --- Wall contact coyote time (0.1 s)
 	_wall_touch_t -= delta
@@ -739,6 +746,8 @@ func _physics_process(delta: float) -> void:
 				slide_cd = SLIDE_CD
 			Sfx.play("jump", -4.0, 1.4)
 			_on_moved()
+	if grappling:
+		hvel = _apply_grapple(delta, hvel, jump_tap)
 	velocity.x = hvel.x
 	velocity.z = hvel.z
 	if move_in != Vector2.ZERO:
@@ -903,6 +912,7 @@ func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int, ln: floa
 # ================================================================ per-frame visuals
 
 func _process(delta: float) -> void:
+	_update_rope()
 	if is_local:
 		_local_visuals(delta)
 	else:
@@ -1171,6 +1181,100 @@ func _use_addon() -> void:
 			if addon_cd <= 0.0 and phasing <= 0.0:
 				phasing = Addons.PHANTOM_TIME
 				Sfx.play("addon", -4.0, 0.7)
+		"grapple":
+			if addon_cd <= 0.0 and not grappling:
+				_fire_grapple()
+
+
+## Grapple: hook whatever the crosshair is on within range. A miss only costs a
+## short cooldown; a hit starts the full cooldown.
+func _fire_grapple() -> void:
+	var from := cam.global_position
+	var mask := MASK_FULL | MapBuilder.L_PLAYER
+	var q := PhysicsRayQueryParameters3D.create(from, from + aim_dir() * Addons.GRAPPLE_RANGE, mask, [get_rid()])
+	var r := get_world_3d().direct_space_state.intersect_ray(q)
+	if r.is_empty():
+		addon_cd = Addons.GRAPPLE_MISS_CD
+		Sfx.play("addon_end", -6.0, 1.6)
+		return
+	grappling = true
+	grapple_point = r.position
+	grapple_t = Addons.GRAPPLE_MAX_TIME
+	addon_cd = Addons.GRAPPLE_CD
+	_grapple_target = r.collider if r.collider is Player else null
+	if _grapple_target:
+		_grapple_offset = grapple_point - _grapple_target.global_position
+	Sfx.play("addon", -4.0, 1.6)
+	_grapple_net.rpc(true, grapple_point)
+	_on_moved()
+
+
+## Pulls you towards the hook. Returns the new horizontal velocity (vertical is
+## written to velocity.y). Jumping, arriving or running out of time lets go.
+func _apply_grapple(delta: float, hvel: Vector3, jump_tap: bool) -> Vector3:
+	grapple_t -= delta
+	if _grapple_target:
+		if not is_instance_valid(_grapple_target) or not _grapple_target.alive:
+			_end_grapple()
+			return hvel
+		grapple_point = _grapple_target.global_position + _grapple_offset
+	var to := grapple_point - (global_position + Vector3(0, 1.0, 0))
+	var d := to.length()
+	if jump_tap or grapple_t <= 0.0 or d < Addons.GRAPPLE_ARRIVE:
+		_end_grapple()
+		return hvel
+	var v := Vector3(hvel.x, velocity.y, hvel.z).move_toward(to / d * Addons.GRAPPLE_SPEED, Addons.GRAPPLE_ACCEL * delta)
+	velocity.y = v.y
+	sliding = false
+	if wallrunning:
+		_end_wallrun()
+	_on_moved()
+	return Vector3(v.x, 0.0, v.z)
+
+
+func _end_grapple() -> void:
+	if not grappling:
+		return
+	grappling = false
+	_grapple_target = null
+	_grapple_net.rpc(false, Vector3.ZERO)
+
+
+## Lets everyone else see the rope.
+@rpc("authority", "call_remote", "reliable")
+func _grapple_net(on: bool, point: Vector3) -> void:
+	grappling = on
+	grapple_point = point
+
+
+func _update_rope() -> void:
+	if not grappling or not alive:
+		if _rope:
+			_rope.visible = false
+		return
+	if _rope == null:
+		_rope = MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.035, 0.035, 1.0)
+		_rope.mesh = bm
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_color = Color(0.16, 0.13, 0.1)
+		_rope.material_override = m
+		_rope.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_rope.top_level = true
+		add_child(_rope)
+	var from := global_position + Vector3(0, 1.3, 0)
+	if is_local and cam:
+		from = cam.global_position + cam.global_basis * Vector3(0.22, -0.22, -0.35)
+	var dir := grapple_point - from
+	var d := dir.length()
+	if d < 0.05:
+		_rope.visible = false
+		return
+	var up := Vector3.RIGHT if absf(dir.normalized().dot(Vector3.UP)) > 0.99 else Vector3.UP
+	_rope.global_transform = Transform3D(Basis.looking_at(dir, up) * Basis.from_scale(Vector3(1.0, 1.0, d)), from + dir * 0.5)
+	_rope.visible = true
 
 
 func _tick_addon(delta: float) -> void:
@@ -1232,6 +1336,11 @@ func addon_status() -> Array:
 				return ["PHASING", phasing / Addons.PHANTOM_TIME, "active"]
 			if addon_cd > 0.0:
 				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.PHANTOM_CD, "cooldown"]
+		"grapple":
+			if grappling:
+				return ["GRAPPLING", grapple_t / Addons.GRAPPLE_MAX_TIME, "active"]
+			if addon_cd > 0.0:
+				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.GRAPPLE_CD, "cooldown"]
 		"skywalker":
 			return ["DOUBLE JUMP READY" if dj_ready else "LAND TO RECHARGE", 1.0 if dj_ready else 0.0, "passive"]
 		"stalker":

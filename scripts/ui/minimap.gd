@@ -2,12 +2,17 @@ class_name Minimap
 extends Control
 ## North-up minimap of the playable area (scaled to fit whatever map size is
 ## loaded). Shows the Runner to everyone at all times, your teammates, the
-## objective / dropped Tag, and yourself.
+## objective / dropped Tag, and yourself. Its size follows the "Minimap size"
+## setting, and location names are drawn on the buildings and park.
 
-const WIDGET := Vector2(240, 204)
+const WIDGET := Vector2(240, 204)  # size at 1.0x
+const MIN_SCALE := 0.6
+const MAX_SCALE := 2.0
+const LABEL_SIZE := 9.0            # font size at 1.0x
 
 var _acc := 0.0
 var _scale := 1.2
+var _ui_scale := 1.0              # the player's minimap size setting
 var _origin := Vector2.ZERO   # map-space point drawn at the widget's top-left
 var _pad := Vector2.ZERO      # centring offset inside the widget
 
@@ -18,6 +23,11 @@ func _init() -> void:
 
 
 func _process(delta: float) -> void:
+	var k := clampf(float(Settings.g("minimap_scale")), MIN_SCALE, MAX_SCALE)
+	if not is_equal_approx(k, _ui_scale) or custom_minimum_size != WIDGET * k:
+		_ui_scale = k
+		custom_minimum_size = WIDGET * k
+		size = custom_minimum_size
 	_acc += delta
 	if _acc >= 0.05:
 		_acc = 0.0
@@ -30,6 +40,35 @@ func _p(v: Vector3) -> Vector2:
 
 func _r(r: Rect2) -> Rect2:
 	return Rect2((r.position - _origin) * _scale + _pad, r.size * _scale)
+
+
+## Location names centred on each building (and the park). Names wider than their
+## building are split onto two lines.
+func _draw_labels(builder) -> void:
+	var font := ThemeDB.fallback_font
+	var fs := int(round(LABEL_SIZE * _ui_scale))
+	for b in builder.buildings:
+		_draw_label(font, fs, str(b.name), _r(b.rect))
+	if builder.has_park:
+		_draw_label(font, fs, MapData.PARK_NAME, _r(builder.park_rect))
+
+
+func _draw_label(font: Font, fs: int, text: String, rect: Rect2) -> void:
+	var lines := [text]
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var cut := text.find(" ", text.length() / 2)
+	if cut < 0:
+		cut = text.rfind(" ")
+	if width > rect.size.x + 6.0 and cut > 0:
+		lines = [text.left(cut), text.substr(cut + 1)]
+	var line_h := font.get_height(fs)
+	var y := rect.get_center().y - line_h * lines.size() * 0.5 + font.get_ascent(fs)
+	for line: String in lines:
+		var lw := font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var pos := Vector2(rect.get_center().x - lw * 0.5, y).round()
+		draw_string_outline(font, pos, line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 3, Color(0, 0, 0, 0.85))
+		draw_string(font, pos, line, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.9))
+		y += line_h
 
 
 func _draw() -> void:
@@ -50,6 +89,8 @@ func _draw() -> void:
 		var rr := _r(b.rect)
 		draw_rect(rr, (b.color as Color).darkened(0.35))
 		draw_rect(rr, Color(0, 0, 0, 0.5), false, 1.0)
+	if Settings.g("minimap_labels"):
+		_draw_labels(w.builder)
 	var t := Time.get_ticks_msec() * 0.001
 	# Objective / dropped Tag
 	if Game.holder == 0 and Game.objective >= 0:

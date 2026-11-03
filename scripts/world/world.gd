@@ -5,7 +5,8 @@ extends Node3D
 
 const HEARTBEAT_RANGE := 25.0
 const TRACER_LIFE := 0.07
-const MAX_TRAIL_POINTS := 64
+const MAX_TRAIL_POINTS := 400  # ~6 s of points even at full slide speed
+const TRAIL_WIDTH := 0.34      # half-width in metres
 
 var builder: MapBuilder
 var players := {}  # peer id -> Player
@@ -26,6 +27,7 @@ var _impacts: Array = []   # [pos, life]
 var _trail_mesh: ImmediateMesh
 var _trail_inst: MeshInstance3D
 var _trails := {}          # id -> PackedVector3Array
+var _trail_times := {}     # id -> PackedFloat64Array (when each trail point was laid)
 var _projectiles: Array = []
 var _hb_timer := 0.0
 
@@ -86,15 +88,14 @@ func _build_environment() -> void:
 	sun = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-52.0, -38.0, 0.0)
 	sun.light_energy = 1.25
-
+	sun.light_color = Color("fff1dc")
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	sun.directional_shadow_max_distance = 70.0
 	sun.shadow_blur = 1.0
 	add_child(sun)
 
 
-## Sky, fog and sunlight follow the colour customization live; map colours are
-## applied when the map is built (next match).
+## Sky and fog colours follow the colour customization live.
 func _apply_colors() -> void:
 	if _proc_sky:
 		_proc_sky.sky_top_color = Palette.get_color("sky_top")
@@ -102,8 +103,6 @@ func _apply_colors() -> void:
 		_proc_sky.ground_horizon_color = Palette.get_color("sky_horizon")
 	if env and env.environment:
 		env.environment.fog_light_color = Palette.get_color("sky_horizon")
-	if sun:
-		sun.light_color = Palette.get_color("sun")
 
 
 ## Uses the player's custom skybox (an equirectangular panorama) when enabled and
@@ -207,6 +206,7 @@ func sync_players() -> void:
 			players[id].queue_free()
 			players.erase(id)
 			_trails.erase(id)
+			_trail_times.erase(id)
 
 
 func local_player() -> Player:
@@ -215,6 +215,7 @@ func local_player() -> Player:
 
 func on_round_begin(_obj: int) -> void:
 	_trails.clear()
+	_trail_times.clear()
 	for p in _projectiles:
 		p.node.queue_free()
 	_projectiles.clear()
@@ -501,36 +502,39 @@ func _ribbon(a: Vector3, b: Vector3, w: float, col: Color, cam_pos: Vector3) -> 
 	_fx_mesh.surface_add_vertex(b - side)
 
 
-## Stalker addon: red ground trails behind every enemy, fading 15 m behind them.
+## Stalker addon: wide red ground trails behind every enemy. Each piece of trail
+## lingers for Addons.STALKER_TRAIL_TIME seconds, fading as it ages.
 func _update_trails() -> void:
 	_trail_mesh.clear_surfaces()
 	var lp := local_player()
 	if lp == null:
 		return
+	var now := Time.get_ticks_msec() / 1000.0
 	for id in players:
 		var p: Player = players[id]
 		if p.team == lp.team or not p.alive:
 			_trails.erase(id)
+			_trail_times.erase(id)
 			continue
 		var pos := p.global_position + Vector3(0, 0.08, 0)
 		var tr: PackedVector3Array = _trails.get(id, PackedVector3Array())
+		var times: PackedFloat64Array = _trail_times.get(id, PackedFloat64Array())
 		if tr.size() > 0 and tr[tr.size() - 1].distance_to(pos) > 6.0:
 			tr = PackedVector3Array()  # teleported (respawn)
+			times = PackedFloat64Array()
 		if tr.is_empty() or tr[tr.size() - 1].distance_to(pos) > 0.35:
 			tr.append(pos)
-		# Trim to the configured length.
-		var total := 0.0
+			times.append(now)
+		# Drop points older than the linger time (and cap the point count).
 		var keep_from := 0
-		for i in range(tr.size() - 1, 0, -1):
-			total += tr[i].distance_to(tr[i - 1])
-			if total > Addons.STALKER_TRAIL:
-				keep_from = i
-				break
+		while keep_from < times.size() and now - times[keep_from] > Addons.STALKER_TRAIL_TIME:
+			keep_from += 1
+		keep_from = maxi(keep_from, tr.size() - MAX_TRAIL_POINTS)
 		if keep_from > 0:
 			tr = tr.slice(keep_from)
-		if tr.size() > MAX_TRAIL_POINTS:
-			tr = tr.slice(tr.size() - MAX_TRAIL_POINTS)
+			times = times.slice(keep_from)
 		_trails[id] = tr
+		_trail_times[id] = times
 	if lp.addon != "stalker" or not lp.alive:
 		return
 	var any := false
@@ -542,6 +546,7 @@ func _update_trails() -> void:
 	_trail_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
 	for id in _trails:
 		var tr: PackedVector3Array = _trails[id]
+		var times: PackedFloat64Array = _trail_times[id]
 		var n := tr.size()
 		for i in range(1, n):
 			var a := tr[i - 1]
@@ -550,9 +555,9 @@ func _update_trails() -> void:
 			d.y = 0.0
 			if d.length() < 0.01:
 				continue
-			var side := Vector3(-d.z, 0.0, d.x).normalized() * 0.22
-			var alpha_a := float(i - 1) / n * 0.8
-			var alpha_b := float(i) / n * 0.8
+			var side := Vector3(-d.z, 0.0, d.x).normalized() * TRAIL_WIDTH
+			var alpha_a := clampf(1.0 - (now - times[i - 1]) / Addons.STALKER_TRAIL_TIME, 0.0, 1.0) * 0.85
+			var alpha_b := clampf(1.0 - (now - times[i]) / Addons.STALKER_TRAIL_TIME, 0.0, 1.0) * 0.85
 			var ca := Color(1.0, 0.15, 0.1, alpha_a)
 			var cb := Color(1.0, 0.15, 0.1, alpha_b)
 			_trail_mesh.surface_set_color(ca)

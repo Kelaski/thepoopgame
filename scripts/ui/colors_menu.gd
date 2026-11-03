@@ -1,7 +1,7 @@
 class_name ColorsMenu
 extends Control
-## Colour customization for menus, teams/Tag, the world and every building style.
-## Menu and sky colours update live; map colours apply when the next match loads.
+## Colour customization for menus, teams/Tag and the sky.
+## Menu and sky colours update live; team colours apply when the next match loads.
 
 var on_back: Callable
 var _pickers := {}  # key -> ColorPickerButton
@@ -27,15 +27,14 @@ func _ready() -> void:
 	tabs.custom_minimum_size = Vector2(820, 430)
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(tabs)
-	for group in ["Menus", "Teams & Tag", "World"]:
+	for group in ["Menus", "Teams & Tag", "Sky"]:
 		var box := UiKit.vbox(8)
 		for slot in Palette.SLOTS:
 			if slot[3] == group:
 				box.add_child(_row(slot[0], slot[1]))
-		if group == "World":
-			box.add_child(UiKit.label("Sky, fog and sunlight change instantly. Ground, roads and grass apply when the next match loads.", 14, UiKit.MUTED))
+		if group == "Sky":
+			box.add_child(UiKit.label("Sky and fog colours change instantly. For a picture skybox, use Customize > Skybox.", 14, UiKit.MUTED))
 		tabs.add_child(_tab(group, box))
-	tabs.add_child(_tab("Buildings", _buildings()))
 
 	var row := UiKit.hbox(10)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -74,41 +73,12 @@ func _picker(key: String) -> ColorPickerButton:
 	return p
 
 
-func _buildings() -> VBoxContainer:
-	var v := UiKit.vbox(10)
-	v.add_child(UiKit.label("Wall, roof, floor and trim colours for each kind of building. Applied when the next match loads.", 14, UiKit.MUTED))
-	var names := {}
-	for b in MapData.BUILDINGS:
-		var t: String = b[2]
-		names[t] = (names[t] + ", " if names.has(t) else "") + str(b[1])
-	for type in MapBuilder.STYLES.keys():
-		v.add_child(UiKit.label(names.get(type, type), 17, UiKit.ACCENT))
-		var h := UiKit.hbox(10)
-		for part in Palette.BUILDING_PARTS:
-			var key := Palette.building_key(type, part)
-			h.add_child(UiKit.label(part.capitalize(), 15))
-			var p := _picker(key)
-			p.custom_minimum_size = Vector2(80, 30)
-			h.add_child(p)
-		h.add_child(UiKit.button("Reset", _reset_building.bind(type), 80))
-		v.add_child(h)
-	return v
-
-
 func _on_color_changed(c: Color, key: String) -> void:
 	Settings.set_color(key, c, false)
 
 
 func _reset_one(key: String) -> void:
 	Settings.clear_color(key)
-	_sync_pickers()
-
-
-func _reset_building(type: String) -> void:
-	var d: Dictionary = Settings.g("colors").duplicate()
-	for part in Palette.BUILDING_PARTS:
-		d.erase(Palette.building_key(type, part))
-	Settings.set_colors(d)
 	_sync_pickers()
 
 
