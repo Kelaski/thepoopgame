@@ -48,7 +48,8 @@ Optional command-line flags (after `--`):
 | Move | W A S D |
 | Jump / double jump (Skywalker) | Space |
 | Crouch / slide (crouch while sprinting) | Ctrl |
-| Lean left / right | Q / E |
+| Lean left / right | Q / E (tap to lean, tap again to stand up) |
+| Ping | Middle mouse (double tap: danger) |
 | Addon ability | Left Shift |
 | Interact (doors) | F |
 | Fire / Aim | Mouse 1 / Mouse 2 |
@@ -59,7 +60,7 @@ Optional command-line flags (after `--`):
 | Chat (all / team) | Enter / Right Shift + Enter |
 | Pause / settings | Esc |
 
-There is no sprint key: moving forward is always a sprint. Aiming, crouching or holding a lean key slows you to a walk.
+There is no sprint key: moving forward is always a sprint. Aiming, crouching or leaning slows you to a walk.
 If you played an older version, the old default binds for lean right (C), addon (F) and interact (E) move to the new defaults automatically. Binds you changed yourself are kept.
 
 **Changing the default controls:** the defaults are the game's actions in **Project Settings → Input Map** in the Godot editor (`move_forward`, `jump`, `addon`, `chat` and so on).
@@ -91,7 +92,7 @@ The map itself (ground, roads, grass and buildings) always uses its built-in col
 
 Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu and sky colours change instantly. Team colours apply when the next match loads. Colours are personal and don't affect other players.
 
-Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch,
+Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim, crouch and lean,
 FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows, shadow quality (Low 70 m / Medium 130 m / High 220 m / Ultra 320 m), interior lights (off / low / high), bloom,
 view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, and an FPS counter.
 
@@ -147,7 +148,16 @@ Slide-jumping keeps your speed, and air strafing is limited while momentum is pr
 **Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
 Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
 **Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
-**Leaning** (Q / E) peeks around corners and slows you to a walk. Switching straight from one side to the other is three times faster than leaning out (about 0.1 s). Your head hitbox moves with the lean, and walls limit how far you can lean.
+**Leaning** (Q / E) works like Rainbow Six Siege:
+- **Toggle by default:** tap Q or E to lean, and you stay leaned until you tap the same key again or the other side. Turn off **Toggle lean** in Settings > Controls to lean only while holding the key.
+- **From the waist:** your head swings out 0.4 m in an arc, drops slightly, and the view tilts 15°. It takes about 0.2 s, and the same to swap sides.
+- **While leaning** you walk (no sprint), and you can aim and shoot. Sliding or wall running stands you back up.
+- Your head hitbox and third-person body move with the lean, and walls limit how far you can lean.
+
+**Pings** (middle mouse) work like Fortnite's. Ping where you're aiming to put a marker there for you and your team, with its distance. It shows through walls and on the minimap, with a sound.
+- **Aim at an enemy** to mark them (red **ENEMY** ping). **Aim at the Tag** to mark it.
+- **Double tap** for a red **DANGER** ping.
+- Pings last 4.5–6 s. Each player can have 3 at once, and older ones disappear. The server limits pings to 5 every 3 s.
 Doors fill their doorways exactly and swing open, away from you and at full speed, when you sprint or slide into them. **F** opens and closes them normally.
 
 ## Map sizes
@@ -402,7 +412,7 @@ You can also upload a **custom crosshair image** (with a scale slider) and a **c
 
 ## Assumptions and choices not covered by the spec
 
-- **Sprint is the default pace** (no sprint key). Leaning, aiming and crouching drop you to walking speed.
+- **Sprint is the default pace** (no sprint key). Leaning (toggled on), aiming and crouching drop you to walking speed.
 - **Reloading and magazine sizes** were added (R key), with the values above.
 - **Sniper:** inaccurate unless aimed. **Shotgun and sniper** pellets and rounds deal the same damage to the head (headshots still break Hider invisibility).
 - **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.

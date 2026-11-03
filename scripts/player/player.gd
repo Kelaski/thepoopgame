@@ -33,10 +33,15 @@ const WALLJUMP_FREE := 3           # wall jumps before fatigue sets in
 const WALLJUMP_FATIGUE := 0.75     # each later wall jump keeps 75% of the previous one's speed
 const FATIGUE_GRAVITY_STEP := 0.5  # ...and adds +50% gravity
 const FATIGUE_GRAVITY_MAX := 6.0   # up to 600%
-const LEAN_DIST := 0.45
-const LEAN_ROLL := 12.0
-const LEAN_SPEED := 6.0          # lean amount per second (0 -> full lean in ~0.17 s)
-const LEAN_SWITCH_SPEED := 18.0  # when switching sides: left -> right in ~0.11 s instead of ~0.33 s
+# Leaning works like Rainbow Six Siege: tap Q / E to lean and stay leaned (tap
+# again, or the other side, to change), or hold it with Toggle lean off. You
+# lean from the waist, so your head swings out in an arc, drops a little and the
+# view tilts with it. You walk while leaned, and can aim and shoot.
+const LEAN_DIST := 0.4           # sideways head offset at full lean (m)
+const LEAN_PIVOT := 1.0          # the lean pivots this far below your eyes (the waist)
+const LEAN_ROLL := 15.0          # view tilt at full lean (degrees)
+const LEAN_SPEED := 5.5          # lean amount per second (0 -> full lean in ~0.18 s)
+const LEAN_SWITCH_SPEED := 9.0   # full left -> full right in ~0.22 s
 const SLIDE_START_MIN := 5.5
 const SLIDE_FRICTION := 4.6
 const SLIDE_END := 3.6
@@ -145,6 +150,8 @@ var _wall_jump_t := 0.0           # coyote: recently left a wall run
 var _wall_jump_n := Vector3.ZERO
 var wall_jumps := 0               # wall jumps since you last touched the floor
 var lean := 0.0          # -1 (left) .. 1 (right), smoothed
+var _lean_side := 0      # where you want to lean: -1, 0 or 1 (toggled or held)
+var lean_drop := 0.0     # how far the lean lowers your head (m)
 var lean_offset := 0.0   # metres, clamped against walls
 var _step_t := 0.0
 
@@ -259,6 +266,33 @@ func _apply_team_look() -> void:
 	nameplate.modulate = tc.lightened(0.55)
 	nameplate.text = Net.name_of(peer_id)
 
+
+
+## Lean input: Toggle lean (the default) flips a side on each tap; otherwise the
+## side follows the key you're holding (the last one pressed wins). Sliding and
+## wall running stand you back up.
+func _update_lean_side(input_ok: bool) -> void:
+	var can_lean := input_ok and not sliding and not wallrunning and alive
+	if not can_lean:
+		if sliding or wallrunning or not alive:
+			_lean_side = 0
+		return
+	var left := Input.is_action_just_pressed("lean_left")
+	var right := Input.is_action_just_pressed("lean_right")
+	if Settings.g("toggle_lean"):
+		if left:
+			_lean_side = 0 if _lean_side == -1 else -1
+		elif right:
+			_lean_side = 0 if _lean_side == 1 else 1
+		return
+	if left:
+		_lean_side = -1
+	elif right:
+		_lean_side = 1
+	elif _lean_side == -1 and not Input.is_action_pressed("lean_left"):
+		_lean_side = 1 if Input.is_action_pressed("lean_right") else 0
+	elif _lean_side == 1 and not Input.is_action_pressed("lean_right"):
+		_lean_side = -1 if Input.is_action_pressed("lean_left") else 0
 
 
 ## Landing on a bounce pad (umbrella and awning tops) launches you up.
@@ -396,6 +430,8 @@ func set_alive(a: bool) -> void:
 		wallrunning = false
 		lean = 0.0
 		lean_offset = 0.0
+		_lean_side = 0
+		lean_drop = 0.0
 		if invisible:
 			invisible = false
 		phasing = 0.0
@@ -438,6 +474,8 @@ func respawn(pos: Vector3, protect: bool) -> void:
 	_last_wall_normal = Vector3.ZERO
 	lean = 0.0
 	lean_offset = 0.0
+	_lean_side = 0
+	lean_drop = 0.0
 	prot_pending = false
 	# Protection runs for 3 s from the moment you spawn, and ends early as soon
 	# as you move or shoot.
@@ -582,8 +620,8 @@ func _physics_process(delta: float) -> void:
 	# Sprint is the default pace: moving forward is always a sprint, except while
 	# aiming, crouching, sliding or holding a lean key (leaning slows you to a walk).
 	var sprint_in := can_input
-	var lean_held := can_input and (Input.is_action_pressed("lean_left") or Input.is_action_pressed("lean_right"))
-	sprinting = sprint_in and forward_in and not aiming and not sliding and not want_crouch and not lean_held
+	_update_lean_side(can_input and not frozen)
+	sprinting = sprint_in and forward_in and not aiming and not sliding and not want_crouch and _lean_side == 0
 
 	# --- Wall contact coyote time (0.1 s)
 	_wall_touch_t -= delta
@@ -734,20 +772,15 @@ func _physics_process(delta: float) -> void:
 	if hvel.length() > DOOR_SLAM_SPEED:
 		_check_door_slam(hvel.normalized())
 
-	# --- Leaning (not while sprinting, sliding or wall running)
-	var lean_in := 0.0
-	if can_input and not frozen and not sprinting and not sliding and not wallrunning:
-		if Input.is_action_pressed("lean_left"):
-			lean_in -= 1.0
-		if Input.is_action_pressed("lean_right"):
-			lean_in += 1.0
-	# Switching from one side straight to the other is snappier than leaning out
-	# from (or back to) the centre.
+	# --- Leaning (sliding and wall running stand you back up)
+	var lean_in := float(_lean_side)
 	var lean_rate := LEAN_SPEED
 	if lean_in != 0.0 and lean != 0.0 and signf(lean_in) != signf(lean):
 		lean_rate = LEAN_SWITCH_SPEED
 	lean = move_toward(lean, lean_in, delta * lean_rate)
-	var want_off := lean * LEAN_DIST
+	# Eased in and out, along an arc round the waist.
+	var max_angle := asin(LEAN_DIST / LEAN_PIVOT)
+	var want_off := sin(signf(lean) * smoothstep(0.0, 1.0, absf(lean)) * max_angle) * LEAN_PIVOT
 	if absf(want_off) > 0.01:
 		var right := Basis(Vector3.UP, yaw).x
 		var eye := global_position + Vector3(0, head.position.y, 0)
@@ -758,6 +791,7 @@ func _physics_process(delta: float) -> void:
 			var hit: Vector3 = r.position
 			want_off = signf(want_off) * maxf(0.0, eye.distance_to(hit) - 0.3)
 	lean_offset = want_off
+	lean_drop = LEAN_PIVOT - sqrt(LEAN_PIVOT * LEAN_PIVOT - lean_offset * lean_offset)
 	head_col.position.x = lean_offset
 
 	# --- Phantom collision masks
@@ -789,6 +823,8 @@ func _physics_process(delta: float) -> void:
 			_interact()
 		if Input.is_action_just_pressed("spray"):
 			_try_spray()
+		if Input.is_action_just_pressed("ping"):
+			_try_ping()
 	# The grapple is held: letting go of the ability key (or opening a menu / chat)
 	# lets go of the rope, or reels a flying hook back in.
 	if grapple_state != Hook.NONE and not (can_input and Input.is_action_pressed("addon")):
@@ -929,7 +965,7 @@ func _remote_update(delta: float) -> void:
 	head.rotation.x = net_pitch
 	_set_crouch_shape((net_flags & (F_CROUCH | F_SLIDE)) != 0)
 	head_col.position.x = net_lean
-	body_root.rotation.z = -net_lean / LEAN_DIST * deg_to_rad(15.0)
+	body_root.rotation.z = -asin(clampf(net_lean / 1.7, -1.0, 1.0))  # tilt the body so the head is where they lean
 	var me := multiplayer.get_unique_id()
 	nameplate.visible = alive and Game.in_match and Net.team_of(me) == team
 	if nameplate.visible:
@@ -985,7 +1021,7 @@ func _local_visuals(delta: float) -> void:
 	elif wallrunning:
 		var right_v := Basis(Vector3.UP, yaw).x
 		roll_target = -signf(wall_normal.dot(right_v)) * deg_to_rad(10.0)
-	roll_target += -lean * deg_to_rad(LEAN_ROLL)
+	roll_target += -lean_offset / LEAN_DIST * deg_to_rad(LEAN_ROLL)
 	cam_roll = lerpf(cam_roll, roll_target, clampf(delta * 10.0, 0.0, 1.0))
 	recoil = maxf(0.0, recoil - delta * 10.0)
 	rotation.y = yaw
@@ -993,7 +1029,7 @@ func _local_visuals(delta: float) -> void:
 	var f := Engine.get_physics_interpolation_fraction()
 	var p := _prev_pos.lerp(_cur_pos, f) if alive else global_position
 	var lean_v := Basis(Vector3.UP, yaw).x * lean_offset
-	cam.global_transform = Transform3D(Basis.from_euler(Vector3(pitch + deg_to_rad(recoil * 1.2), yaw, cam_roll)), p + Vector3(0, head.position.y, 0) + lean_v)
+	cam.global_transform = Transform3D(Basis.from_euler(Vector3(pitch + deg_to_rad(recoil * 1.2), yaw, cam_roll)), p + Vector3(0, head.position.y - lean_drop, 0) + lean_v)
 	if viewmodel == null:
 		return
 	var hspeed := Vector2(velocity.x, velocity.z).length()
@@ -1505,6 +1541,39 @@ func _try_spray() -> void:
 			up = Vector3.FORWARD
 	_spray_ready_at = now + SPRAY_COOLDOWN
 	Game.world.request_spray.rpc_id(1, r.position, normal, up)
+
+
+# Pings (Fortnite style): middle mouse marks where you aim for your team. Aiming
+# at an enemy marks them, aiming near the Tag marks it, and a quick double tap
+# turns your ping into a danger warning.
+const PING_RANGE := 300.0
+const PING_DOUBLE_TAP := 0.3
+var _last_ping_at := -10.0
+
+
+func _try_ping() -> void:
+	if Game.world == null:
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	var from := cam.global_position
+	var dir := aim_dir()
+	var q := PhysicsRayQueryParameters3D.create(from, from + dir * PING_RANGE, MASK_FULL | MapBuilder.L_PLAYER, [get_rid()])
+	var r := get_world_3d().direct_space_state.intersect_ray(q)
+	var pos: Vector3 = r.position if not r.is_empty() else from + dir * PING_RANGE * 0.5
+	var kind := "spot"
+	if not r.is_empty() and r.collider is Player and (r.collider as Player).team != team:
+		kind = "enemy"
+		pos = (r.collider as Player).global_position + Vector3(0, 1.0, 0)
+	elif Game.holder == 0 and Game.objective >= 0:
+		# Close to the line of sight to the Tag (within ~2 m of it)?
+		var to_tag := Game.tag_pos + Vector3(0, 1.0, 0) - from
+		if to_tag.length() < PING_RANGE and to_tag.normalized().dot(dir) > cos(atan2(2.0, to_tag.length())):
+			kind = "tag"
+			pos = Game.tag_pos + Vector3(0, 1.0, 0)
+	if now - _last_ping_at < PING_DOUBLE_TAP:
+		kind = "danger"
+	_last_ping_at = now
+	Game.world.request_ping.rpc_id(1, pos, kind)
 
 
 func _interact() -> void:

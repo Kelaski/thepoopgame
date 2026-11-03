@@ -38,6 +38,8 @@ func _ready() -> void:
 	streams["jump"] = _thud(rng, 0.08, 120.0)
 	streams["round"] = _chirp(300.0, 600.0, 0.6, 0.5)
 	streams["tick"] = _tone(1000.0, 0.03, 0.35)
+	streams["ping"] = _bell(1760.0, 0.35, 0.4)
+	streams["ping_danger"] = _chirp(1500.0, 950.0, 0.22, 0.45)
 	streams["hurt"] = _thud(rng, 0.15, 60.0)
 	for i in 8:
 		var p := AudioStreamPlayer.new()

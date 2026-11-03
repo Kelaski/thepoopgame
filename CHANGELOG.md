@@ -7,6 +7,23 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.14.0
+
+### Added
+- **Pings** (middle mouse, rebindable), like Fortnite's:
+  - Ping where you're aiming to put a marker there for you and your team. It shows its distance, through walls and on the minimap, with a sound.
+  - Aim at an enemy to mark them with a red **ENEMY** ping, or at the Tag to mark it.
+  - Double tap for a red **DANGER** ping.
+  - Pings fade after 4.5–6 s. Each player can have 3 at once, and new rounds clear them.
+- **Toggle lean setting** (Settings > Controls, on by default).
+
+### Changed
+- **Leaning works like Rainbow Six Siege:**
+  - Tap Q / E to lean and stay leaned. Tap the same key to stand up, or the other one to swap sides. With Toggle lean off, you lean while holding the key.
+  - You lean from the waist: your head swings out in an arc, drops slightly and the view tilts 15°. Leaning eases in and out over about 0.2 s.
+  - You walk while leaned and can aim and shoot. Sliding or wall running stands you back up.
+  - Other players see your body tilt so your head is where you're leaning.
+
 ## 0.13.0
 
 ### Added

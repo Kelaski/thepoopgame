@@ -116,6 +116,17 @@ func _draw() -> void:
 		draw_colored_polygon(pts, Mats.TAG_COLOR)
 		pts.append(pts[0])
 		draw_polyline(pts, Mats.team_color(rp.team), 2.0)
+	# Team pings: diamonds in the ping's colour, fading out with the marker
+	for pg: Array in w.pings:
+		var m = pg[2]
+		if not is_instance_valid(m):
+			continue
+		var pc := _p(m.global_position)
+		var a: float = m.alpha()
+		var pts := PackedVector2Array([pc + Vector2(0, -6), pc + Vector2(6, 0), pc + Vector2(0, 6), pc + Vector2(-6, 0)])
+		draw_colored_polygon(pts, Color(m.color, a))
+		pts.append(pts[0])
+		draw_polyline(pts, Color(0, 0, 0, 0.85 * a), 1.5)
 	# Self arrow
 	if lp and lp.alive:
 		var c := _p(lp.global_position)

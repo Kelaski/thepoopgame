@@ -29,6 +29,7 @@ const ACTIONS := [
 	["fire", "Fire"],
 	["aim", "Aim Down Sights"],
 	["reload", "Reload"],
+	["ping", "Ping (double tap: danger)"],
 	["scoreboard", "Scoreboard"],
 	["loadout", "Loadout Menu (while dead)"],
 	["spray", "Spray"],
@@ -49,6 +50,7 @@ const DEFAULTS := {
 	"invert_y": false,
 	"toggle_aim": false,
 	"toggle_crouch": false,
+	"toggle_lean": true,  # Rainbow Six style: tap to lean and stay leaned
 	# Video
 	"fov": 100.0,
 	"brightness": 1.0,

@@ -100,6 +100,13 @@ script = ExtResource("5_mpnul")
 setting = "toggle_crouch"
 label_text = "Toggle crouch (instead of hold)"
 
+[node name="ToggleLean" type="HBoxContainer" parent="Center/Panel/Content/Tabs/Controls/ControlsContent" unique_id=1406529183 instance=ExtResource("4_i3kxd")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("5_mpnul")
+setting = "toggle_lean"
+label_text = "Toggle lean (tap to lean, tap again to stand)"
+
 [node name="Keybinds" type="ScrollContainer" parent="Center/Panel/Content/Tabs" unique_id=1183745986]
 visible = false
 layout_mode = 2

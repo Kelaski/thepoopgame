@@ -11,6 +11,18 @@ const TRAIL_WIDTH := 0.34      # half-width in metres
 const PLAYER_SCENE := preload("res://assets/models/player.tscn")
 const TAG_SCENE := preload("res://assets/models/tag.tscn")
 const SPRAY_SCENE := preload("res://assets/models/spray_decal.tscn")
+const PING_SCENE := preload("res://assets/models/ping_marker.tscn")
+## Ping kinds: [title shown on the marker, lifetime in seconds]
+const PING_KINDS := {
+	"spot": ["", 6.0],
+	"enemy": ["ENEMY", 4.5],
+	"danger": ["DANGER", 6.0],
+	"tag": ["TAG", 6.0],
+}
+const PING_DANGER := Color("ff4a3a")
+const PINGS_PER_PLAYER := 3     # older pings from the same player disappear
+const PING_BURST := 5           # at most this many pings...
+const PING_BURST_TIME := 3.0    # ...per this many seconds (server-side spam limit)
 const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # bullet tracers + impacts
 const FX_TRAILS_MAT := preload("res://assets/materials/fx_trails.tres")    # Stalker trails
 ## Times of day (same order as Game.TIMES_OF_DAY). top / horizon tint the sky
@@ -37,6 +49,8 @@ const SHADOW_QUALITY := [
 	[4, 320.0, 8192],   # Ultra
 ]
 var builder: MapBuilder
+var pings: Array = []   # [owner id, kind, PingMarker] for your team, oldest first
+var _ping_times := {}   # server: id -> recent ping times
 var players := {}  # peer id -> Player
 var players_node: Node3D
 var env: WorldEnvironment
@@ -305,6 +319,8 @@ func local_player() -> Player:
 
 
 func on_round_begin(_obj: int) -> void:
+	for p in pings.duplicate():
+		_remove_ping(p)
 	_trails.clear()
 	_trail_times.clear()
 	for p in _projectiles:
@@ -712,6 +728,66 @@ func request_spray(pos: Vector3, normal: Vector3, up: Vector3) -> void:
 		return
 	_spray_last[id] = now
 	_spray_placed.rpc(id, pos, normal.normalized(), up.normalized())
+
+
+# ================================================================ pings
+
+@rpc("any_peer", "call_local", "reliable")
+func request_ping(pos: Vector3, kind: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var id: int = Net.sender()
+	if not PING_KINDS.has(kind) or not pos.is_finite() or not Game.is_alive(id) or not players.has(id):
+		return
+	if players[id].global_position.distance_to(pos) > Player.PING_RANGE + 5.0:
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	var recent: Array = _ping_times.get(id, [])
+	recent = recent.filter(func(t: float) -> bool: return now - t < PING_BURST_TIME)
+	if recent.size() >= PING_BURST and kind != "danger":
+		return
+	recent.append(now)
+	_ping_times[id] = recent
+	var team := Net.team_of(id)
+	for pid in Net.players:
+		if Net.team_of(pid) == team:
+			_show_ping.rpc_id(pid, id, pos, kind)
+
+
+@rpc("authority", "call_local", "reliable")
+func _show_ping(owner_id: int, pos: Vector3, kind: String) -> void:
+	_prune_pings()
+	# A danger ping (double tap) replaces the ping its owner just placed.
+	var mine := pings.filter(func(p: Array) -> bool: return p[0] == owner_id)
+	if kind == "danger" and not mine.is_empty():
+		var last: Array = mine[-1]
+		if (last[2] as PingMarker).age < 0.6:
+			_remove_ping(last)
+			mine.pop_back()
+	while mine.size() >= PINGS_PER_PLAYER:
+		_remove_ping(mine.pop_front())
+	var info: Array = PING_KINDS.get(kind, PING_KINDS.spot)
+	var col := Mats.team_color(Net.team_of(owner_id)).lightened(0.35)
+	if kind == "enemy" or kind == "danger":
+		col = PING_DANGER
+	elif kind == "tag":
+		col = Mats.TAG_COLOR
+	var m: PingMarker = PING_SCENE.instantiate()
+	m.setup(col, info[0], info[1])
+	add_child(m)
+	m.global_position = pos
+	pings.append([owner_id, kind, m])
+	Sfx.play("ping_danger" if col == PING_DANGER else "ping", -6.0)
+
+
+func _remove_ping(p: Array) -> void:
+	if is_instance_valid(p[2]):
+		(p[2] as PingMarker).queue_free()
+	pings.erase(p)
+
+
+func _prune_pings() -> void:
+	pings = pings.filter(func(p: Array) -> bool: return is_instance_valid(p[2]) and not (p[2] as Node).is_queued_for_deletion())
 
 
 ## A player's spray was cleared (they left): remove the one they placed.
