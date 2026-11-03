@@ -10,6 +10,7 @@ extends Node
 
 signal match_started
 signal match_ended
+signal map_size_changed(size: String)
 signal state_changed
 signal kill_event(killer: int, victim: int, weapon: String, head: bool)
 signal announce(text: String, color: Color)
@@ -32,6 +33,7 @@ const TEAM_PICKUP_BONUS := 15.0
 const RUNNER_KILL_REWARD := 5.0
 
 var world = null  # World node while a match is loaded
+var map_size := MapData.DEFAULT_SIZE  # chosen by the host; replicated to everyone
 var in_match := false
 var ui_open := false
 var typing := false  # chat box has focus: gameplay keys are ignored
@@ -96,6 +98,7 @@ func reset_local() -> void:
 	hp.clear()
 	respawn_left.clear()
 	world = null
+	_set_map_size_local(MapData.DEFAULT_SIZE)
 
 
 # ===================================================================== server
@@ -107,7 +110,7 @@ func server_start_match() -> void:
 		Net.players[id].kills = 0
 		Net.players[id].deaths = 0
 	Net.broadcast_roster()
-	_start_match.rpc()
+	_start_match.rpc(map_size)
 	get_tree().create_timer(1.0).timeout.connect(_server_begin_round)
 
 
@@ -122,7 +125,7 @@ func on_player_joined(id: int) -> void:
 	alive_ids[id] = false
 	hp[id] = max_hp_of(id)
 	respawn_left[id] = RESPAWN_TIME
-	_start_match.rpc_id(id)
+	_start_match.rpc_id(id, map_size)
 	_late_sync.rpc_id(id, alive_ids, objective, scores, round_num)
 	_push_state()
 
@@ -154,7 +157,8 @@ func _server_begin_round() -> void:
 	var a := randi() % dots.size()
 	var b := a
 	var tries := 0
-	while (b == a or dots[a].distance_to(dots[b]) < 70.0) and tries < 50:
+	var min_dist: float = world.builder.min_spawn_dist
+	while (b == a or dots[a].distance_to(dots[b]) < min_dist) and tries < 50:
 		b = randi() % dots.size()
 		tries += 1
 	if b == a:
@@ -348,6 +352,56 @@ func server_suicide(id: int) -> String:
 	return "You eliminated yourself."
 
 
+# ==================================================================== map size
+
+## Host picks the map size (lobby dropdown or /map). Takes effect when the next
+## match starts; during a match the match restarts on the new map.
+func server_set_map_size(size: String) -> void:
+	if not multiplayer.is_server() or not MapData.valid_size(size):
+		return
+	Settings.s("map_size", size)
+	_sync_map_size.rpc(size)
+
+
+## /map command (host only). Returns a reply for the chat.
+func server_map_command(sender: int, args: PackedStringArray) -> String:
+	var options := " | ".join(PackedStringArray(MapData.SIZE_ORDER))
+	if args.is_empty():
+		return "Current map: %s. Usage: /map <%s>" % [MapData.size_name(map_size), options]
+	if sender != 1:
+		return "Only the host can change the map."
+	var size := args[0].to_lower()
+	if not MapData.valid_size(size):
+		return "Unknown map size \"%s\". Use one of: %s" % [size.left(16), options]
+	if size == map_size and not in_match:
+		return "The map is already %s." % MapData.size_name(size)
+	server_set_map_size(size)
+	if in_match:
+		_announce.rpc("Host changed the map to %s - restarting the match" % MapData.size_name(size), Color.WHITE)
+		_end_match.rpc()
+		server_start_match()
+		return "Restarting on the %s map." % MapData.size_name(size)
+	return "Map set to %s." % MapData.size_name(size)
+
+
+func send_map_size_to(id: int) -> void:
+	if multiplayer.is_server():
+		_sync_map_size.rpc_id(id, map_size)
+
+
+@rpc("authority", "call_local", "reliable")
+func _sync_map_size(size: String) -> void:
+	_set_map_size_local(size)
+
+
+func _set_map_size_local(size: String) -> void:
+	if not MapData.valid_size(size):
+		size = MapData.DEFAULT_SIZE
+	if size != map_size:
+		map_size = size
+		map_size_changed.emit(size)
+
+
 ## Dead player asks to respawn. Honoured once their respawn timer has run out.
 @rpc("any_peer", "call_local", "reliable")
 func request_respawn() -> void:
@@ -392,7 +446,8 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 # ==================================================================== broadcasts
 
 @rpc("authority", "call_local", "reliable")
-func _start_match() -> void:
+func _start_match(size: String) -> void:
+	_set_map_size_local(size)
 	in_match = true
 	phase = Phase.LOBBY
 	scores = [0, 0]

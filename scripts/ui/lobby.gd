@@ -5,6 +5,7 @@ var main
 var _teams: Array = []
 var _start: Button
 var _status: Label
+var _map_label: Label
 
 
 func _ready() -> void:
@@ -23,6 +24,17 @@ func _ready() -> void:
 		v.add_child(l)
 	else:
 		v.add_child(UiKit.label("Connected. Waiting for the host to start the match.", 16, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER))
+
+	# Map size: the host picks it here (or with /map); everyone else sees it.
+	if multiplayer.is_server():
+		var names := []
+		for sz in MapData.SIZE_ORDER:
+			names.append(MapData.size_name(sz))
+		v.add_child(UiKit.option_row("Map size", names, maxi(0, MapData.SIZE_ORDER.find(Game.map_size)), func(i): Game.server_set_map_size(MapData.SIZE_ORDER[i])))
+	_map_label = UiKit.label("", 15, UiKit.MUTED, HORIZONTAL_ALIGNMENT_CENTER)
+	v.add_child(_map_label)
+	Game.map_size_changed.connect(_on_map_size_changed)
+	_update_map_label()
 
 	var cols := UiKit.hbox(16)
 	v.add_child(cols)
@@ -61,6 +73,21 @@ func _ready() -> void:
 	v.add_child(_status)
 	Net.roster_changed.connect(_refresh)
 	_refresh()
+
+
+const MAP_INFO := {
+	"small": "Small: Bank, Meridian Tower and the park (about 80 x 100 m).",
+	"medium": "Medium: School, Bank, Diner, Arcade, Meridian Tower, Casino and the park (about 130 x 135 m).",
+	"large": "Large: the whole city - 18 buildings and the park (200 x 170 m).",
+}
+
+
+func _on_map_size_changed(_size: String) -> void:
+	_update_map_label()
+
+
+func _update_map_label() -> void:
+	_map_label.text = "Map: " + MAP_INFO.get(Game.map_size, MapData.size_name(Game.map_size))
 
 
 func _refresh() -> void:

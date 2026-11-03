@@ -58,6 +58,7 @@ func host(port: int) -> String:
 	online = true
 	players.clear()
 	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
+	Game._set_map_size_local(str(Settings.g("map_size")))
 	roster_changed.emit()
 	upload_my_spray()
 	return ""
@@ -164,6 +165,7 @@ func register(pname: String, weapon: String, addon: String) -> void:
 	_broadcast()
 	for sid in sprays:
 		_spray_data.rpc_id(id, sid, sprays[sid])
+	Game.send_map_size_to(id)
 	Game.on_player_joined(id)
 
 

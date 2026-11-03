@@ -3,6 +3,20 @@ class_name MapData
 ## 1 px = 0.1 m, so the playable area is 200 m x 170 m centred on the origin.
 
 const SCALE := 0.1
+
+# Map sizes are cut-outs of the full layout (sketch pixels [x0, y0, x1, y1]).
+# Buildings fully inside the cut-out are kept, the boundary fence moves in, and
+# spawn zones / Tag spots / roads / crane bridges outside it are dropped.
+#   large  - the whole city (200 x 170 m, 18 buildings + park, 10 spawns, 8 Tag spots)
+#   medium - centre-north (130 x 136 m, 6 buildings + park, 5 spawns, 4 Tag spots)
+#   small  - centre (81 x 102 m, 2 buildings + park, 3 spawns, 3 Tag spots)
+const SIZES := {
+	"small": {"name": "Small", "rect": [360, 250, 1170, 1270], "min_spawn_dist": 50.0},
+	"medium": {"name": "Medium", "rect": [420, 0, 1720, 1360], "min_spawn_dist": 60.0},
+	"large": {"name": "Large", "rect": [0, 0, 2000, 1700], "min_spawn_dist": 70.0},
+}
+const SIZE_ORDER := ["small", "medium", "large"]
+const DEFAULT_SIZE := "large"
 const HALF_X := 100.0
 const HALF_Z := 85.0
 
@@ -73,3 +87,17 @@ static func px_rect(r: Array) -> Rect2:
 	var a := px(r[0], r[1])
 	var b := px(r[2], r[3])
 	return Rect2(a, b - a)
+
+
+static func valid_size(size: String) -> bool:
+	return SIZES.has(size)
+
+
+static func size_name(size: String) -> String:
+	return SIZES.get(size, SIZES[DEFAULT_SIZE]).name
+
+
+## Playable area of a map size, in metres.
+static func size_bounds(size: String) -> Rect2:
+	var d: Dictionary = SIZES.get(size, SIZES[DEFAULT_SIZE])
+	return px_rect(d.rect)

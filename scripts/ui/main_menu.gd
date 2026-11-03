@@ -52,6 +52,11 @@ func _ready() -> void:
 	row.add_child(portcol)
 	v.add_child(row)
 
+	var size_names := []
+	for sz in MapData.SIZE_ORDER:
+		size_names.append(MapData.size_name(sz))
+	var cur_size := MapData.SIZE_ORDER.find(str(Settings.g("map_size")))
+	v.add_child(UiKit.option_row("Map size when hosting", size_names, cur_size if cur_size >= 0 else MapData.SIZE_ORDER.size() - 1, func(i): Settings.s("map_size", MapData.SIZE_ORDER[i])))
 	var btns := UiKit.hbox(10)
 	var host := UiKit.button("Host Game", _on_host, 200)
 	host.size_flags_horizontal = Control.SIZE_EXPAND_FILL

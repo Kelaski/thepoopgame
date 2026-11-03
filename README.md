@@ -119,6 +119,18 @@ Press Jump to kick off the wall. The kick keeps your speed and adds a little, so
 **Leaning** (Q / C) peeks around corners. Your head hitbox moves with the lean, and walls limit how far you can lean.
 Doors swing open, away from you and at full speed, when you sprint or slide into them. **E** opens and closes them normally.
 
+## Map sizes
+
+The host picks **Small**, **Medium** or **Large** before hosting (the main menu dropdown), in the lobby, or with the chat command `/map <small|medium|large>`. Using `/map` during a match restarts the match on the new map. The choice is shared with everyone, including players who join later. `/map` with no size shows the current one.
+
+| Size | Area | Buildings | Spawn zones | Tag spots | Rooftop bridges |
+|---|---|---|---|---|---|
+| Small | ~81 × 102 m | Bank, Meridian Tower + park | 3 | 3 (Park, Bank, Tower) | none |
+| Medium | ~130 × 136 m | School, Bank, Diner, Arcade, Meridian Tower, Casino + park | 5 | 4 (Park, Bank, Tower, Casino) | Tower–Casino |
+| Large | 200 × 170 m | the whole city (all 18) + park | 10 | 8 | all 6 |
+
+Smaller sizes are cut-outs of the full city. Buildings that fit fully inside are kept and the fence moves in. Empty lots where a building was cut get street clutter, and the minimap zooms to fit. Defined in `MapData.SIZES` (`scripts/map/map_data.gd`).
+
 ## The map
 
 The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.

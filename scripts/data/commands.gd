@@ -5,6 +5,7 @@ class_name Commands
 const LIST := {
 	"help": {"usage": "/help", "desc": "List the available commands."},
 	"kill": {"usage": "/kill", "desc": "Eliminate yourself (the respawn timer still applies)."},
+	"map": {"usage": "/map <small|medium|large>", "desc": "Host: change the map size (restarts a running match)."},
 }
 
 
@@ -37,4 +38,6 @@ static func run(sender: int, text: String) -> Array:
 			return lines
 		"kill":
 			return [Game.server_suicide(sender)]
+		"map":
+			return [Game.server_map_command(sender, parts.slice(1))]
 	return []

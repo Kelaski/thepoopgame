@@ -71,8 +71,13 @@ var objectives: Array = []       # {pos: Vector3, name: String}
 var spawn_points: Array = []     # Vector3 candidate respawn points
 var doors: Array = []            # Door
 var buildings: Array = []        # {id, name, rect: Rect2, floors, fh, top, color}
-var road_rects: Array = []       # Rect2
+var road_rects: Array = []       # Rect2 (clipped to the map bounds)
 var park_rect := Rect2()
+var has_park := true
+var map_size := MapData.DEFAULT_SIZE
+var bounds := Rect2()            # playable area (inside the fence), metres
+var min_spawn_dist := 70.0       # minimum distance between the two teams' spawn zones
+var _active: Array = []          # MapData.BUILDINGS entries built for this size
 
 # Chunk accumulators
 var _chunk: Node3D
@@ -100,9 +105,20 @@ var _forbid: Array = []
 var _detail := true
 
 
-func build(parent: Node3D) -> void:
+func build(parent: Node3D, size := MapData.DEFAULT_SIZE) -> void:
 	root = parent
 	rng.seed = 424242
+	map_size = size if MapData.valid_size(size) else MapData.DEFAULT_SIZE
+	bounds = MapData.size_bounds(map_size)
+	min_spawn_dist = MapData.SIZES[map_size].min_spawn_dist
+	# Only buildings that fit entirely inside the fence are built.
+	var excluded: Array = []
+	for b in MapData.BUILDINGS:
+		var br := MapData.px_rect(b[3])
+		if bounds.encloses(br):
+			_active.append(b)
+		else:
+			excluded.append(br)
 	_box_mesh = BoxMesh.new()
 	_cyl_mesh = CylinderMesh.new()
 	_cyl_mesh.top_radius = 0.5
@@ -122,29 +138,36 @@ func build(parent: Node3D) -> void:
 	_solid_body.collision_mask = 0
 	root.add_child(_solid_body)
 
+	# Spawn zones and Tag spots: inside the fence and not in a removed building's lot.
 	for d in MapData.SPAWN_DOTS:
 		var p := MapData.px(d[0], d[1])
-		spawn_dots.append(Vector3(p.x, 0.0, p.y))
+		if _usable_point(p, excluded):
+			spawn_dots.append(Vector3(p.x, 0.0, p.y))
 	for o in MapData.OBJECTIVES:
 		var p := MapData.px(o[0], o[1])
-		objectives.append({"pos": Vector3(p.x, 0.0, p.y), "name": o[2]})
+		if _usable_point(p, excluded):
+			objectives.append({"pos": Vector3(p.x, 0.0, p.y), "name": o[2]})
 	for r in MapData.ROADS:
-		road_rects.append(MapData.px_rect(r))
+		var clipped := MapData.px_rect(r).intersection(bounds)
+		if clipped.size.x > 1.0 and clipped.size.y > 1.0:
+			road_rects.append(clipped)
 	park_rect = MapData.px_rect(MapData.PARK_RECT)
+	has_park = bounds.encloses(park_rect)
 
 	_begin_chunk("Streets")
 	_build_ground()
 	_build_street_props()
 	_end_chunk()
 
-	for b in MapData.BUILDINGS:
+	for b in _active:
 		_begin_chunk(b[1])
 		_build_building(b)
 		_end_chunk()
 
-	_begin_chunk("Park")
-	_build_park()
-	_end_chunk()
+	if has_park:
+		_begin_chunk("Park")
+		_build_park()
+		_end_chunk()
 
 	_begin_chunk("Cranes")
 	_build_cranes()
@@ -283,11 +306,19 @@ func _label(text: String, pos: Vector3, yaw: float, size := 96, col := Color.WHI
 
 # ================================================================ ground & streets
 
+func _usable_point(p: Vector2, excluded: Array) -> bool:
+	if not bounds.grow(-2.0).has_point(p):
+		return false
+	for r: Rect2 in excluded:
+		if r.has_point(p):
+			return false
+	return true
+
+
 func _build_ground() -> void:
-	var hx := MapData.HALF_X
-	var hz := MapData.HALF_Z
+	var bc := bounds.get_center()
 	# Playable ground (concrete / sidewalk)
-	box(Vector3(0, -0.5, 0), Vector3(hx * 2.0 + 4.0, 1.0, hz * 2.0 + 4.0), Palette.get_color("world_ground"), L_SOLID)
+	box(Vector3(bc.x, -0.5, bc.y), Vector3(bounds.size.x + 4.0, 1.0, bounds.size.y + 4.0), Palette.get_color("world_ground"), L_SOLID)
 	# Scenery ground outside the fence
 	box(Vector3(0, -0.53, 0), Vector3(700, 1.0, 700), Palette.get_color("world_outside"), 0)
 	# Roads with dashed centre lines
@@ -305,22 +336,25 @@ func _build_ground() -> void:
 	# Boundary fence: visual chain-link panels + tall invisible collision walls.
 	var fence_col := Color("55625a")
 	var post_col := Color("8c949a")
+	# Sides: 0 = north (min z), 1 = south (max z), 2 = west (min x), 3 = east (max x)
 	for side in 4:
 		var horizontal := side < 2
-		var fixed := (-hz if side == 0 else hz) if horizontal else (-hx if side == 2 else hx)
-		var length := hx * 2.0 if horizontal else hz * 2.0
-		var n := int(length / 4.0)
+		var fixed: float = [bounds.position.y, bounds.end.y, bounds.position.x, bounds.end.x][side]
+		var outward := -1.0 if side % 2 == 0 else 1.0
+		var mid := bc.x if horizontal else bc.y
+		var length := bounds.size.x if horizontal else bounds.size.y
+		var n := maxi(1, int(length / 4.0))
 		for i in n + 1:
-			var t := -length / 2.0 + i * length / n
+			var t := mid - length / 2.0 + i * length / n
 			var pc := Vector3(t, 1.75, fixed) if horizontal else Vector3(fixed, 1.75, t)
 			box(pc, Vector3(0.15, 3.5, 0.15), post_col, 0)
-		var center := Vector3(0, 1.6, fixed) if horizontal else Vector3(fixed, 1.6, 0)
+		var center := Vector3(mid, 1.6, fixed) if horizontal else Vector3(fixed, 1.6, mid)
 		var size := Vector3(length, 3.0, 0.06) if horizontal else Vector3(0.06, 3.0, length)
 		box(center, size, fence_col, 0)
-		var top := Vector3(0, 3.45, fixed) if horizontal else Vector3(fixed, 3.45, 0)
+		var top := Vector3(mid, 3.45, fixed) if horizontal else Vector3(fixed, 3.45, mid)
 		var top_size := Vector3(length, 0.1, 0.12) if horizontal else Vector3(0.12, 0.1, length)
 		box(top, top_size, post_col, 0)
-		var wall_c := Vector3(0, 40, fixed + (-0.6 if fixed < 0 else 0.6)) if horizontal else Vector3(fixed + (-0.6 if fixed < 0 else 0.6), 40, 0)
+		var wall_c := Vector3(mid, 40, fixed + outward * 0.6) if horizontal else Vector3(fixed + outward * 0.6, 40, mid)
 		var wall_s := Vector3(length + 4.0, 80, 1.0) if horizontal else Vector3(1.0, 80, length + 4.0)
 		_add_shape(L_SOLID, _box_shape(wall_s), Transform3D(Basis.IDENTITY, wall_c))
 
@@ -366,14 +400,14 @@ func _build_street_props() -> void:
 				c2 = Vector2(r.position.x + t, (r.end.y + 0.6) if far_side else (r.position.y - 0.6))
 			else:
 				c2 = Vector2((r.end.x + 0.6) if far_side else (r.position.x - 0.6), r.position.y + t)
-			if not _in_building(c2, 0.5) and absf(c2.x) < MapData.HALF_X - 1.0 and absf(c2.y) < MapData.HALF_Z - 1.0:
+			if not _in_building(c2, 0.5) and bounds.grow(-1.0).has_point(c2):
 				cyl(Vector3(c2.x, 2.75, c2.y), 0.14, 5.5, DARKMETAL, L_WALL)
 				box(Vector3(c2.x, 5.5, c2.y), Vector3(0.6, 0.18, 0.6), Color("fff2b0"), 0)
 			t += 12.0
 	# Dumpsters in alleys near the tenements and warehouse
 	for p in [[1480, 1560], [1820, 1580], [480, 120], [1300, 900], [420, 860], [1030, 1380]]:
 		var c := MapData.px(p[0], p[1])
-		if not _in_building(c, 0.8):
+		if not _in_building(c, 0.8) and bounds.grow(-2.0).has_point(c):
 			box(Vector3(c.x, 0.7, c.y), Vector3(2.0, 1.4, 1.2), Color("3f6a4a"), L_WALL)
 	_scatter_clutter()
 
@@ -387,10 +421,12 @@ func _scatter_clutter() -> void:
 	for o in objectives:
 		avoid_pts.append(o.pos)
 	var tries := 0
-	while placed.size() < 420 and tries < 6000:
+	# 420 props on the full 200 x 170 m map; scaled by area for smaller sizes.
+	var target := maxi(80, int(420.0 * bounds.get_area() / (200.0 * 170.0)))
+	while placed.size() < target and tries < 6000:
 		tries += 1
-		var p := Vector2(rng.randf_range(-MapData.HALF_X + 2.0, MapData.HALF_X - 2.0), rng.randf_range(-MapData.HALF_Z + 2.0, MapData.HALF_Z - 2.0))
-		if _in_building(p, 2.6) or park_rect.grow(0.5).has_point(p):
+		var p := Vector2(rng.randf_range(bounds.position.x + 2.0, bounds.end.x - 2.0), rng.randf_range(bounds.position.y + 2.0, bounds.end.y - 2.0))
+		if _in_building(p, 2.6) or (has_park and park_rect.grow(0.5).has_point(p)):
 			continue
 		if _near_any(p, avoid_pts, 6.0):
 			continue
@@ -485,8 +521,9 @@ func _car(c: Vector3, along_x: bool, col: Color) -> void:
 			box(c + off, Vector3(0.7, 0.7, 0.25) if along_x else Vector3(0.25, 0.7, 0.7), BLACK, 0)
 
 
+## True if p is inside (or within margin of) a building that exists on this map size.
 func _in_building(p: Vector2, margin: float) -> bool:
-	for b in MapData.BUILDINGS:
+	for b in _active:
 		var r := MapData.px_rect(b[3]).grow(margin)
 		if r.has_point(p):
 			return true
@@ -1532,10 +1569,10 @@ func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: Stri
 # ================================================================ spawn points
 
 func _build_spawn_points() -> void:
-	var x := -96.0
-	while x <= 96.0:
-		var z := -81.0
-		while z <= 81.0:
+	var x := bounds.position.x + 4.0
+	while x <= bounds.end.x - 4.0:
+		var z := bounds.position.y + 4.0
+		while z <= bounds.end.y - 4.0:
 			var p := Vector2(x, z)
 			if not _in_building(p, 1.2):
 				spawn_points.append(Vector3(x, 0.1, z))

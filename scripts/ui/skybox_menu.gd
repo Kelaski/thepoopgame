@@ -87,28 +87,21 @@ func _on_file(path: String) -> void:
 func _rebuild_with_custom_on() -> void:
 	# Turn the custom sky on and rebuild so the checkbox reflects it.
 	Settings.s("sky_custom", true)
-	var fresh := SkyboxMenu.new()
-	fresh.on_back = on_back
-	var main = get_tree().root.get_node_or_null("Main")
-	if main and main.overlay == self:
-		main.overlay = fresh
-	get_parent().add_child(fresh)
-	fresh._status.text = _status.text
-	queue_free()
+	_rebuild()
 
 
 func _remove() -> void:
 	UserImages.remove(UserImages.SKYBOX)
 	_status.text = "Custom skybox removed."
 	Settings.s("sky_custom", false)
+	_rebuild()
+
+
+func _rebuild() -> void:
 	var fresh := SkyboxMenu.new()
 	fresh.on_back = on_back
-	var main = get_tree().root.get_node_or_null("Main")
-	if main and main.overlay == self:
-		main.overlay = fresh
-	get_parent().add_child(fresh)
+	get_tree().root.get_node("Main").replace_overlay(self, fresh)
 	fresh._status.text = _status.text
-	queue_free()
 
 
 func _back() -> void:

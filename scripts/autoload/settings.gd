@@ -36,6 +36,7 @@ const DEFAULTS := {
 	"last_ip": "127.0.0.1",
 	"port": 7777,
 	"weapon": "ar",
+	"map_size": "large",  # last map size chosen when hosting
 	"addon": "trackstar",
 	# Controls
 	"sensitivity": 0.10,

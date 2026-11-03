@@ -1,16 +1,19 @@
 class_name Minimap
 extends Control
-## North-up minimap of the whole city. Shows the Runner to everyone at all times,
-## your teammates, the objective / dropped Tag, and yourself.
+## North-up minimap of the playable area (scaled to fit whatever map size is
+## loaded). Shows the Runner to everyone at all times, your teammates, the
+## objective / dropped Tag, and yourself.
 
-const S := 1.2
-const OFF := Vector2(MapData.HALF_X, MapData.HALF_Z)
+const WIDGET := Vector2(240, 204)
 
 var _acc := 0.0
+var _scale := 1.2
+var _origin := Vector2.ZERO   # map-space point drawn at the widget's top-left
+var _pad := Vector2.ZERO      # centring offset inside the widget
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(MapData.HALF_X * 2.0, MapData.HALF_Z * 2.0) * S
+	custom_minimum_size = WIDGET
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
@@ -22,11 +25,11 @@ func _process(delta: float) -> void:
 
 
 func _p(v: Vector3) -> Vector2:
-	return (Vector2(v.x, v.z) + OFF) * S
+	return (Vector2(v.x, v.z) - _origin) * _scale + _pad
 
 
 func _r(r: Rect2) -> Rect2:
-	return Rect2((r.position + OFF) * S, r.size * S)
+	return Rect2((r.position - _origin) * _scale + _pad, r.size * _scale)
 
 
 func _draw() -> void:
@@ -34,9 +37,15 @@ func _draw() -> void:
 	var w = Game.world
 	if w == null or w.builder == null:
 		return
+	var area: Rect2 = w.builder.bounds
+	_scale = minf(size.x / area.size.x, size.y / area.size.y)
+	_origin = area.position
+	_pad = (size - area.size * _scale) * 0.5
+	draw_rect(_r(area), Color(0.16, 0.18, 0.2, 0.9))
 	for r: Rect2 in w.builder.road_rects:
 		draw_rect(_r(r), Color(0.24, 0.25, 0.29))
-	draw_rect(_r(w.builder.park_rect), Color(0.32, 0.55, 0.28))
+	if w.builder.has_park:
+		draw_rect(_r(w.builder.park_rect), Color(0.32, 0.55, 0.28))
 	for b in w.builder.buildings:
 		var rr := _r(b.rect)
 		draw_rect(rr, (b.color as Color).darkened(0.35))

@@ -34,7 +34,7 @@ func _ready() -> void:
 	name = "World"
 	_build_environment()
 	builder = MapBuilder.new()
-	builder.build(self)
+	builder.build(self, Game.map_size)
 	players_node = Node3D.new()
 	players_node.name = "Players"
 	add_child(players_node)
@@ -231,6 +231,9 @@ func update_tag() -> void:
 # ================================================================ spawning (server)
 
 func is_free(pos: Vector3) -> bool:
+	# Never spawn outside the fence (the ground extends a little past it).
+	if not builder.bounds.grow(-0.8).has_point(Vector2(pos.x, pos.z)):
+		return false
 	var q := PhysicsShapeQueryParameters3D.new()
 	var s := CapsuleShape3D.new()
 	s.radius = 0.42
