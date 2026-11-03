@@ -32,7 +32,7 @@ Optional command-line flags (after `--`):
 |---|---|
 | Move | W A S D |
 | Jump / double jump (Skywalker) | Space |
-| Crouch / slide (crouch while running) | Ctrl |
+| Crouch / slide (crouch while sprinting) | Ctrl |
 | Lean left / right | Q / E |
 | Addon ability | Shift |
 | Interact (doors) | F |
@@ -44,7 +44,7 @@ Optional command-line flags (after `--`):
 | Chat (all / team) | Enter / Y |
 | Pause / settings | Esc |
 
-There is no sprint key: you always move at full (Half-Life "run") speed. Aiming, crouching or holding a lean key slows you down.
+There is no sprint key: moving forward is always a sprint. Aiming, crouching or holding a lean key slows you to a walk.
 If you played an older version, the old default binds for lean right (C), addon (F) and interact (E) move to the new defaults automatically. Binds you changed yourself are kept.
 
 A fast, punchy 160 BPM beat plays during matches. It is synthesized in code and has its own volume slider.
@@ -117,28 +117,13 @@ view distance, master/effects/UI volume, hitmarker sound, minimap size (0.6x–2
 
 ### Movement
 
-Ground and air movement is a port of the GoldSrc (Half-Life 1) player physics in `pm_shared.c`, converted at 1 unit = 1 inch:
-
-| | GoldSrc value | In metres |
-|---|---|---|
-| Max speed (run) | 320 u/s | 8.13 m/s |
-| Ground acceleration / friction / stop speed | 10 / 4 / 100 u/s | 10 / 4 / 2.54 m/s |
-| Air acceleration / air wish-speed cap | 10 / 30 u/s | 10 / 0.76 m/s |
-| Gravity / jump height | 800 u/s² / 45 u | 20.3 m/s² / 1.14 m |
-| Ducked speed | 0.333 × | 2.7 m/s |
-| Edge friction | 2 × near a drop | |
-
-- **Air strafing works:** in the air you only gain speed sideways, so strafing while turning the mouse curves you around and builds speed.
-- **Bunny hopping works:** jumping on the exact frame you land skips ground friction. Jump has to be pressed again for each hop (holding it does nothing), so many players bind Jump to the mouse wheel as well (Settings > Keybinds).
-- **Half-Life's bunny-hop cap** applies: jumping above 1.7 × max speed scales you down to 65% of that.
-- There is no ground coyote time, as in Half-Life.
-- **Sliding** (added on top of GoldSrc): crouch while moving faster than 5.5 m/s (so while running, or in mid-air) to slide. A ground slide starts at 1.25 × max speed or more (up to 14 m/s) and slows with its own friction. Sliding downhill keeps accelerating the longer you stay on the slope (up to 22 m/s). Mid-air slides carry on after you land until your momentum runs out. Jumping out of a slide keeps all of its speed (the bunny-hop cap doesn't apply to slide-jumps). Crouching while slower than 5.5 m/s is a plain duck.
-- Holding a lean key walks (0.52 ×, like Counter-Strike's walk key). Aiming also slows you.
-
-**Wall running** (kept from before): jump into a wall at speed while holding forward to run along it for up to 1.6 s.
-Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a bunny hop. Crouch drops you off. There is no limit on how many walls you can chain before landing. Wall jumps have 0.1 s of coyote time, so you can still kick off just after leaving a wall.
-**Leaning** (Q / E) peeks around corners. Your head hitbox moves with the lean, and walls limit how far you can lean.
-Doors fill their doorways exactly and swing open, away from you and at full speed, when you run or slide into them. **F** opens and closes them normally.
+Snappy ground acceleration, sprinting by default, crouch, and a momentum slide (crouch while sprinting). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
+Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved.
+**Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
+Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
+**Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Touching the floor resets it.
+**Leaning** (Q / E) peeks around corners and slows you to a walk. Your head hitbox moves with the lean, and walls limit how far you can lean.
+Doors fill their doorways exactly and swing open, away from you and at full speed, when you sprint or slide into them. **F** opens and closes them normally.
 
 ## Map sizes
 
@@ -250,7 +235,7 @@ You can also upload a **custom crosshair image** (with a scale slider) and a **c
 
 ## Assumptions and choices not covered by the spec
 
-- **Movement is GoldSrc's** (see Movement), with wall running and wall jumps added on top. Full speed is the default pace (no sprint key). Leaning, aiming and crouching slow you down.
+- **Sprint is the default pace** (no sprint key). Leaning, aiming and crouching drop you to walking speed.
 - **Reloading and magazine sizes** were added (R key), with the values above.
 - **Sniper:** inaccurate unless aimed. **Shotgun and sniper** pellets and rounds deal the same damage to the head (headshots still break Hider invisibility).
 - **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.
