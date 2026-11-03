@@ -276,7 +276,10 @@ Every prop and piece of furniture on the map is a template scene:
 - `assets/props/vehicles/`: car, taxi, van, bus.
 - `assets/props/street/`: lamp, trees, benches, bins, hydrant, mailbox, bus shelter, kiosk, dumpster.
 - `assets/props/nature/`: tree crown, trunk, bush.
-- `assets/props/park/`, `arena/`, `water/`: the basketball court, playground, bleachers, scoreboard, tanks and pumps.
+- `assets/props/park/`, `arena/`, `water/`: the basketball court, playground, bleachers, scoreboard, tanks and pumps, plus the park's fountain, flower beds, picnic umbrellas and ground pieces:
+  - `lawn`: a 1 m square stretched to the park.
+  - `path`: 1 m long, stretched to each path.
+  - `plaza`, `sandpit` and `pond`: the pond is scaled with the park.
 - `assets/props/crane/`: footing, mast, braces, the crane top, hook and loads, and `beam`, the stretched piece used for cables, jibs and bridge decks.
 - `assets/furniture/`: 40 items, from desks and beds to slot machines.
 - `assets/furniture/decor/`: 30 interior decor pieces: ceiling lights, wall decor, floor pieces, a rug and the exit sign.

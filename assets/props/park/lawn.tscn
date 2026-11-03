@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kko0f"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.41568628, 0.65882355, 0.30980393, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_8xwut"]
+size = Vector3(1, 0.04, 1)
+
+[node name="Lawn" type="Node3D" unique_id=170091099]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=1852157983]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+material_override = SubResource("StandardMaterial3D_kko0f")
+mesh = SubResource("BoxMesh_8xwut")

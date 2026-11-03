@@ -1616,10 +1616,7 @@ func _furnish_water(inner: Rect2, zones: Array) -> void:
 
 # ================================================================ park (19)
 
-const PATH_W := 2.6
-const PATH_COL := Color("cdbf9e")
-const PATH_EDGE := Color("a89a7a")
-const SAND := Color("e2cf98")
+const PATH_W := 2.6  # width of props/park/path (paving and kerbs)
 
 
 ## The park, laid out like a real city park (classic 37 x 44 m layout scaled to
@@ -1638,7 +1635,10 @@ func _build_park() -> void:
 	var z0 := r.position.y
 	var kx := r.size.x / 37.0
 	var kz := r.size.y / 44.0
-	box(Vector3(r.get_center().x, 0.02, r.get_center().y), Vector3(r.size.x, 0.04, r.size.y), GRASS, DECOR)
+	# The ground pieces are scenes in assets/props/park/: lawn (stretched to the
+	# park), path (stretched to each path), plaza, sandpit and pond (scaled with
+	# the park). All visual only.
+	_prefab("props/park/lawn", _at(Vector3(r.get_center().x, 0, r.get_center().y), 0.0, Vector3(r.size.x, 1, r.size.y)))
 	_label(park_name.to_upper(), Vector3(r.get_center().x, 3.0, r.end.y + 0.5), 0.0, 96, Color("d8f0c0"))
 	# Basketball court (left), playground on a sandpit (top left), pond (bottom right)
 	var court := Rect2(x0 + 2.5 * kx, z0 + minf(13.0 * kz, r.size.y - 27.0), 14.0, 26.0)
@@ -1646,13 +1646,10 @@ func _build_park() -> void:
 	_prefab("props/park/basketball_court", _at(Vector3(cc.x, 0, cc.y)))  # with hoops and fence
 	var pg := Rect2(x0 + 6.5 * kx - 4.0, z0 + 5.1 * kz - 2.6, 8.0, 5.2)
 	var pc := pg.get_center()
-	var sand := pg.grow(1.2)
-	box(Vector3(sand.get_center().x, 0.05, sand.get_center().y), Vector3(sand.size.x, 0.03, sand.size.y), SAND, DECOR)
+	var sand := pg.grow(1.2)  # props/park/sandpit is this size
+	_prefab("props/park/sandpit", _at(Vector3(pc.x, 0, pc.y)))
 	_prefab("props/park/playground", _at(Vector3(pc.x, 0, pc.y)))
-	for blob in [[28.5, 28.5, 3.8], [27.0, 33.0, 3.6], [24.5, 36.5, 3.4], [26.0, 39.0, 2.6]]:
-		var p := Vector2(x0 + blob[0] * kx, z0 + blob[1] * kz)
-		cyl(Vector3(p.x, 0.05, p.y), blob[2] + 0.4, 0.06, Color("9a8a6a"), DECOR)
-		cyl(Vector3(p.x, 0.07, p.y), blob[2], 0.06, Color("3fa8e0"), DECOR)
+	_prefab("props/park/pond", _at(Vector3(x0 + 26.5 * kx, 0, z0 + 34.0 * kz), 0.0, Vector3(kx, 1, kz)))
 	var pond := Rect2(x0 + 20.0 * kx, z0 + 24.5 * kz, 12.0 * kx, 17.0 * kz)
 
 	# Keep clear of the big pieces, the Tag and the spawn zones.
@@ -1674,7 +1671,7 @@ func _build_park() -> void:
 	var plaza := Vector2(path_x, path_z if cross else z0 + r.size.y * 0.25)
 	var plaza_r := 4.2
 	if not _hits_any(Rect2(plaza - Vector2.ONE * 2.4, Vector2(4.8, 4.8)), avoid.slice(3), 0.0):
-		cyl(Vector3(plaza.x, 0.06, plaza.y), plaza_r, 0.04, PATH_COL, DECOR)
+		_prefab("props/park/plaza", _at(Vector3(plaza.x, 0, plaza.y)))
 		_prefab("props/park/fountain", _at(Vector3(plaza.x, 0, plaza.y)))
 		# Flower beds on the plaza's diagonals, turned to follow it round
 		for i in 4:
@@ -1775,16 +1772,13 @@ func _build_park() -> void:
 	_detail = true
 
 
-## A paved park path with a slightly darker kerb down each side (visual only).
+## A paved park path: props/park/path (1 m long along local Z) stretched to the
+## path's length and turned to run along it.
 func _park_path(pr: Rect2) -> void:
 	var c := pr.get_center()
-	box(Vector3(c.x, 0.055, c.y), Vector3(pr.size.x, 0.03, pr.size.y), PATH_COL, DECOR)
 	var along_z := pr.size.y > pr.size.x
-	for s: float in [-1.0, 1.0]:
-		if along_z:
-			box(Vector3(c.x + s * (pr.size.x * 0.5 - 0.08), 0.06, c.y), Vector3(0.16, 0.04, pr.size.y), PATH_EDGE, DECOR)
-		else:
-			box(Vector3(c.x, 0.06, c.y + s * (pr.size.y * 0.5 - 0.08)), Vector3(pr.size.x, 0.04, 0.16), PATH_EDGE, DECOR)
+	var length := pr.size.y if along_z else pr.size.x
+	_prefab("props/park/path", _at(Vector3(c.x, 0, c.y), 0.0 if along_z else PI * 0.5, Vector3(1, 1, length)))
 
 
 ## Park tree: a trunk stretched to a random height and a leafy crown.

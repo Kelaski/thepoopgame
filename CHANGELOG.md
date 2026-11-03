@@ -7,6 +7,13 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.14.1
+
+### Changed
+- **Park ground pieces are scenes now:** the lawn, paths, fountain plaza paving, sandpit and pond are in `assets/props/park/` (`lawn`, `path`, `plaza`, `sandpit`, `pond`), so you can reshape them in the editor. They look the same as before.
+- **Sandpit:** has a low wooden border.
+- **Pond:** has a few rocks and reeds round it.
+
 ## 0.14.0
 
 ### Added
