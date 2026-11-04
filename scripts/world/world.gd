@@ -267,7 +267,7 @@ func _apply_night_lights() -> void:
 		l.visible = night > 0.02 and (q == 2 or (q == 1 and i % 2 == 0))
 		l.light_energy = float(l.get_meta("energy", 1.0)) * night
 
-## The Tag (assets/models/tag.tscn): Gem, PickupRing and Beam, tinted with the
+## The Tag (assets/models/tag.tscn): Gem and Beam, tinted with the
 ## Tag colour (which players can customize) at load.
 func _build_tag() -> void:
 	tag_node = TAG_SCENE.instantiate()
@@ -276,9 +276,6 @@ func _build_tag() -> void:
 	tag_gem = tag_node.get_node("Gem")
 	tag_beam = tag_node.get_node("Beam")
 	tag_gem.material_override = Mats.glow(Mats.TAG_COLOR)
-	var ring := tag_node.get_node_or_null("PickupRing") as GeometryInstance3D
-	if ring:
-		ring.material_override = Mats.glow(Mats.TAG_COLOR, 0.35)
 	tag_beam.material_override = Mats.glow(Mats.TAG_COLOR, 0.25)
 	tag_node.visible = false
 
@@ -478,15 +475,15 @@ func find_respawn(id: int) -> Vector3:
 func _remote_sender() -> Player:
 	if not _is_remote_call():
 		return null
-	return players.get(multiplayer.get_remote_sender_id())
+	return players.get(Net.remote_sender())
 
 
 func _is_remote_call() -> bool:
-	var sid := multiplayer.get_remote_sender_id()
+	var sid := Net.remote_sender()  # through the host: who really sent it (Net.to_all)
 	return sid != 0 and sid != multiplayer.get_unique_id()
 
 
-@rpc("any_peer", "call_local", "reliable")
+## Sent with Net.to_all (runs here too).
 func door_rpc(idx: int, target: float, fast: bool) -> void:
 	if idx < 0 or idx >= builder.doors.size() or not is_finite(target):
 		return
@@ -505,7 +502,7 @@ func door_rpc(idx: int, target: float, fast: bool) -> void:
 	Sfx.play_at("door", d.global_position + Vector3(0, 1.2, 0), -2.0 if fast else -8.0, 40.0, 0.8 if fast else 1.0)
 
 
-@rpc("any_peer", "call_remote", "unreliable")
+## Sent with Net.to_all.
 func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
 	# Only real weapons, a handful of tracers, from where the shooter actually is.
 	if not Weapons.DATA.has(weapon) or ends.size() > MAX_SHOT_TRACERS or not origin.is_finite():
@@ -514,7 +511,7 @@ func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
 	if p == null or not p.alive or p.global_position.distance_to(origin) > 6.0:
 		return
 	# No more shot effects than the fastest gun fires (with slack), per shooter.
-	var sid := multiplayer.get_remote_sender_id()
+	var sid := p.peer_id
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - float(_fx_shot_at.get(sid, -100.0)) < FX_SHOT_MIN_GAP:
 		return
@@ -541,13 +538,13 @@ func add_impact(pos: Vector3) -> void:
 
 ## Bat finisher: the victim's gun flies where the batter is looking.
 func launch_thrown_gun(start: Vector3, dir: Vector3, victim: int) -> void:
-	_fx_projectile.rpc(multiplayer.get_unique_id(), start, dir * 32.0, victim)
+	Net.to_all(self, "_fx_projectile", [multiplayer.get_unique_id(), start, dir * 32.0, victim], true, true)
 
 
-@rpc("any_peer", "call_local", "reliable")
+## Sent with Net.to_all (runs here too).
 func _fx_projectile(owner_id: int, start: Vector3, vel: Vector3, victim: int) -> void:
 	# Only the thrower can launch their own gun, and only a sensible one.
-	if _is_remote_call() and multiplayer.get_remote_sender_id() != owner_id:
+	if _is_remote_call() and Net.remote_sender() != owner_id:
 		return
 	if not (start.is_finite() and vel.is_finite()) or vel.length() > 60.0 or _projectiles.size() >= MAX_PROJECTILES:
 		return
@@ -594,7 +591,8 @@ func _update_stalker_scan() -> void:
 
 func _update_tag_visual(delta: float) -> void:
 	update_tag()
-	# During the countdown the Tag shows through walls, so everyone sees where to go.
+	# During the countdown the Tag itself (not its beam) shows through walls, so
+	# everyone sees where to go.
 	var hl: bool = Game.phase == Game.Phase.PREROUND
 	if hl != _tag_highlit:
 		_tag_highlit = hl
@@ -603,7 +601,6 @@ func _update_tag_visual(delta: float) -> void:
 			mat = TAG_HIGHLIGHT.duplicate()
 			(mat as StandardMaterial3D).albedo_color = Color(Mats.TAG_COLOR, 0.8)
 		tag_gem.material_overlay = mat
-		tag_beam.material_overlay = mat
 	if tag_node.visible:
 		tag_gem.rotation.y += delta * 2.0
 		tag_gem.position.y = 1.0 + sin(Time.get_ticks_msec() * 0.003) * 0.15

@@ -16,7 +16,7 @@ signal match_started
 signal match_ended
 signal map_size_changed(size: String)
 signal state_changed
-signal kill_event(killer: int, victim: int, weapon: String, head: bool)
+signal kill_event(killer: int, victim: int, weapon: String, head: bool, noscope: bool)
 signal announce(text: String, color: Color)
 signal local_hit(damage: float, head: bool, killed: bool)
 signal local_damaged(hp: float)
@@ -387,7 +387,7 @@ func _respawn_time_for(id: int) -> float:
 	return RESPAWN_TIME
 
 
-func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
+func _server_kill(victim: int, killer: int, weapon: String, head: bool, noscope := false) -> void:
 	var respawn := _respawn_time_for(victim)
 	alive_ids[victim] = false
 	hp[victim] = 0.0
@@ -406,7 +406,7 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
 	var victim_pos := Vector3.ZERO
 	if world.players.has(victim):
 		victim_pos = world.players[victim].global_position
-	_on_death.rpc(victim, killer, weapon, head, victim_pos, respawn)
+	_on_death.rpc(victim, killer, weapon, head, victim_pos, respawn, noscope)
 	if holder == victim:
 		_server_drop(victim_pos)
 	elif holder == killer and killer != victim and phase == Phase.HELD:
@@ -527,7 +527,9 @@ func _push_state() -> void:
 ## the victim must be in that weapon's range, and hits can't come faster than the
 ## weapon can fire.
 @rpc("any_peer", "call_local", "reliable")
-func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
+## noscope: a sniper shot fired without the scope, as the shooter saw it (only
+## shown in the kill feed, so it's taken on trust).
+func report_hit(victim: int, damage: float, head: bool, weapon: String, noscope := false) -> void:
 	if not multiplayer.is_server() or not in_match or world == null:
 		return
 	var shooter: int = Net.sender()
@@ -566,7 +568,7 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 	hp[victim] = hp.get(victim, 100.0) - damage
 	_last_hit[victim] = _now
 	if hp[victim] <= 0.0:
-		_server_kill(victim, shooter, weapon, head)
+		_server_kill(victim, shooter, weapon, head, noscope and weapon == "sniper")
 	else:
 		_on_damage.rpc(victim, shooter, hp[victim], damage, head)
 
@@ -907,7 +909,7 @@ func _on_damage(victim: int, shooter: int, new_hp: float, damage: float, head: b
 
 
 @rpc("authority", "call_local", "reliable")
-func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos: Vector3, respawn: float) -> void:
+func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos: Vector3, respawn: float, noscope := false) -> void:
 	alive_ids[victim] = false
 	hp[victim] = 0.0
 	respawn_left[victim] = respawn
@@ -917,7 +919,7 @@ func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos:
 	if killer == me and victim != me:
 		local_hit.emit(0.0, head, true)
 		if world and world.players.has(me):
-			world.players[me].on_kill()  # Reload on Kill
+			world.players[me].on_kill(victim)  # Reload on Kill
 		# A killing bat swing launches the victim's gun where the batter is looking.
 		if weapon == "bat" and world and world.players.has(me) and Net.players.has(victim):
 			var vw: String = Net.players[victim].weapon
@@ -925,7 +927,7 @@ func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos:
 				world.launch_thrown_gun(victim_pos + Vector3(0, 1.3, 0), world.players[me].aim_dir(), victim)
 	if victim == me:
 		local_damaged.emit(0.0)
-	kill_event.emit(killer, victim, weapon, head)
+	kill_event.emit(killer, victim, weapon, head, noscope)
 	state_changed.emit()
 
 

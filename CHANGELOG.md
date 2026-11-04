@@ -7,6 +7,27 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.22.0
+
+### Added
+- **No-scope kills:** a sniper kill without the scope says NO-SCOPE in the kill feed and on the death screen.
+- **Ping:** the lobby and the scoreboard (Tab) show each player's ping to the host.
+
+### Changed
+- **Mantling** works through windows and over the ledges around rooftops, and now needs you to hold Space as you push into the ledge.
+- **No more gliding:** letting go of the movement keys on the ground stops you quickly, whatever your speed. You used to slide on while sprint speed bled off. (Landing a hop still keeps your speed for a moment, so bunny hops work as before.)
+- **Warp** can be heard by everyone, where the player vanishes and where they reappear.
+- **Death screen:** "they have xx HP left" now shows the killer's health as it is, while they're alive.
+- **Names follow your Steam name** unless you type your own. Clear the name box to go back to it. Everyone starts on their Steam name once after this update.
+- **The name box** on the main menu is on the left now.
+- **The Tag in the countdown:** only the Tag itself shows through walls, not its beam, and the disc at the foot of the beam is gone.
+- **Sniper:** one round in the magazine, so it reloads after every shot (2.5 s, about the same pace as before). Reload on Kill skips that reload.
+- **Teammate outlines** only show where a wall or something else hides your teammate, not all the time.
+
+### Fixed
+- **Frozen players in lobbies of 3 or more:** you could see other players standing still while they moved on the host's screen. Everything a player sends to everyone (movement, shots, doors, grapples) now goes through the host, which every player can always reach.
+- **Reload on Kill** now refills the moment your shot kills, instead of after the host confirms the kill, so the sniper and shotgun really can fire again straight away.
+
 ## 0.21.0
 
 ### Added

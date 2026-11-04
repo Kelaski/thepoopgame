@@ -63,6 +63,7 @@ var _np_t := 0.0
 var _killer_id := 0
 var _killer_weapon := ""
 var _killer_head := false
+var _killer_noscope := false
 var _killer_hp := -1.0
 
 
@@ -126,12 +127,13 @@ func _on_announce(text: String, color: Color) -> void:
 	_banner_t = 3.0
 
 
-func _on_kill(killer: int, victim: int, weapon: String, head: bool) -> void:
+func _on_kill(killer: int, victim: int, weapon: String, head: bool, noscope: bool) -> void:
 	var me := multiplayer.get_unique_id()
 	if victim == me:
 		_killer_id = killer
 		_killer_weapon = weapon
 		_killer_head = head
+		_killer_noscope = noscope
 		_killer_hp = Game.hp.get(killer, -1.0)
 	# One row per kill, laid out in assets/ui/kill_feed_row.tscn.
 	var pc: PanelContainer = KILL_ROW.instantiate()
@@ -143,7 +145,7 @@ func _on_kill(killer: int, victim: int, weapon: String, head: bool) -> void:
 	killer_l.visible = killer != victim and Net.players.has(killer)
 	killer_l.text = Net.name_of(killer)
 	killer_l.add_theme_color_override("font_color", Mats.team_color(Net.team_of(killer)).lightened(0.35))
-	(pc.get_node("Row/Weapon") as Label).text = "[%s%s]" % [Weapons.display_name(weapon), " HEADSHOT" if head else ""]
+	(pc.get_node("Row/Weapon") as Label).text = "[%s%s%s]" % [Weapons.display_name(weapon), " NO-SCOPE" if noscope else "", " HEADSHOT" if head else ""]
 	var victim_l: Label = pc.get_node("Row/Victim")
 	victim_l.text = Net.name_of(victim)
 	victim_l.add_theme_color_override("font_color", Mats.team_color(Net.team_of(victim)).lightened(0.35))
@@ -341,10 +343,13 @@ func _process(delta: float) -> void:
 			_death_name.text = Net.name_of(_killer_id)
 			_death_name.add_theme_color_override("font_color", Mats.team_color(Net.team_of(_killer_id)).lightened(0.35))
 			var detail := Weapons.display_name(_killer_weapon)
+			if _killer_noscope:
+				detail += "  -  NO-SCOPE"
 			if _killer_head:
 				detail += "  -  HEADSHOT"
-			if _killer_hp >= 0.0:
-				detail += "  -  they had %d HP left" % int(ceil(_killer_hp))
+			# Their health now (it updates while you watch), while they're still alive.
+			if Game.is_alive(_killer_id):
+				detail += "  -  they have %d HP left" % int(ceil(float(Game.hp.get(_killer_id, _killer_hp))))
 			_death_detail.text = detail
 		else:
 			_death_title.text = ""
@@ -391,11 +396,11 @@ func _refresh_scoreboard() -> void:
 		for c in col.get_children():
 			c.queue_free()
 		col.add_child(UiKit.label("%s  -  %d" % [Mats.team_name(team).to_upper(), Game.scores[team]], 22, Mats.team_color(team).lightened(0.35)))
-		col.add_child(UiKit.label("Name                      K / D", 14, UiKit.MUTED))
+		col.add_child(UiKit.label("Name                      K / D     Ping", 14, UiKit.MUTED))
 		for id in Net.players:
 			var p: Dictionary = Net.players[id]
 			if p.team != team:
 				continue
 			var mark := "  [TAG]" if id == Game.holder else ""
 			var dead := "" if Game.is_alive(id) else "  (dead)"
-			col.add_child(UiKit.label("%-24s  %d / %d%s%s" % [p.name, p.kills, p.deaths, mark, dead], 16))
+			col.add_child(UiKit.label("%-24s  %-8s  %s%s%s" % [p.name, "%d / %d" % [p.kills, p.deaths], Net.ping_text(id), mark, dead], 16))

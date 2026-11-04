@@ -12,10 +12,11 @@ func _ready() -> void:
 	%Message.text = message
 	%Message.visible = message != ""
 	%NameEdit.text = str(Settings.g("player_name"))
+	%NameEdit.placeholder_text = Net.default_name()  # an empty box means this name
 
 
 func _on_name_changed(t: String) -> void:
-	Settings.s("player_name", t)
+	Net.set_player_name(t)
 
 
 func _on_host_pressed() -> void:

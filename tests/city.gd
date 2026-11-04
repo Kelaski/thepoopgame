@@ -78,6 +78,7 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	await _check_sniper_walls()
 	await _check_upper_tags()
+	await _check_mantles()
 	print("TEST PASS" if _fails == 0 else "TEST FAIL (%d)" % _fails)
 	get_tree().quit(1 if _fails else 0)
 
@@ -151,3 +152,39 @@ func _check_upper_tags() -> void:
 				_fail("seed %d: Tag spot %s at %.1f m up: floor %s, blocked %s" % [seed, o.name, p.y, "missing" if hit.is_empty() else "%.2f" % hit.position.y, blocked])
 		for c in parent.get_children():
 			c.free()
+
+
+## Mantling finds the top of a thin wall, not the floor behind it: a window sill
+## (with the room's floor behind) and a roof parapet (with the roof behind).
+func _check_mantles() -> void:
+	var stage := Node3D.new()
+	add_child(stage)
+	stage.position = Vector3(0, 300, 0)
+	var floor := StaticBody3D.new()
+	floor.collision_layer = MapBuilder.L_FLOOR
+	var fs := CollisionShape3D.new()
+	fs.shape = BoxShape3D.new()
+	fs.shape.size = Vector3(30, 0.2, 4)
+	fs.position = Vector3(0, -0.1, -2.15)  # the floor inside / the roof, behind the wall
+	floor.add_child(fs)
+	stage.add_child(floor)
+	var window: Node3D = load("res://assets/building/wall_window_small.tscn").instantiate()
+	stage.add_child(window)
+	var parapet: Node3D = load("res://assets/building/parapet.tscn").instantiate()
+	parapet.position = Vector3(8, 0, 0)
+	stage.add_child(parapet)
+	var p: Player = load("res://assets/models/player.tscn").instantiate()
+	p.peer_id = 999
+	stage.add_child(p)
+	p.set_process(false)  # a remote player follows its (missing) network updates
+	var cases := [["window sill", Vector3(0, 0.2, 0.15 + Player.RADIUS + 0.02), 0.6], ["roof parapet", Vector3(8, -0.4, 0.15 + Player.RADIUS + 0.02), 1.5]]
+	for c in cases:
+		p.position = c[1]
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		var h: float = p._mantle_height(Vector3(0, 0, -1))
+		if absf(h - float(c[2])) > 0.05:
+			_fail("mantle at a %s: climbs %.2f m, should be %.2f m" % [c[0], h, c[2]])
+		else:
+			print("CITY mantle at a %s: %.2f m" % [c[0], h])
+	stage.queue_free()

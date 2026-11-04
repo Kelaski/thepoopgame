@@ -31,6 +31,7 @@ const MANTLE_MAX_UP := 4.0      # only while not still shooting upwards faster t
 const MANTLE_PUSH := 3.5        # forward speed over the ledge
 const MANTLE_RISE := 6.0        # climbing speed up the face
 const MANTLE_TIME := 0.6        # longest a mantle can take
+const MANTLE_REACH := [0.15, 0.45]  # m past the wall's face to look for the top: inside a 0.3 m wall, and just past it
 const GRAVITY := 16.0
 const JUMP_V := 6.4
 const DJUMP_V := 7.0
@@ -192,6 +193,7 @@ var _rocket_t := 0.0       # flame showing (local: time left; sent as F_ROCKET)
 var swap_t := 0.0          # Swap: beam charging (the host does the swap)
 var _parry_t := 0.0        # pink bubble showing (everyone)
 var _parry_bubble: Node3D
+var _predicted_kills := {}  # Reload on Kill: victim id -> when we refilled for their kill ahead of the host
 var _rocket_flame: Node3D
 var invisible := false
 var phasing := 0.0
@@ -333,6 +335,7 @@ func _apply_team_look() -> void:
 #   outline drawn through walls (assets/materials/scan_outline.tres)
 const SCAN_OUTLINE := preload("res://assets/materials/scan_outline.tres")
 const TEAM_OUTLINE := preload("res://assets/materials/team_outline.tres")
+const TEAM_OUTLINE_MASK := preload("res://assets/materials/team_outline_mask.tres")  # its first pass only
 var _scan_shown := false
 
 
@@ -351,7 +354,10 @@ func _apply_overlay() -> void:
 	elif not is_local and mine >= 0 and team == mine:
 		overlay = TEAM_OUTLINE
 	for mi: MeshInstance3D in _meshes_under(body_root, []):
-		mi.material_overlay = overlay
+		# The teammate outline only shows where something hides them. The feet stand on
+		# the ground, which would "hide" their outline's lower edge, so they only mark
+		# the body (keeping the outline hollow) without an outline of their own.
+		mi.material_overlay = TEAM_OUTLINE_MASK if overlay == TEAM_OUTLINE and mi.name.begins_with("Foot") else overlay
 
 
 static func _meshes_under(n: Node, out: Array) -> Array:
@@ -765,10 +771,12 @@ func _physics_process(delta: float) -> void:
 			_wall_touch_t = 0.1
 			_wall_touch_n = side_n
 
-	# --- Mantle: jump at a ledge (or fall past one) while pushing into it and you
-	# climb straight up onto it, keeping some of your speed.
+	# --- Mantle: hold Space while you jump at a ledge (or fall past one), pushing
+	# into it, and you climb straight up onto it, keeping some of your speed. Works
+	# on window sills and roof parapets too.
 	var facing := Basis(Vector3.UP, yaw) * Vector3.FORWARD
-	if not on_floor and not wallrunning and forward_in and _mantle_cd <= 0.0 and _wall_touch_t > 0.0 and velocity.y < MANTLE_MAX_UP and facing.dot(-_wall_touch_n) > 0.5:
+	var holding_jump := can_input and not frozen and Input.is_action_pressed("jump")
+	if not on_floor and not wallrunning and forward_in and holding_jump and _mantle_cd <= 0.0 and _wall_touch_t > 0.0 and velocity.y < MANTLE_MAX_UP and facing.dot(-_wall_touch_n) > 0.5:
 		var mh := _mantle_height(-Vector3(_wall_touch_n.x, 0.0, _wall_touch_n.z).normalized())
 		if mh > -1.0:
 			_mantle_t = MANTLE_TIME
@@ -885,6 +893,10 @@ func _physics_process(delta: float) -> void:
 			if _land_grace > 0.0 and speed_now > base:
 				# Just landed faster than you run: no friction yet, so a hop now keeps it all.
 				hvel = _air_strafe(hvel, wish, base, delta)
+			elif wish == Vector3.ZERO:
+				# No movement keys: stop as quickly as from a walk, whatever your speed
+				# (letting go of W used to glide you on while sprint speed bled off).
+				hvel = hvel.move_toward(Vector3.ZERO, DECEL * delta)
 			elif speed_now > base + 0.2:
 				# Faster than you run (after a slide or hops): bleed it off quickly,
 				# while you can still steer.
@@ -1025,7 +1037,7 @@ func _physics_process(delta: float) -> void:
 	_net_acc += delta
 	if _net_acc >= NET_INTERVAL:
 		_net_acc = 0.0
-		_net_state.rpc(global_position, yaw, pitch, velocity, _flags(), Time.get_ticks_msec() / 1000.0)
+		Net.to_all(self, "_net_state", [global_position, yaw, pitch, velocity, _flags(), Time.get_ticks_msec() / 1000.0], false)
 
 
 ## Extra slide speed from landing hard: a share of the fall speed beyond
@@ -1077,23 +1089,31 @@ func _side_wall(right: Vector3) -> Vector3:
 
 ## How high (above your feet) the top of a ledge just ahead in dir is, if you can
 ## mantle onto it (a flat top MANTLE_MIN..MANTLE_MAX up, with room to stand), or -1.
+## It looks inside the wall's thickness and just past it, and takes the highest
+## top with room: a window sill or a roof parapet is thin, and just past it is
+## the floor behind, too low to climb over the sill.
 func _mantle_height(dir: Vector3) -> float:
 	var space := get_world_3d().direct_space_state
 	var mask := MASK_FULL & ~MapBuilder.L_PLAYER & ~64
-	var from := global_position + Vector3(0, MANTLE_MAX + 0.3, 0) + dir * (RADIUS + 0.45)
-	var q := PhysicsRayQueryParameters3D.create(from, from - Vector3(0, MANTLE_MAX + 0.3 - MANTLE_MIN, 0), mask, [get_rid()])
-	var r := space.intersect_ray(q)
-	if r.is_empty() or (r.normal as Vector3).y < 0.7:
-		return -1.0
-	var top: Vector3 = r.position
-	var room := PhysicsShapeQueryParameters3D.new()
-	room.shape = probe_shape
-	room.transform = Transform3D(Basis.IDENTITY, top + Vector3(0, STAND_H * 0.5 + 0.1, 0))
-	room.collision_mask = mask
-	room.exclude = [get_rid()]
-	if not space.intersect_shape(room, 1).is_empty():
-		return -1.0
-	return top.y - global_position.y
+	var best := -1.0
+	for reach: float in MANTLE_REACH:
+		var from := global_position + Vector3(0, MANTLE_MAX + 0.3, 0) + dir * (RADIUS + reach)
+		var q := PhysicsRayQueryParameters3D.create(from, from - Vector3(0, MANTLE_MAX + 0.3 - MANTLE_MIN, 0), mask, [get_rid()])
+		var r := space.intersect_ray(q)
+		if r.is_empty() or (r.normal as Vector3).y < 0.7:
+			continue
+		var top: Vector3 = r.position
+		var h := top.y - global_position.y
+		if h > MANTLE_MAX or h <= best:
+			continue
+		var room := PhysicsShapeQueryParameters3D.new()
+		room.shape = probe_shape
+		room.transform = Transform3D(Basis.IDENTITY, top + Vector3(0, STAND_H * 0.5 + 0.1, 0))
+		room.collision_mask = mask
+		room.exclude = [get_rid()]
+		if space.intersect_shape(room, 1).is_empty():
+			best = h
+	return best
 
 
 func _tick_timers(delta: float) -> void:
@@ -1215,7 +1235,7 @@ func _flags() -> int:
 	return f
 
 
-@rpc("authority", "call_remote", "unreliable_ordered")
+## From the player's owner, through the host (Net.to_all).
 func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int, sent: float) -> void:
 	if not (pos.is_finite() and vel.is_finite() and is_finite(y) and is_finite(p) and is_finite(sent)):
 		return
@@ -1512,15 +1532,16 @@ func _try_fire() -> void:
 		pitch = clampf(pitch + deg_to_rad(float(w.kick) * 0.35), deg_to_rad(-89.0), deg_to_rad(89.0))
 		if ammo <= 0:
 			_start_reload()
+	_predict_kill(hits)
 	for id in hits:
-		Game.report_hit.rpc_id(1, id, hits[id][0], hits[id][1], weapon)
+		Game.report_hit.rpc_id(1, id, hits[id][0], hits[id][1], weapon, weapon == "sniper" and ads_t < 0.85)
 	Sfx.play(weapon, -3.0, randf_range(0.95, 1.05))
 	if weapon != "bat":
 		var muzzle := vm_muzzle.global_position if vm_muzzle else origin
 		Game.world.add_tracers(muzzle, ends, weapon)
-		Game.world.fx_shot.rpc(global_position + Vector3(0, 1.25, 0), ends, weapon)
+		Net.to_all(Game.world, "fx_shot", [global_position + Vector3(0, 1.25, 0), ends, weapon], false)
 	else:
-		Game.world.fx_shot.rpc(global_position + Vector3(0, 1.25, 0), PackedVector3Array(), weapon)
+		Net.to_all(Game.world, "fx_shot", [global_position + Vector3(0, 1.25, 0), PackedVector3Array(), weapon], false)
 
 
 func _acc(hits: Dictionary, id: int, dmg: float, head_hit: bool) -> void:
@@ -1683,6 +1704,9 @@ func net_teleport(pos: Vector3, move_self: bool) -> void:
 		swap_t = 0.0
 		Sfx.play("warp", -2.0, 0.8)
 		return
+	# Everyone hears it: where they vanished and where they reappear.
+	Sfx.play_at("warp", global_position + Vector3(0, 1.2, 0), -2.0, 50.0)
+	Sfx.play_at("warp", pos + Vector3(0, 1.2, 0), -2.0, 50.0, 0.8)
 	global_position = pos
 	net_pos = pos
 	_anchor_t = -1.0
@@ -1690,14 +1714,34 @@ func net_teleport(pos: Vector3, move_self: bool) -> void:
 	_net_free_until = Time.get_ticks_msec() / 1000.0 + TELEPORT_GRACE
 
 
-## Reload on Kill: a kill refills the magazine and chambers a round.
-func on_kill() -> void:
+## Reload on Kill: a kill refills the magazine and chambers a round. A kill we
+## already predicted (see _predict_kill) was refilled for then.
+func on_kill(victim := 0) -> void:
+	if _predicted_kills.has(victim):
+		_predicted_kills.erase(victim)
+		return
 	if addon2 != "reloader" or weapon == "bat" or not alive:
 		return
 	ammo = int(Weapons.DATA[weapon].mag)
 	reloading = 0.0
 	fire_cd = 0.0
 	Sfx.play("reload", -4.0, 1.4)
+
+
+## Reload on Kill: a shot that does at least the victim's health kills them, so
+## refill now instead of a round trip later when the host confirms it.
+func _predict_kill(hits: Dictionary) -> void:
+	if addon2 != "reloader" or weapon == "bat":
+		return
+	for t in _predicted_kills.keys():
+		if _now - float(_predicted_kills[t]) > 2.0:
+			_predicted_kills.erase(t)  # the host never confirmed that one
+	for id in hits:
+		var v: Player = Game.world.players.get(id)
+		if v and v.alive and not v.is_protected() and v._parry_t <= 0.0 and hits[id][0] >= float(Game.hp.get(id, 100.0)):
+			on_kill()
+			_predicted_kills[id] = _now
+			return
 
 
 ## Parry: true while this (local) player's parry is up.
@@ -1742,7 +1786,7 @@ func _fire_grapple() -> void:
 	_hook_dist = 0.0
 	grapple_state = Hook.FLYING
 	Sfx.play("addon", -4.0, 1.6)
-	_grapple_net.rpc(Hook.FLYING, _hook_pos, _hook_dir)
+	Net.to_all(self, "_grapple_net", [Hook.FLYING, _hook_pos, _hook_dir], true)
 	_on_moved()
 
 
@@ -1761,7 +1805,7 @@ func _tick_hook(delta: float) -> void:
 		grapple_state = Hook.NONE
 		addon_cd[PRI] = Addons.GRAPPLE_MISS_CD
 		Sfx.play("addon_end", -6.0, 1.6)
-		_grapple_net.rpc(Hook.NONE, Vector3.ZERO, Vector3.ZERO)
+		Net.to_all(self, "_grapple_net", [Hook.NONE, Vector3.ZERO, Vector3.ZERO], true)
 
 
 func _attach_grapple(point: Vector3, collider: Object) -> void:
@@ -1774,9 +1818,9 @@ func _attach_grapple(point: Vector3, collider: Object) -> void:
 	if _grapple_target:
 		_grapple_offset = point - _grapple_target.global_position
 		if _grapple_target.team != team:
-			_grapple_target._grapple_yank.rpc_id(_grapple_target.peer_id)
+			Net.to_peer(_grapple_target.peer_id, _grapple_target, "_grapple_yank", [])
 	Sfx.play("door", -6.0, 1.8)
-	_grapple_net.rpc(Hook.ATTACHED, point, Vector3.ZERO)
+	Net.to_all(self, "_grapple_net", [Hook.ATTACHED, point, Vector3.ZERO], true)
 
 
 ## Reels you towards the hook. Returns the new horizontal velocity (vertical is
@@ -1837,12 +1881,11 @@ func _end_grapple() -> void:
 		addon_cd[PRI] = maxf(addon_cd[PRI], Addons.GRAPPLE_MISS_CD)
 	grapple_state = Hook.NONE
 	_grapple_target = null
-	_grapple_net.rpc(Hook.NONE, Vector3.ZERO, Vector3.ZERO)
+	Net.to_all(self, "_grapple_net", [Hook.NONE, Vector3.ZERO, Vector3.ZERO], true)
 
 
 ## Lets everyone else see the hook and rope. FLYING sends the throw origin and
 ## direction (remotes fly the hook themselves); ATTACHED sends the anchor point.
-@rpc("authority", "call_remote", "reliable")
 func _grapple_net(state: int, point: Vector3, dir: Vector3) -> void:
 	if state < Hook.NONE or state > Hook.ATTACHED or not (point.is_finite() and dir.is_finite()):
 		return
@@ -1861,11 +1904,10 @@ func _grapple_net(state: int, point: Vector3, dir: Vector3) -> void:
 
 ## An enemy hooked us: we get yanked towards them. Only honoured from a player
 ## who is actually within grapple range.
-@rpc("any_peer", "call_remote", "reliable")
 func _grapple_yank() -> void:
 	if not is_local or not alive or Game.world == null or parrying():
 		return
-	var from: Player = Game.world.players.get(multiplayer.get_remote_sender_id())
+	var from: Player = Game.world.players.get(Net.remote_sender())
 	if from == null or not from.alive or from.team == team or from.addon != "grapple":
 		return
 	# One yank per hook: a hooked enemy can't be flung again until the grapple could
@@ -2051,7 +2093,7 @@ func _check_door_slam(dir: Vector3) -> void:
 			add_collision_exception_with(r.collider)
 			_door_exceptions[r.collider] = 0.7
 			if not door.is_open():
-				Game.world.door_rpc.rpc(door.idx, door.away_from(global_position), true)
+				Net.to_all(Game.world, "door_rpc", [door.idx, door.away_from(global_position), true], true, true)
 			return
 
 
@@ -2130,4 +2172,4 @@ func _interact() -> void:
 	var door = r.collider.get_parent()
 	if door is Door:
 		var t: float = 0.0 if door.is_open() else door.away_from(global_position)
-		Game.world.door_rpc.rpc(door.idx, t, false)
+		Net.to_all(Game.world, "door_rpc", [door.idx, t, false], true, true)

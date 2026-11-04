@@ -25,9 +25,11 @@ const DATA := {
 	},
 	"sniper": {
 		"name": "Sniper",
-		"desc": "100 dmg, headshots kill. Pierces a wall and every player in line.",
+		"desc": "100 dmg, headshots kill. Pierces a wall and every player in line. One round: it reloads after every shot.",
+		# One round, so every shot is followed by a reload (2.5 s, the same pace as
+		# its 0.4 shots/s, which only matters for the host's hit-rate check).
 		"dmg": 100.0, "dmg_low": 90.0, "dmg_head": 150.0, "rps": 0.4, "zoom": 2.5,
-		"mag": 5, "reload": 2.8, "hip": 4.0, "ads": 0.0, "range": 400.0, "kick": 3.5,
+		"mag": 1, "reload": 2.5, "hip": 4.0, "ads": 0.0, "range": 400.0, "kick": 3.5,
 	},
 	"bat": {
 		"name": "Spiked Bat",

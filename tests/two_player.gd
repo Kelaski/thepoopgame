@@ -23,6 +23,15 @@ func _ready() -> void:
 	var names: Array = Net.players.values().map(func(p): return p.name)
 	if names[0] == names[1]:
 		return _fail("duplicate names %s" % [names])
+	# Ping: the host measures the joiner's round trip within a couple of seconds.
+	var jid0: int = Net.players.keys().filter(func(i): return i != 1)[0]
+	var wait := 0.0
+	while not Net.pings.has(jid0) and wait < 4.0:
+		await get_tree().process_frame
+		wait += get_process_delta_time()
+	if not Net.pings.has(jid0) or Net.pings[jid0] < 0 or Net.pings[jid0] > 1000:
+		return _fail("no sensible ping for the joiner (%s)" % Net.pings)
+	print("PING joiner %s" % Net.ping_text(jid0))
 	Game.server_start_match()
 	while Game.phase != Game.Phase.RUSH and t < 60.0:
 		await get_tree().process_frame

@@ -56,7 +56,7 @@ metadata/_tab_index = 0
 layout_mode = 2
 theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 15
-text = "Player name (used when you next host or join)"
+text = "Player name (used when you next host or join). Leave it empty to use your Steam name."
 
 [node name="NameEdit" type="LineEdit" parent="Center/Panel/Content/Tabs/Player" unique_id=1197796031]
 unique_name_in_owner = true

@@ -38,6 +38,14 @@ godot --headless --path . res://tests/two_player.tscn -- --host --port=27199 --n
 godot --headless --path . res://tests/two_player.tscn -- --join=127.0.0.1:27199 --name=Same
 ```
 
+**Three-player test** (`tests/three_player.tscn`) checks that one client sees another client move, through the host's relay. Start the host, then B, then A; A exits with 0 on a pass:
+
+```
+godot --headless --path . res://tests/three_player.tscn -- --host --port=27197 --name=H
+godot --headless --path . res://tests/three_player.tscn -- --join=127.0.0.1:27197 --name=B
+godot --headless --path . res://tests/three_player.tscn -- --join=127.0.0.1:27197 --name=A
+```
+
 ## Default controls
 
 **Changing the default controls:** the defaults are the game's actions in **Project Settings → Input Map** in the Godot editor (`move_forward`, `jump`, `addon` and `addon2` for the two addon slots, `chat` and so on).
@@ -71,6 +79,8 @@ godot --headless --path . res://tests/two_player.tscn -- --join=127.0.0.1:27199 
 - Clients find lobbies with a lobby-list search filtered on that tag. They enter the lobby, then connect a peer to the lobby owner.
 
 **Roles:** the host is the authoritative server (peer 1, also a player).
+
+**Host relay:** anything a client sends to everyone (its movement, shots, doors, grapple) goes to the host with `Net.to_all`, and the host passes it on. Over Steam, clients aren't guaranteed a working connection to each other: in lobbies of 3 or more, players saw other clients frozen while the host saw everyone. Handlers find out who really sent a message with `Net.remote_sender()`, and only the methods listed in `Net.RELAYED` can be relayed.
 
 **Who gets in:**
 - A joining player sends their version number. The host turns away anyone on a different version, and anyone who doesn't register within 5 s (older builds).
@@ -109,7 +119,7 @@ Open these in the Godot editor. Changes show up in game the next time a match lo
 - **`assets/models/door.tscn`:** the door, with the hinge at the origin, built for a 1.7 × 2.45 m doorway.
   - In game, `Panel` is stretched to each doorway, the collision `Shape` is resized, and other parts under `Body` (the `Knob`) move to match.
   - The panel takes each building's door colour.
-- **`assets/models/tag.tscn`:** the Tag: `Gem`, `PickupRing` and `Beam`. They're tinted with the Tag colour from Customization.
+- **`assets/models/tag.tscn`:** the Tag: `Gem` and `Beam`. They're tinted with the Tag colour from Customization.
   - The ring shows the pickup radius (1.7 m, `Game.PICKUP_RADIUS`), so change both together.
 - **`assets/models/spray_decal.tscn`:** the spray decal. Its material is `assets/materials/spray_decal.tres`, and each player's image and aspect ratio are filled in at runtime.
 - **Thrown gun:** the gun a killing bat swing launches is now the victim's actual weapon model.

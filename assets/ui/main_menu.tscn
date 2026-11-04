@@ -96,16 +96,13 @@ autowrap_mode = 3
 
 [node name="NamePanel" type="PanelContainer" parent="."]
 layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
+anchors_preset = 4
 anchor_top = 0.5
-anchor_right = 1.0
 anchor_bottom = 0.5
-offset_left = -380.0
+offset_left = 60.0
 offset_top = -70.0
-offset_right = -60.0
+offset_right = 380.0
 offset_bottom = 70.0
-grow_horizontal = 0
 grow_vertical = 2
 
 [node name="Content" type="VBoxContainer" parent="NamePanel"]
@@ -130,7 +127,7 @@ max_length = 20
 layout_mode = 2
 theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 14
-text = "Shown to other players in matches."
+text = "Leave it empty to use your Steam name."
 
 [connection signal="text_changed" from="NamePanel/Content/NameEdit" to="." method="_on_name_changed"]
 [connection signal="pressed" from="Center/Panel/Content/HostButton" to="." method="_on_host_pressed"]

@@ -19,6 +19,7 @@ signal chat_message(from_id: int, text: String, team_only: bool)
 signal spray_updated(id: int)
 signal lobby_list_received(lobbies: Array)  # [{id, name, version, players, max}], see find_lobbies()
 signal invite_accepted(lobby: int)          # accepted a Steam invite / "Join Game" while running
+signal pings_changed                        # new ping numbers (about once a second)
 
 const APP_ID := 480            # Spacewar, Valve's shared test app, until Tag Rush has its own
 const LOBBY_GAME := "tagrush"  # lobby tag: app 480 is shared by many games, so lobbies are filtered by it
@@ -60,6 +61,61 @@ func _ready() -> void:
 	_init_steam()
 
 
+# ------------------------------------------------------------------ ping
+# The host times a round trip to each player once a second and shares the
+# numbers: everyone's game goes through the host, so that's the ping that counts.
+const PING_INTERVAL := 1.0
+var pings := {}  # peer id -> round trip to the host in ms (the host itself isn't listed)
+var _ping_acc := 0.0
+
+
+func _process(delta: float) -> void:
+	if not online or not multiplayer.is_server():
+		return
+	_ping_acc += delta
+	if _ping_acc < PING_INTERVAL:
+		return
+	_ping_acc = 0.0
+	for id in pings.keys():
+		if not players.has(id):
+			pings.erase(id)
+	_sync_pings.rpc(pings)
+	_on_pings(pings)
+	_ping.rpc(Time.get_ticks_usec())
+
+
+## "42 ms" for a player, "host" for the host, "-" until it's been measured.
+func ping_text(id: int) -> String:
+	if id == 1:
+		return "host"
+	return "%d ms" % pings[id] if pings.has(id) else "-"
+
+
+@rpc("authority", "call_remote", "unreliable")
+func _ping(t: int) -> void:
+	_pong.rpc_id(1, t)
+
+
+@rpc("any_peer", "call_remote", "unreliable")
+func _pong(t: int) -> void:
+	var id := multiplayer.get_remote_sender_id()
+	var now := Time.get_ticks_usec()
+	if not multiplayer.is_server() or not players.has(id) or t > now or now - t > 10_000_000:
+		return  # a time we never sent
+	var ms := (now - t) / 1000.0
+	pings[id] = roundi(lerpf(float(pings.get(id, ms)), ms, 0.5))  # smoothed a little
+
+
+@rpc("authority", "call_remote", "unreliable")
+func _sync_pings(p: Dictionary) -> void:
+	_on_pings(p)
+
+
+func _on_pings(p: Dictionary) -> void:
+	pings = p
+	pings_changed.emit()
+
+
 func _exit_tree() -> void:
 	leave()
 
@@ -77,8 +133,8 @@ func _init_steam() -> void:
 		push_warning("Steam init failed: %s" % r)
 		return
 	steam_ok = true
-	# New players start with their Steam name (it can still be changed in Customization).
-	if str(Settings.g("player_name")) in ["", "Player"] and Sanitize.player_name(steam_name()) != "":
+	# Your name is your Steam name (kept up to date) unless you've typed your own.
+	if not Settings.g("custom_name") and Sanitize.player_name(steam_name()) != "":
 		Settings.s("player_name", Sanitize.player_name(steam_name()))
 	Steam.lobby_created.connect(_on_lobby_created)
 	Steam.lobby_joined.connect(_on_lobby_joined)
@@ -89,6 +145,19 @@ func _init_steam() -> void:
 ## Your Steam name (used as the default player name).
 func steam_name() -> String:
 	return Steam.getPersonaName() if steam_ok else ""
+
+
+## The name you get when you don't type one: your Steam name, or "Player".
+func default_name() -> String:
+	var s := Sanitize.player_name(steam_name())
+	return s if s != "" else "Player"
+
+
+## A name box changed: a typed name is kept, an empty box goes back to the default.
+func set_player_name(t: String) -> void:
+	var custom := t.strip_edges() != ""
+	Settings.s("custom_name", custom, false)
+	Settings.s("player_name", t if custom else default_name())
 
 
 ## A lobby Steam asked us to join when it launched the game ("+connect_lobby <id>"
@@ -271,8 +340,116 @@ func is_server() -> bool:
 
 ## Sender of the current RPC; falls back to the local id for local calls.
 func sender() -> int:
-	var s := multiplayer.get_remote_sender_id()
+	var s := remote_sender()
 	return s if s != 0 else multiplayer.get_unique_id()
+
+
+# ------------------------------------------------------------------ host relay
+# Messages a client sends to everyone (movement, shots, doors, grapples) go to
+# the host, which runs them and passes them on to everyone else. Clients aren't
+# guaranteed a working connection to each other over Steam (lobbies of 3+ saw
+# other players frozen while the host saw everyone), but every client always
+# reaches the host. Handlers ask remote_sender() who really sent a message.
+
+## Methods a client may send through the host: method -> [argument count, the
+## sender must own the node (a player's own state)].
+const RELAYED := {
+	"_net_state": [6, true],
+	"_grapple_net": [3, true],
+	"_grapple_yank": [0, false],
+	"fx_shot": [3, false],
+	"door_rpc": [3, false],
+	"_fx_projectile": [4, false],
+}
+var _relay_from := 0  # while a relayed message runs: who originally sent it
+
+
+## The original sender of the message being handled (0 for a local call).
+func remote_sender() -> int:
+	return _relay_from if _relay_from != 0 else multiplayer.get_remote_sender_id()
+
+
+## Sends node.method(args) to everyone else: directly from the host, through
+## the host from a client. With local it also runs here first (like call_local).
+func to_all(node: Node, method: StringName, args: Array, reliable: bool, local := false) -> void:
+	if local:
+		node.callv(method, args)
+	if not online:
+		return
+	if multiplayer.is_server():
+		for pid in multiplayer.get_peers():
+			_send_relayed(pid, multiplayer.get_unique_id(), node.get_path(), method, args, reliable)
+	elif reliable:
+		_relay_r.rpc_id(1, 0, node.get_path(), method, args)
+	else:
+		_relay_u.rpc_id(1, 0, node.get_path(), method, args)
+
+
+## Sends node.method(args) to one peer, through the host if we're a client.
+func to_peer(target: int, node: Node, method: StringName, args: Array) -> void:
+	if multiplayer.is_server():
+		_send_relayed(target, multiplayer.get_unique_id(), node.get_path(), method, args, true)
+	else:
+		_relay_r.rpc_id(1, target, node.get_path(), method, args)
+
+
+func _send_relayed(pid: int, from: int, path: NodePath, method: StringName, args: Array, reliable: bool) -> void:
+	if reliable:
+		_relayed_r.rpc_id(pid, from, path, method, args)
+	else:
+		_relayed_u.rpc_id(pid, from, path, method, args)
+
+
+# Client -> host. target 0 = everyone, otherwise that one peer.
+@rpc("any_peer", "call_remote", "reliable")
+func _relay_r(target: int, path: NodePath, method: StringName, args: Array) -> void:
+	_on_relay(target, path, method, args, true)
+
+
+@rpc("any_peer", "call_remote", "unreliable_ordered")
+func _relay_u(target: int, path: NodePath, method: StringName, args: Array) -> void:
+	_on_relay(target, path, method, args, false)
+
+
+func _on_relay(target: int, path: NodePath, method: StringName, args: Array, reliable: bool) -> void:
+	var from := multiplayer.get_remote_sender_id()
+	if not multiplayer.is_server() or not players.has(from) or not _run_relayed(from, path, method, args, target != 0 and target != 1):
+		return
+	if target != 0:
+		if target != 1 and players.has(target):
+			_send_relayed(target, from, path, method, args, reliable)
+		return
+	for pid in multiplayer.get_peers():
+		if pid != from:
+			_send_relayed(pid, from, path, method, args, reliable)
+
+
+# Host -> client: a message from player `from`, passed on by the host.
+@rpc("authority", "call_remote", "reliable")
+func _relayed_r(from: int, path: NodePath, method: StringName, args: Array) -> void:
+	_run_relayed(from, path, method, args, false)
+
+
+@rpc("authority", "call_remote", "unreliable_ordered")
+func _relayed_u(from: int, path: NodePath, method: StringName, args: Array) -> void:
+	_run_relayed(from, path, method, args, false)
+
+
+## Runs a relayed message here as if `from` had sent it. Returns false if it
+## isn't allowed. check_only: the host just checks a message meant for someone else.
+func _run_relayed(from: int, path: NodePath, method: StringName, args: Array, check_only: bool) -> bool:
+	var rule: Array = RELAYED.get(String(method), [])
+	var node := get_node_or_null(path)
+	if rule.is_empty() or node == null or args.size() != int(rule[0]) or not node.has_method(method):
+		return false
+	if rule[1] and node.get_multiplayer_authority() != from:
+		return false
+	if check_only or from == multiplayer.get_unique_id():
+		return true
+	_relay_from = from
+	node.callv(method, args)
+	_relay_from = 0
+	return true
 
 
 ## Starts hosting: asks Steam for a lobby. Finishes in _on_lobby_created, which
@@ -347,6 +524,7 @@ func leave() -> void:
 	_spray_tex.clear()
 	_chat_times.clear()
 	_spray_up_at.clear()
+	pings.clear()
 	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()

@@ -37,7 +37,7 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 | **Assault Rifle** | Mid range | 33 dmg (45 headshot), 9.5 rounds/s, 30-round magazine, 1.5x holo sight |
 | **SMG** | Close to mid range | 22 dmg (30 headshot) up to 25 m, as strong as the AR there but weaker beyond. 14 rounds/s, tight hip fire, 40-round magazine |
 | **Shotgun** | Point blank | 13 pellets of 15 dmg up close, 1 shot/s, 6 shells |
-| **Sniper** | Long range | 100 dmg, headshots always kill, pierces a wall and every player in line, 5 rounds. Its scope glints when it's aimed at you |
+| **Sniper** | Long range | 100 dmg, headshots always kill, pierces a wall and every player in line. One round: it reloads after every shot (2.5 s). Its scope glints when it's aimed at you |
 | **Spiked Bat** | Speed | 35 dmg, more the faster you're moving (up to 300). 150 HP and +10% speed while held. A killing swing launches your victim's gun |
 
 ## Addons
@@ -73,7 +73,7 @@ Tag Rush plays fast. Moving forward is always a sprint, and every move keeps you
 - **Slide-hop and bunny hop:** jump out of a slide and keep all your speed. Time your next jump as you land to keep it going.
 - **Air strafe:** hold A or D and turn with the mouse to steer and pick up speed in the air.
 - **Wall run** along walls to speed up, then **kick off** to chain into the next wall, a slide or a hop. A run starts when you hold forward, hold a movement key towards the wall, or hug the wall, and lasts while you hold a movement key.
-- **Mantle** onto ledges by jumping at them.
+- **Mantle** onto ledges, through windows and over rooftop ledges: jump at them and keep holding **Space** while you push into them.
 - **Bounce pads:** jump into or onto an umbrella or kiosk awning and it launches you twice as high as a jump.
 - **Doors** fly open when you sprint or slide into them.
 - Top speed is capped at 30 m/s, so even the fastest chains stay readable.
@@ -96,7 +96,7 @@ Tag Rush plays fast. Moving forward is always a sprint, and every move keeps you
 
 Open **Customization** from the main menu, the lobby or the pause menu:
 
-- **Player:** your name (you can also type it on the main menu).
+- **Player:** your name (you can also type it on the main menu). Leave it empty to use your Steam name.
 - **Music:** play the Tag Rush Theme, your own playlist, or both. Add songs from your computer (OGG, MP3 and WAV work out of the box; more formats with [ffmpeg](https://ffmpeg.org) installed).
 - **Colours:** recolour the menus, the teams, the Tag and the sky, or pick a preset (Default, Midnight, Neon, Pastel, Desert). Your colours only change your own screen.
 - **Crosshair:** a full crosshair editor with a live preview and share codes, custom crosshair and sniper scope images, and holo sight reticle options for the AR and SMG.
@@ -105,7 +105,7 @@ Open **Customization** from the main menu, the lobby or the pause menu:
 
 ## Playing with friends
 
-Online play runs through **Steam**, so Steam has to be running and signed in. Your name starts as your Steam name; you can change it in Customization.
+Online play runs through **Steam**, so Steam has to be running and signed in. Your name is your Steam name unless you type your own, on the main menu or in Customization. Clear the box to go back to your Steam name.
 
 - **Host:** click **Host Game**. In the lobby, choose who can join:
   - **Public:** listed in Join Game for everyone.
@@ -137,7 +137,7 @@ All controls can be rebound in **Settings > Keybinds**.
 | Ping (double tap: danger) | Middle mouse |
 | Change loadout (countdown or while dead) | B |
 | Spray | T |
-| Scoreboard | Tab |
+| Scoreboard (with everyone's ping) | Tab |
 | Chat (all / team) | Enter / Right Shift + Enter |
 | Pause | Esc |
 

@@ -12,6 +12,7 @@ var back_to_pause := false
 
 func _ready() -> void:
 	%NameEdit.text = str(Settings.g("player_name"))
+	%NameEdit.placeholder_text = Net.default_name()  # an empty box means this name
 	for c in %Tabs.get_children():
 		if c != %Tabs.get_node("Player"):
 			_embed(c)
@@ -52,7 +53,7 @@ func replace_tab(old: Control, fresh: Control) -> void:
 
 
 func _on_name_changed(t: String) -> void:
-	Settings.s("player_name", t)
+	Net.set_player_name(t)
 
 
 func _on_back_pressed() -> void:

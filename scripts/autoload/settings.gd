@@ -38,6 +38,7 @@ const ACTIONS := [
 
 const DEFAULTS := {
 	"player_name": "Player",
+	"custom_name": false,  # the player typed their own name; otherwise it follows their Steam name
 	"lobby_privacy": 0,  # who can join lobbies you host: Net.Privacy (public / friends / invite only)
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
