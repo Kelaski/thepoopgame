@@ -87,6 +87,7 @@ const F_ADS := 32
 const F_MOVING := 64
 const F_WALLRUN := 128
 const F_GROUND := 256
+const F_ROCKET := 512  # Moonwalker rocket boots firing
 
 const VM_HIP := Vector3(0.24, -0.24, -0.5)
 const VM_ADS := Vector3(0.0, -0.135, -0.36)
@@ -110,12 +111,19 @@ const WEAPON_SCENES := {
 }
 const MUZZLE_FLASH_SCENE := preload("res://assets/models/muzzle_flash.tscn")
 const GLINT_SCENE := preload("res://assets/models/glint.tscn")
+const PARRY_SCENE := preload("res://assets/models/parry_bubble.tscn")
+const ROCKET_SCENE := preload("res://assets/models/rocket_flame.tscn")
+const PRI := 0  # addon slots: primary (Use Primary key)...
+const SEC := 1  # ...and secondary (Use Secondary key)
+const ROCKET_FLAME_TIME := 0.6
+const TELEPORT_GRACE := 0.6  # s after the host moves someone (Warp, Swap) that their updates skip the movement check
 
 var peer_id := 0
 var is_local := false
 var team := 0
 var weapon := "ar"
-var addon := "trackstar"
+var addon := Addons.DEFAULT_PRIMARY
+var addon2 := Addons.DEFAULT_SECONDARY
 var alive := false
 
 # Nodes
@@ -176,8 +184,15 @@ var wall_jumps := 0               # wall jumps since you last touched the floor
 var _step_t := 0.0
 
 # Addon state
-var addon_active := 0.0
-var addon_cd := 0.0
+var addon_active: Array[float] = [0.0, 0.0]  # per slot: time left on the ability
+var addon_cd: Array[float] = [0.0, 0.0]      # per slot: cooldown left
+var _cd_full: Array[float] = [0.0, 0.0]      # per slot: what that cooldown started at (for the HUD bar)
+var rocket_armed := false  # Moonwalker: the next jump is a rocket jump
+var _rocket_t := 0.0       # flame showing (local: time left; sent as F_ROCKET)
+var swap_t := 0.0          # Swap: beam charging (the host does the swap)
+var _parry_t := 0.0        # pink bubble showing (everyone)
+var _parry_bubble: Node3D
+var _rocket_flame: Node3D
 var invisible := false
 var phasing := 0.0
 var floor_phase := 0.0
@@ -233,6 +248,9 @@ var _anchor_t := -1.0            # ...and when (s); -1 = start a new window
 var _jump_votes := 0     # updates in a row that put this player somewhere it couldn't have moved to
 var _jump_pos := Vector3.ZERO    # where that run of updates started...
 var _jump_t := 0.0               # ...and when
+var _last_sent := -INF           # sender's clock time of the last update used
+var _clock_off := INF            # quickest (arrival - sent) seen: maps their clock onto ours
+var _net_free_until := -1.0      # the host moved this player: accept their updates until then
 
 
 func setup(id: int, info: Dictionary) -> void:
@@ -240,7 +258,8 @@ func setup(id: int, info: Dictionary) -> void:
 	name = str(id)
 	team = info.get("team", 0)
 	weapon = info.get("weapon", "ar")
-	addon = info.get("addon", "trackstar")
+	addon = info.get("addon", Addons.DEFAULT_PRIMARY)
+	addon2 = info.get("addon2", Addons.DEFAULT_SECONDARY)
 
 
 func _ready() -> void:
@@ -303,12 +322,17 @@ func _apply_team_look() -> void:
 	nameplate.pixel_size = 0.0015 * NAMEPLATE_SCALE
 	nameplate.modulate = tc.lightened(0.55)
 	nameplate.text = Net.name_of(peer_id)
+	_apply_overlay()
 
 
-
-# Stalker scan: while the local Stalker's ability runs, other players get a red
-# outline drawn through walls (assets/materials/scan_outline.tres).
+# Outlines, as a material overlay on every body part:
+# * teammates: a hollow white outline, through walls too (assets/materials/
+#   team_outline.tres: the body marks its shape in the stencil buffer, and a
+#   slightly grown copy is drawn in white only outside that shape)
+# * Stalker scan: while the local Stalker's ability runs, other players get a red
+#   outline drawn through walls (assets/materials/scan_outline.tres)
 const SCAN_OUTLINE := preload("res://assets/materials/scan_outline.tres")
+const TEAM_OUTLINE := preload("res://assets/materials/team_outline.tres")
 var _scan_shown := false
 
 
@@ -316,8 +340,18 @@ func set_scan_outline(on: bool) -> void:
 	if on == _scan_shown:
 		return
 	_scan_shown = on
+	_apply_overlay()
+
+
+func _apply_overlay() -> void:
+	var mine := Net.team_of(multiplayer.get_unique_id())
+	var overlay: Material = null
+	if _scan_shown:
+		overlay = SCAN_OUTLINE
+	elif not is_local and mine >= 0 and team == mine:
+		overlay = TEAM_OUTLINE
 	for mi: MeshInstance3D in _meshes_under(body_root, []):
-		mi.material_overlay = SCAN_OUTLINE if on else null
+		mi.material_overlay = overlay
 
 
 static func _meshes_under(n: Node, out: Array) -> Array:
@@ -422,6 +456,8 @@ func _rebuild_tp_gun() -> void:
 		_glint = GLINT_SCENE.instantiate()
 		_glint.visible = false
 		gp.add_child(_glint)
+	if body_root:
+		_apply_overlay()  # the new gun gets the outline too
 
 
 ## Body transparency (Hider / Phantom / spawn protection), applied to every part
@@ -469,21 +505,24 @@ func _update_glint() -> void:
 
 func refresh_loadout() -> void:
 	var old_weapon := weapon
-	var old_addon := addon
+	var old_addons := [addon, addon2]
 	if Net.players.has(peer_id):
 		var info: Dictionary = Net.players[peer_id]
 		team = info.team
 		weapon = info.weapon
 		addon = info.addon
+		addon2 = info.get("addon2", addon2)
 	if weapon != old_weapon:
 		_rebuild_tp_gun()
 		# A new gun comes loaded (matters when you swap during the countdown).
 		ammo = int(Weapons.DATA[weapon].mag)
 		reloading = 0.0
 		fire_cd = 0.0
-	if addon != old_addon:
-		addon_active = 0.0
-		addon_cd = 0.0
+	for slot in 2:
+		if addon_in(slot) != old_addons[slot]:
+			addon_active[slot] = 0.0
+			addon_cd[slot] = 0.0
+	rocket_armed = rocket_armed and addon == "moonwalker"
 	if nameplate:
 		_apply_team_look()
 	if is_local:
@@ -501,6 +540,8 @@ func set_alive(a: bool) -> void:
 		phasing = 0.0
 		floor_phase = 0.0
 		velocity = Vector3.ZERO
+		swap_t = 0.0
+		_rocket_t = 0.0
 		if is_local:
 			_end_grapple()
 		grapple_state = Hook.NONE
@@ -528,8 +569,12 @@ func respawn(pos: Vector3, protect: bool) -> void:
 	invisible = false
 	phasing = 0.0
 	floor_phase = 0.0
-	addon_active = 0.0
-	addon_cd = 0.0
+	addon_active = [0.0, 0.0]
+	addon_cd = [0.0, 0.0]
+	rocket_armed = false
+	_rocket_t = 0.0
+	swap_t = 0.0
+	_parry_t = 0.0
 	grapple_state = Hook.NONE
 	_grapple_target = null
 	dj_ready = true
@@ -735,14 +780,18 @@ func _physics_process(delta: float) -> void:
 			Sfx.play("jump", -6.0, 0.8)
 			_on_moved()
 
-	# --- Wall run start: airborne, moving along a wall, holding forward. A run
+	# --- Wall run start: airborne, moving along a wall, and either holding forward,
+	# holding a movement key into the wall, or hugging it (touching it). A run
 	# starts at least at WALLRUN_START, lifts you a little, and can't go straight
 	# back onto the wall you just left (another wall, or the floor, resets that).
-	if not on_floor and not wallrunning and phasing <= 0.0 and wallrun_cd <= 0.0 and forward_in and _wall_touch_t > 0.0:
+	if not on_floor and not wallrunning and phasing <= 0.0 and wallrun_cd <= 0.0 and _wall_touch_t > 0.0:
 		var n := _wall_touch_n
+		var n_flat := Vector3(n.x, 0.0, n.z).normalized()
+		var into_wall := wish.length() > 0.3 and wish.normalized().dot(-n_flat) > 0.25
+		var hugging := is_on_wall() and get_wall_normal().dot(n_flat) > 0.9
 		var along := hvel.normalized().dot(n)
-		var same_wall := _last_wall_normal != Vector3.ZERO and Vector3(n.x, 0.0, n.z).normalized().dot(_last_wall_normal) > 0.9
-		if absf(n.y) < 0.3 and speed_now > WALLRUN_MIN_SPEED and velocity.y > -9.0 and absf(along) < 0.9 and not same_wall:
+		var same_wall := _last_wall_normal != Vector3.ZERO and n_flat.dot(_last_wall_normal) > 0.9
+		if (forward_in or into_wall or hugging) and absf(n.y) < 0.3 and speed_now > WALLRUN_MIN_SPEED and velocity.y > -9.0 and absf(along) < 0.9 and not same_wall:
 			wallrunning = true
 			wall_normal = Vector3(n.x, 0.0, n.z).normalized()
 			wallrun_t = 0.0
@@ -787,7 +836,8 @@ func _physics_process(delta: float) -> void:
 		var g := lerpf(WALLRUN_GRAVITY, WALLRUN_GRAVITY_END, clampf(wallrun_t / WALLRUN_TIME, 0.0, 1.0))
 		velocity.y = maxf(velocity.y - g * fg * delta, -3.0 * fg)
 		var still_on_wall := _ray_hits(global_position + Vector3(0, 1.0, 0), -wall_normal * (RADIUS + 0.4))
-		if wallrun_t >= WALLRUN_TIME or not still_on_wall or not forward_in or any_crouch_tap:
+		# A run lasts while you hold any movement key (forward, or along / into the wall).
+		if wallrun_t >= WALLRUN_TIME or not still_on_wall or wish.length() < 0.3 or any_crouch_tap:
 			_end_wallrun()
 		crouching = false
 	elif sliding:
@@ -866,7 +916,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- Gravity & jumping
 	if not on_floor and not wallrunning and not mantling:
-		velocity.y -= GRAVITY * _fatigue_gravity() * delta
+		velocity.y -= GRAVITY * _gravity_mult() * delta
 	if _jump_buffer_t > 0.0:
 		if wallrunning or (_wall_jump_t > 0.0 and not on_floor):
 			# Kick off the wall: out, up, and along it, keeping (and adding to) your
@@ -876,7 +926,7 @@ func _physics_process(delta: float) -> void:
 			var n := wall_normal if wallrunning else _wall_jump_n
 			wall_jumps += 1
 			var fatigue := _wall_fatigue()
-			velocity.y = WALLJUMP_UP * lerpf(0.5, 1.0, fatigue)
+			velocity.y = _jump_speed(WALLJUMP_UP * lerpf(0.5, 1.0, fatigue))
 			var along_wall := hvel - n * hvel.dot(n)
 			if fatigue < 1.0:
 				along_wall *= fatigue
@@ -894,7 +944,7 @@ func _physics_process(delta: float) -> void:
 				crouching = false
 				_crouch_toggle = false
 				_set_crouch_shape(false)
-			velocity.y = JUMP_V
+			velocity.y = _jump_speed(JUMP_V)
 			coyote = 0.0
 			_jump_buffer_t = 0.0
 			_land_grace = 0.0
@@ -906,10 +956,10 @@ func _physics_process(delta: float) -> void:
 				_crouch_toggle = false
 				_set_crouch_shape(false)
 			_on_moved()
-		elif jump_tap and addon == "skywalker" and dj_ready:
+		elif jump_tap and addon2 == "skywalker" and dj_ready:
 			# Extra height, current momentum kept as-is (no added speed).
 			dj_ready = false
-			velocity.y = DJUMP_V
+			velocity.y = _jump_speed(DJUMP_V)
 			_jump_buffer_t = 0.0
 			if sliding:
 				sliding = false
@@ -958,7 +1008,9 @@ func _physics_process(delta: float) -> void:
 		if Input.is_action_pressed("fire"):
 			_try_fire()
 		if Input.is_action_just_pressed("addon"):
-			_use_addon()
+			_use_addon(PRI)
+		if Input.is_action_just_pressed("addon2"):
+			_use_addon(SEC)
 		if Input.is_action_just_pressed("interact"):
 			_interact()
 		if Input.is_action_just_pressed("spray"):
@@ -973,7 +1025,7 @@ func _physics_process(delta: float) -> void:
 	_net_acc += delta
 	if _net_acc >= NET_INTERVAL:
 		_net_acc = 0.0
-		_net_state.rpc(global_position, yaw, pitch, velocity, _flags())
+		_net_state.rpc(global_position, yaw, pitch, velocity, _flags(), Time.get_ticks_msec() / 1000.0)
 
 
 ## Extra slide speed from landing hard: a share of the fall speed beyond
@@ -991,7 +1043,7 @@ func _air_strafe(hvel: Vector3, wish: Vector3, base: float, delta: float) -> Vec
 		return hvel
 	var speed := hvel.length()
 	if speed < base:
-		hvel += wish * AIR_ACCEL * delta
+		hvel += wish * AIR_ACCEL * _air_mult() * delta
 		if hvel.length() > base:
 			hvel = hvel.normalized() * base
 		return hvel
@@ -1004,7 +1056,7 @@ func _air_strafe(hvel: Vector3, wish: Vector3, base: float, delta: float) -> Vec
 	var add := AIR_WISH_CAP - hvel.dot(wd)
 	if add <= 0.0:
 		return hvel
-	var out := hvel + wd * minf(AIR_STRAFE_ACCEL * delta, add)
+	var out := hvel + wd * minf(AIR_STRAFE_ACCEL * _air_mult() * delta, add)
 	var limit := maxf(speed, AIR_SPEED_LIMIT * _speed_mult())
 	if out.length() > limit:
 		out = out.normalized() * limit
@@ -1068,9 +1120,31 @@ func _speed_mult() -> float:
 	var m := 1.0
 	if weapon == "bat":
 		m *= Weapons.BAT_SPEED_MULT
-	if addon == "trackstar":
-		m *= Addons.TRACK_ACTIVE if addon_active > 0.0 else Addons.TRACK_PASSIVE
+	if addon2 == "trackstar":
+		m *= Addons.TRACK_ACTIVE if addon_active[SEC] > 0.0 else Addons.TRACK_PASSIVE
 	return m
+
+
+## Moonwalker: 20% less gravity. Wall-jump fatigue adds on top.
+func _gravity_mult() -> float:
+	return _fatigue_gravity() * (Addons.MOON_GRAVITY if addon == "moonwalker" else 1.0)
+
+
+## Moonwalker: 15% better air control.
+func _air_mult() -> float:
+	return Addons.MOON_AIR if addon == "moonwalker" else 1.0
+
+
+## Upward speed for a jump: normally v, but an armed Moonwalker rocket launches
+## you MOON_ROCKET_H up instead (and its cooldown starts).
+func _jump_speed(v: float) -> float:
+	if not rocket_armed:
+		return v
+	rocket_armed = false
+	addon_cd[PRI] = Addons.MOON_CD
+	_rocket_t = ROCKET_FLAME_TIME
+	Sfx.play("rocket", -3.0)
+	return maxf(v, sqrt(2.0 * GRAVITY * _gravity_mult() * Addons.MOON_ROCKET_H))
 
 
 ## 1.0 for your first WALLJUMP_FREE wall jumps, then 0.75, 0.56, 0.42... for each
@@ -1134,34 +1208,20 @@ func _flags() -> int:
 		f |= F_MOVING
 	if wallrunning:
 		f |= F_WALLRUN
+	if _rocket_t > 0.0:
+		f |= F_ROCKET
 	if is_on_floor():
 		f |= F_GROUND
 	return f
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
-func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int) -> void:
-	if not (pos.is_finite() and vel.is_finite() and is_finite(y) and is_finite(p)):
+func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int, sent: float) -> void:
+	if not (pos.is_finite() and vel.is_finite() and is_finite(y) and is_finite(p) and is_finite(sent)):
 		return
-	# Updates further than anyone can move since the window began (teleports, speed
-	# hacks) are ignored. Respawns start a new window, so they never trip this.
-	var now := Time.get_ticks_msec() / 1000.0
-	if _has_net and _anchor_t >= 0.0 and not _reachable(_anchor_pos, _anchor_t, pos, now):
-		# A second of updates moving on from one new spot at legal speed (the
-		# out-of-bounds reset) is accepted, so a player can't get stuck unseen.
-		if _jump_votes == 0 or not _reachable(_jump_pos, _jump_t, pos, now):
-			_jump_votes = 0
-			_jump_pos = pos
-			_jump_t = now
-		_jump_votes += 1
-		if _jump_votes < 30:
-			return
-		_anchor_t = -1.0
-	_jump_votes = 0
-	if _anchor_t < 0.0 or now - _anchor_t >= NET_WINDOW:
-		_anchor_pos = pos
-		_anchor_t = now
-	_observe_speed(pos)
+	if not _net_filter(pos, sent, Time.get_ticks_msec() / 1000.0):
+		return
+	_observe_speed(pos, sent)
 	net_pos = pos
 	net_yaw = y
 	net_pitch = clampf(p, -PI * 0.5, PI * 0.5)
@@ -1179,6 +1239,41 @@ var _obs_t := -1.0
 var _obs_speed := 0.0
 
 
+## Movement check for one update (sent at the sender's clock time `sent`, arriving
+## at `now`). Returns false to ignore it. Updates further than anyone can move
+## since the window began (teleports, speed hacks) are ignored, and so are updates
+## older than the last one (they arrive out of order). Respawns start a new window.
+##
+## Speeds are timed by when an update was *sent*, mapped onto our clock with the
+## quickest delivery seen so far: over the internet updates often arrive in bursts
+## after a stall, and timing them by arrival made players freeze. A sender whose
+## clock runs fast gains nothing: the estimate never runs ahead of arrival.
+func _net_filter(pos: Vector3, sent: float, now: float) -> bool:
+	if sent <= _last_sent:
+		return false
+	_last_sent = sent
+	_clock_off = minf(_clock_off, now - sent)
+	var t := sent + _clock_off
+	if now < _net_free_until:
+		_anchor_t = -1.0  # the host just moved them (Warp, Swap): start again from here
+	if _has_net and _anchor_t >= 0.0 and not _reachable(_anchor_pos, _anchor_t, pos, t):
+		# A second of updates moving on from one new spot at legal speed (the
+		# out-of-bounds reset) is accepted, so a player can't get stuck unseen.
+		if _jump_votes == 0 or not _reachable(_jump_pos, _jump_t, pos, t):
+			_jump_votes = 0
+			_jump_pos = pos
+			_jump_t = t
+		_jump_votes += 1
+		if _jump_votes < 30:
+			return false
+		_anchor_t = -1.0
+	_jump_votes = 0
+	if _anchor_t < 0.0 or t - _anchor_t >= NET_WINDOW:
+		_anchor_pos = pos
+		_anchor_t = t
+	return true
+
+
 ## True if a player could get from `from` (at time t0) to `to` (at now) legally.
 static func _reachable(from: Vector3, t0: float, to: Vector3, now: float) -> bool:
 	var dt := maxf(now - t0, NET_INTERVAL)
@@ -1186,11 +1281,13 @@ static func _reachable(from: Vector3, t0: float, to: Vector3, now: float) -> boo
 	return d.length() <= NET_MAX_SPEED * dt + 3.0 and Vector2(d.x, d.z).length() <= NET_MAX_HSPEED * dt + 3.0
 
 
-func _observe_speed(pos: Vector3) -> void:
-	var now := Time.get_ticks_msec() / 1000.0
+## Timed by the sender's clock, not arrival: a client that holds its updates and
+## sends them in a burst would otherwise look many times faster. Gaps count as at
+## least one send interval, so squeezing the timestamps doesn't help either.
+func _observe_speed(pos: Vector3, now: float) -> void:
 	if _obs_t > 0.0 and now > _obs_t:
 		var d := Vector2(pos.x - _obs_pos.x, pos.z - _obs_pos.z).length()
-		var inst := d / maxf(now - _obs_t, 1.0 / 60.0)
+		var inst := d / maxf(now - _obs_t, NET_INTERVAL)
 		# Peak speed that decays over about half a second.
 		_obs_speed = maxf(inst, _obs_speed * exp(-(now - _obs_t) * 2.0))
 	_obs_pos = pos
@@ -1204,6 +1301,7 @@ func observed_speed() -> float:
 # ================================================================ per-frame visuals
 
 func _process(delta: float) -> void:
+	_tick_parry_bubble(delta)
 	if not is_local and grapple_state == Hook.FLYING:
 		_hook_dist = minf(_hook_dist + Addons.GRAPPLE_HOOK_SPEED * delta, Addons.GRAPPLE_RANGE)
 	_update_rope()
@@ -1252,6 +1350,7 @@ func _remote_update(delta: float) -> void:
 	tag_mesh.visible = Game.holder == peer_id
 	if tag_mesh.visible:
 		tag_mesh.rotation.y += delta * 3.0
+	_show_rocket_flame((net_flags & F_ROCKET) != 0 and vis)
 	tp_pivot.rotation.x = net_pitch
 	_update_glint()
 
@@ -1328,14 +1427,14 @@ func _start_reload() -> void:
 ## Time between shots. Trackstar re-chambers the shotgun (35%) and sniper (30%) faster.
 func shot_interval() -> float:
 	var t := 1.0 / float(Weapons.DATA[weapon].rps)
-	if addon == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
+	if addon2 == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
 		t *= Addons.track_mult(weapon)
 	return t
 
 
 ## Trackstar reloads 35% faster (30% with the sniper).
 func reload_time() -> float:
-	return float(Weapons.DATA[weapon].reload) * (Addons.track_mult(weapon) if addon == "trackstar" else 1.0)
+	return float(Weapons.DATA[weapon].reload) * (Addons.track_mult(weapon) if addon2 == "trackstar" else 1.0)
 
 
 func _spread_dir(b: Basis, deg: float) -> Vector3:
@@ -1404,8 +1503,8 @@ func _try_fire() -> void:
 					_acc(hits, h.id, bat_dmg, h.head)
 					Sfx.play("bat_hit", -2.0)
 					break
-	for id in hits:
-		Game.report_hit.rpc_id(1, id, hits[id][0], hits[id][1], weapon)
+	# The shot is finished (round used, reload started) before its hits are sent:
+	# on the host a kill comes straight back, and Reload on Kill must refill after.
 	if weapon != "bat":
 		ammo -= 1
 		flash_t = 0.05
@@ -1413,6 +1512,8 @@ func _try_fire() -> void:
 		pitch = clampf(pitch + deg_to_rad(float(w.kick) * 0.35), deg_to_rad(-89.0), deg_to_rad(89.0))
 		if ammo <= 0:
 			_start_reload()
+	for id in hits:
+		Game.report_hit.rpc_id(1, id, hits[id][0], hits[id][1], weapon)
 	Sfx.play(weapon, -3.0, randf_range(0.95, 1.05))
 	if weapon != "bat":
 		var muzzle := vm_muzzle.global_position if vm_muzzle else origin
@@ -1471,31 +1572,160 @@ func _hitscan(from: Vector3, dir: Vector3, max_dist: float, wall_pierce: int, pi
 
 
 # ================================================================ addons
+# Two slots: the primary addon (Addons.PRIMARY, on Use Primary) and the secondary
+# (Addons.SECONDARY, on Use Secondary). addon_active / addon_cd are per slot.
+# Warp, Swap and Parry are refereed by the host (Game.report_warp, request_swap,
+# request_parry): it moves players for everyone and decides who a parry protects.
 
-func _use_addon() -> void:
-	match addon:
+func addon_in(slot: int) -> String:
+	return addon if slot == PRI else addon2
+
+
+func has_addon(id: String) -> bool:
+	return id == addon or id == addon2
+
+
+func _use_addon(slot: int) -> void:
+	if addon_cd[slot] > 0.0:
+		return
+	match addon_in(slot):
 		"hider":
-			if addon_cd <= 0.0 and not invisible:
+			if not invisible:
 				invisible = true
-				addon_active = Addons.HIDER_TIME
+				addon_active[slot] = Addons.HIDER_TIME
 				Sfx.play("addon", -4.0)
+		"grapple":
+			if grapple_state == Hook.NONE:
+				_fire_grapple()
+		"warp":
+			_warp()
+		"swap":
+			if swap_t <= 0.0 and _enemy_in_swap_range():
+				swap_t = Addons.SWAP_CHARGE
+				addon_cd[slot] = Addons.SWAP_CD
+				Sfx.play("swap_beam", -3.0)
+				Game.request_swap.rpc_id(1)
+		"moonwalker":
+			if not rocket_armed:
+				rocket_armed = true
+				Sfx.play("addon", -4.0, 1.5)
 		"trackstar":
-			if addon_cd <= 0.0:
-				addon_active = Addons.TRACK_TIME
-				addon_cd = Addons.TRACK_CD
-				Sfx.play("addon", -4.0, 1.3)
+			addon_active[slot] = Addons.TRACK_TIME
+			addon_cd[slot] = Addons.TRACK_CD
+			Sfx.play("addon", -4.0, 1.3)
 		"phantom":
-			if addon_cd <= 0.0 and phasing <= 0.0:
+			if phasing <= 0.0:
 				phasing = Addons.PHANTOM_TIME
 				Sfx.play("addon", -4.0, 0.7)
 		"stalker":
-			if addon_cd <= 0.0:
-				addon_active = Addons.STALKER_SCAN_TIME
-				addon_cd = Addons.STALKER_SCAN_CD
-				Sfx.play("addon", -4.0, 0.85)
-		"grapple":
-			if grapple_state == Hook.NONE and addon_cd <= 0.0:
-				_fire_grapple()
+			addon_active[slot] = Addons.STALKER_SCAN_TIME
+			addon_cd[slot] = Addons.STALKER_SCAN_CD
+			Sfx.play("addon", -4.0, 0.85)
+		"parry":
+			addon_active[slot] = Addons.PARRY_TIME
+			addon_cd[slot] = Addons.PARRY_TIME + Addons.PARRY_CD
+			show_parry()
+			Sfx.play("parry", -3.0)
+			Game.request_parry.rpc_id(1)
+
+
+## Warp: blink WARP_DIST the way you're looking, stopping just short of anything
+## solid (even while Phantom is phasing you), with all your speed turned that way.
+func _warp() -> void:
+	var dir := aim_dir()
+	if is_on_floor() and dir.y < 0.0:
+		dir = Vector3(dir.x, 0.0, dir.z).normalized()  # aiming down on the ground: along it
+	var mask := collision_mask
+	collision_mask = MASK_FULL
+	var hit := move_and_collide(dir * Addons.WARP_DIST, true, 0.05)
+	collision_mask = mask
+	var travel := dir * Addons.WARP_DIST if hit == null else hit.get_travel()
+	if travel.length() < 0.5:
+		return  # right up against a wall: nothing happens, no cooldown
+	global_position += travel
+	_prev_pos = global_position
+	_cur_pos = global_position
+	velocity = dir * velocity.length()
+	if wallrunning:
+		_end_wallrun()
+	_mantle_t = 0.0
+	_end_grapple()
+	addon_cd[PRI] = Addons.WARP_CD
+	Sfx.play("warp", -3.0)
+	Game.report_warp.rpc_id(1, global_position)
+	_on_moved()
+
+
+## Swap only starts if an enemy is in range here (the host checks again at the end).
+func _enemy_in_swap_range() -> bool:
+	if Game.world == null:
+		return false
+	for p: Player in Game.world.players.values():
+		if p.team != team and p.alive and p.global_position.distance_to(global_position) <= Addons.SWAP_RANGE:
+			return true
+	Game.announce.emit("No enemy within %dm to swap with" % int(Addons.SWAP_RANGE), Color("ff5cc6"))
+	return false
+
+
+## The host moved this player (Warp, Swap). With move_self the local player is
+## moved too (Swap); a warp has already moved them.
+func net_teleport(pos: Vector3, move_self: bool) -> void:
+	if is_local:
+		if not move_self:
+			return
+		global_position = pos
+		_prev_pos = pos
+		_cur_pos = pos
+		if wallrunning:
+			_end_wallrun()
+		_mantle_t = 0.0
+		_end_grapple()
+		swap_t = 0.0
+		Sfx.play("warp", -2.0, 0.8)
+		return
+	global_position = pos
+	net_pos = pos
+	_anchor_t = -1.0
+	_jump_votes = 0
+	_net_free_until = Time.get_ticks_msec() / 1000.0 + TELEPORT_GRACE
+
+
+## Reload on Kill: a kill refills the magazine and chambers a round.
+func on_kill() -> void:
+	if addon2 != "reloader" or weapon == "bat" or not alive:
+		return
+	ammo = int(Weapons.DATA[weapon].mag)
+	reloading = 0.0
+	fire_cd = 0.0
+	Sfx.play("reload", -4.0, 1.4)
+
+
+## Parry: true while this (local) player's parry is up.
+func parrying() -> bool:
+	return addon2 == "parry" and addon_active[SEC] > 0.0
+
+
+## Shows the pink parry bubble (everyone sees it; the host says when).
+func show_parry() -> void:
+	_parry_t = Addons.PARRY_TIME
+
+
+func _tick_parry_bubble(delta: float) -> void:
+	_parry_t = maxf(0.0, _parry_t - delta)
+	var on := _parry_t > 0.0 and alive
+	if on and _parry_bubble == null:
+		_parry_bubble = PARRY_SCENE.instantiate()
+		add_child(_parry_bubble)
+	if _parry_bubble:
+		_parry_bubble.visible = on
+
+
+func _show_rocket_flame(on: bool) -> void:
+	if on and _rocket_flame == null:
+		_rocket_flame = ROCKET_SCENE.instantiate()
+		add_child(_rocket_flame)
+	if _rocket_flame:
+		_rocket_flame.visible = on
 
 
 # ---------------------------------------------------------------- grapple
@@ -1529,7 +1759,7 @@ func _tick_hook(delta: float) -> void:
 	if _hook_dist >= Addons.GRAPPLE_RANGE - 0.01:
 		# Missed: the hook reels back in and only a short cooldown applies.
 		grapple_state = Hook.NONE
-		addon_cd = Addons.GRAPPLE_MISS_CD
+		addon_cd[PRI] = Addons.GRAPPLE_MISS_CD
 		Sfx.play("addon_end", -6.0, 1.6)
 		_grapple_net.rpc(Hook.NONE, Vector3.ZERO, Vector3.ZERO)
 
@@ -1538,7 +1768,7 @@ func _attach_grapple(point: Vector3, collider: Object) -> void:
 	grapple_state = Hook.ATTACHED
 	grapple_point = point
 	grapple_t = Addons.GRAPPLE_MAX_TIME
-	addon_cd = Addons.GRAPPLE_CD
+	addon_cd[PRI] = Addons.GRAPPLE_CD
 	_rope_len = point.distance_to(global_position + Vector3(0, 1.0, 0))
 	_grapple_target = collider as Player
 	if _grapple_target:
@@ -1604,7 +1834,7 @@ func _end_grapple() -> void:
 	if grapple_state == Hook.NONE:
 		return
 	if grapple_state == Hook.FLYING:
-		addon_cd = maxf(addon_cd, Addons.GRAPPLE_MISS_CD)
+		addon_cd[PRI] = maxf(addon_cd[PRI], Addons.GRAPPLE_MISS_CD)
 	grapple_state = Hook.NONE
 	_grapple_target = null
 	_grapple_net.rpc(Hook.NONE, Vector3.ZERO, Vector3.ZERO)
@@ -1633,7 +1863,7 @@ func _grapple_net(state: int, point: Vector3, dir: Vector3) -> void:
 ## who is actually within grapple range.
 @rpc("any_peer", "call_remote", "reliable")
 func _grapple_yank() -> void:
-	if not is_local or not alive or Game.world == null:
+	if not is_local or not alive or Game.world == null or parrying():
 		return
 	var from: Player = Game.world.players.get(multiplayer.get_remote_sender_id())
 	if from == null or not from.alive or from.team == team or from.addon != "grapple":
@@ -1701,31 +1931,34 @@ func _update_rope() -> void:
 
 
 func _tick_addon(delta: float) -> void:
-	match addon:
-		"hider":
-			if invisible:
-				addon_active -= delta
-				if addon_active <= 0.0:
-					_end_invis()
-			else:
-				addon_cd = maxf(0.0, addon_cd - delta)
-		"trackstar", "stalker":
-			addon_active = maxf(0.0, addon_active - delta)
-			addon_cd = maxf(0.0, addon_cd - delta)
-		"phantom":
-			if phasing > 0.0:
-				phasing -= delta
-				if phasing <= 0.0:
-					if alive and _overlaps(MapBuilder.L_WALL | MapBuilder.L_DOOR, probe_shape, STAND_H * 0.5 + 0.1):
-						phasing = 0.05  # Still inside a wall: stay phased until clear.
-					else:
-						phasing = 0.0
-						addon_cd = Addons.PHANTOM_CD
-						Sfx.play("addon_end", -4.0)
-			else:
-				addon_cd = maxf(0.0, addon_cd - delta)
-		_:
-			addon_cd = maxf(0.0, addon_cd - delta)
+	for slot in 2:
+		# Remember the length of the cooldown in progress, however it was started.
+		_cd_full[slot] = maxf(_cd_full[slot], addon_cd[slot]) if addon_cd[slot] > 0.0 else 0.0
+		match addon_in(slot):
+			"hider":
+				if invisible:
+					addon_active[slot] -= delta
+					if addon_active[slot] <= 0.0:
+						_end_invis()
+				else:
+					addon_cd[slot] = maxf(0.0, addon_cd[slot] - delta)
+			"phantom":
+				if phasing > 0.0:
+					phasing -= delta
+					if phasing <= 0.0:
+						if alive and _overlaps(MapBuilder.L_WALL | MapBuilder.L_DOOR, probe_shape, STAND_H * 0.5 + 0.1):
+							phasing = 0.05  # Still inside a wall: stay phased until clear.
+						else:
+							phasing = 0.0
+							addon_cd[slot] = Addons.PHANTOM_CD
+							Sfx.play("addon_end", -4.0)
+				else:
+					addon_cd[slot] = maxf(0.0, addon_cd[slot] - delta)
+			_:
+				addon_active[slot] = maxf(0.0, addon_active[slot] - delta)
+				addon_cd[slot] = maxf(0.0, addon_cd[slot] - delta)
+	swap_t = maxf(0.0, swap_t - delta)
+	_rocket_t = maxf(0.0, _rocket_t - delta)
 	if floor_phase > 0.0:
 		floor_phase -= delta
 		if floor_phase <= 0.0 and alive and _overlaps(MapBuilder.L_FLOOR, probe_shape, STAND_H * 0.5 + 0.1):
@@ -1736,44 +1969,71 @@ func _end_invis() -> void:
 	if not invisible:
 		return
 	invisible = false
-	addon_active = 0.0
-	addon_cd = Addons.HIDER_CD
+	addon_active[PRI] = 0.0
+	addon_cd[PRI] = Addons.HIDER_CD
 	Sfx.play("addon_end", -4.0)
 
 
-## [label, fraction (0..1), state] for the HUD.
-func addon_status() -> Array:
-	match addon:
+## [label, fraction (0..1), state] for the HUD bar of an addon slot.
+func addon_status(slot: int) -> Array:
+	var act: float = addon_active[slot]
+	var cd: float = addon_cd[slot]
+	match addon_in(slot):
 		"hider":
 			if invisible:
-				return ["INVISIBLE %.0fs" % addon_active, addon_active / Addons.HIDER_TIME, "active"]
-			if addon_cd > 0.0:
-				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.HIDER_CD, "cooldown"]
-		"trackstar":
-			if addon_active > 0.0:
-				return ["SPRINTING %.0fs" % addon_active, addon_active / Addons.TRACK_TIME, "active"]
-			if addon_cd > 0.0:
-				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.TRACK_CD, "cooldown"]
-		"phantom":
-			if phasing > 0.0:
-				return ["PHASING", phasing / Addons.PHANTOM_TIME, "active"]
-			if addon_cd > 0.0:
-				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.PHANTOM_CD, "cooldown"]
+				return ["INVISIBLE %.0fs" % act, act / Addons.HIDER_TIME, "active"]
+			if cd > 0.0:
+				return _cooling(slot)
 		"grapple":
 			if grapple_state == Hook.FLYING:
 				return ["HOOK OUT", 1.0 - _hook_dist / Addons.GRAPPLE_RANGE, "active"]
 			if grapple_state == Hook.ATTACHED:
 				return ["GRAPPLING", grapple_t / Addons.GRAPPLE_MAX_TIME, "active"]
-			if addon_cd > 0.0:
-				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.GRAPPLE_CD, "cooldown"]
+			if cd > 0.0:
+				return _cooling(slot)
+		"warp":
+			if cd > 0.0:
+				return _cooling(slot)
+		"swap":
+			if swap_t > 0.0:
+				return ["SWAPPING", 1.0 - swap_t / Addons.SWAP_CHARGE, "active"]
+			if cd > 0.0:
+				return _cooling(slot)
+		"moonwalker":
+			if rocket_armed:
+				return ["ROCKET: JUMP!", 1.0, "active"]
+			if cd > 0.0:
+				return _cooling(slot)
+		"trackstar":
+			if act > 0.0:
+				return ["SPRINTING %.0fs" % act, act / Addons.TRACK_TIME, "active"]
+			if cd > 0.0:
+				return _cooling(slot)
+		"phantom":
+			if phasing > 0.0:
+				return ["PHASING", phasing / Addons.PHANTOM_TIME, "active"]
+			if cd > 0.0:
+				return _cooling(slot)
+		"stalker":
+			if act > 0.0:
+				return ["SCANNING %.0fs" % act, act / Addons.STALKER_SCAN_TIME, "active"]
+			if cd > 0.0:
+				return _cooling(slot)
+		"parry":
+			if act > 0.0:
+				return ["PARRYING", act / Addons.PARRY_TIME, "active"]
+			if cd > 0.0:
+				return _cooling(slot)
 		"skywalker":
 			return ["DOUBLE JUMP READY" if dj_ready else "LAND TO RECHARGE", 1.0 if dj_ready else 0.0, "passive"]
-		"stalker":
-			if addon_active > 0.0:
-				return ["SCANNING %.0fs" % addon_active, addon_active / Addons.STALKER_SCAN_TIME, "active"]
-			if addon_cd > 0.0:
-				return ["%.1fs" % addon_cd, 1.0 - addon_cd / Addons.STALKER_SCAN_CD, "cooldown"]
-	return ["READY [%s]" % Settings.bind_text("addon"), 1.0, "ready"]
+		"reloader":
+			return ["REFILLS ON KILL", 1.0, "passive"]
+	return ["READY [%s]" % Settings.bind_text("addon" if slot == PRI else "addon2"), 1.0, "ready"]
+
+
+func _cooling(slot: int) -> Array:
+	var cd: float = addon_cd[slot]
+	return ["%.1fs" % cd, 1.0 - cd / maxf(_cd_full[slot], cd), "cooldown"]
 
 
 # ================================================================ doors

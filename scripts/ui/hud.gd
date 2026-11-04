@@ -10,7 +10,6 @@ extends Control
 const FEED_MAX := 6
 const KILL_ROW := preload("res://assets/ui/kill_feed_row.tscn")
 const HP_FILL_W := 258.0     # inner width of the health bar
-const ADDON_FILL_W := 218.0  # inner width of the addon bar
 const HP_SEGMENT := 25.0     # the health bar is marked off every 25 HP
 const FEED_TIME := 7.0
 
@@ -35,9 +34,7 @@ var _ticks_for := 0.0  # max health the segment marks were laid out for
 @onready var _ammo: Label = %Ammo
 @onready var _ammo_max: Label = %AmmoMax
 @onready var _weapon: Label = %Weapon
-@onready var _addon_name: Label = %AddonName
-@onready var _addon_fill: ColorRect = %AddonFill
-@onready var _addon_text: Label = %AddonText
+@onready var _addon_bars: Array[AddonBar] = [%AddonBar, %Addon2Bar]
 @onready var _banner: Label = %Banner
 var _banner_t := 0.0
 @onready var _feed: VBoxContainer = %Feed
@@ -214,12 +211,12 @@ func _process(delta: float) -> void:
 	_timer.add_theme_color_override("font_color", timer_col)
 	# The bar along the bottom of the top HUD is a second clock: it empties as the
 	# round timer runs down (full until the Tag is first picked up).
-	var track := _clock_fill.get_parent() as Control
+	# It shrinks in from both ends, drawn by assets/materials/clock_bar.gdshader so the
+	# edges move smoothly between pixels.
 	var frac := 1.0
 	if Game.phase in [Game.Phase.HELD, Game.Phase.DROPPED]:
 		frac = clampf(Game.timer / Game.ROUND_TIME, 0.0, 1.0)
-	_clock_fill.size = Vector2(track.size.x * frac, track.size.y)
-	_clock_fill.position.x = (track.size.x - _clock_fill.size.x) * 0.5  # shrinks in from both ends
+	(_clock_fill.material as ShaderMaterial).set_shader_parameter("fill", frac)
 	_clock_fill.color = Mats.TAG_COLOR if Game.is_overtime() else (timer_col if Game.phase == Game.Phase.HELD else Color(0.95, 0.95, 0.95, 0.95))
 	if Game.holder != 0:
 		_runner_label.text = "" if Game.holder == me else "Runner: %s" % Net.name_of(Game.holder)
@@ -292,19 +289,8 @@ func _process(delta: float) -> void:
 		_ammo_max.text = "RELOADING  %.1fs" % lp.reloading if lp.reloading > 0.0 else "/ %d" % wd.mag
 	# Running low: the count turns red
 	_ammo.modulate = Color(1, 0.55, 0.45) if lp.weapon != "bat" and lp.ammo <= maxi(1, int(wd.mag) / 4) else Color.WHITE
-	var st: Array = lp.addon_status()
-	_addon_name.text = Addons.display_name(lp.addon).to_upper()
-	_addon_text.text = st[0]
-	_addon_fill.size.x = ADDON_FILL_W * clampf(st[1], 0.0, 1.0)
-	match st[2]:
-		"active":
-			_addon_fill.color = Color("49d6e0")
-		"cooldown":
-			_addon_fill.color = Color("5a5f6a")
-		"passive":
-			_addon_fill.color = Color("6a8a5a") if st[1] > 0.5 else Color("5a5f6a")
-		_:
-			_addon_fill.color = Color("e0b13c")
+	for slot in 2:
+		_addon_bars[slot].show_status(Addons.display_name(lp.addon_in(slot)), lp.addon_status(slot))
 
 	# Crosshair mode
 	if not alive or Game.ui_open:

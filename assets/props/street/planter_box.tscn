@@ -1,0 +1,138 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vvy7q"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7216, 0.698, 0.651, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_6glw8"]
+size = Vector3(2.2, 0.6, 0.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_kns0o"]
+size = Vector3(2.2, 0.6, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_65rpr"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2902, 0.2275, 0.1647, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_11i16"]
+size = Vector3(2.1, 0.05, 0.7)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_9ylt9"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3098, 0.5412, 0.2275, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_ueu0f"]
+radius = 0.38
+height = 0.76
+radial_segments = 12
+rings = 6
+
+[sub_resource type="SphereMesh" id="SphereMesh_wbsbq"]
+radius = 0.45
+height = 0.9
+radial_segments = 12
+rings = 6
+
+[sub_resource type="SphereMesh" id="SphereMesh_y7a9e"]
+radius = 0.36
+height = 0.72
+radial_segments = 12
+rings = 6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3m7d5"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9098, 0.4196, 0.5412, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_n4wmu"]
+radius = 0.08
+height = 0.16
+radial_segments = 12
+rings = 6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wczyh"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.949, 0.8235, 0.2902, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_ey5xv"]
+radius = 0.07
+height = 0.14
+radial_segments = 12
+rings = 6
+
+[node name="PlanterBox" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+material_override = SubResource("StandardMaterial3D_vvy7q")
+mesh = SubResource("BoxMesh_6glw8")
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)
+material_override = SubResource("StandardMaterial3D_65rpr")
+mesh = SubResource("BoxMesh_11i16")
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0.75, 0)
+material_override = SubResource("StandardMaterial3D_9ylt9")
+mesh = SubResource("SphereMesh_ueu0f")
+metadata/slot = "leaf"
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+material_override = SubResource("StandardMaterial3D_9ylt9")
+mesh = SubResource("SphereMesh_wbsbq")
+metadata/slot = "leaf"
+
+[node name="Part4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0.75, 0)
+material_override = SubResource("StandardMaterial3D_9ylt9")
+mesh = SubResource("SphereMesh_y7a9e")
+metadata/slot = "leaf"
+
+[node name="Part5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.92, 0.2)
+material_override = SubResource("StandardMaterial3D_3m7d5")
+mesh = SubResource("SphereMesh_n4wmu")
+
+[node name="Part6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.95, -0.2)
+material_override = SubResource("StandardMaterial3D_wczyh")
+mesh = SubResource("SphereMesh_ey5xv")
+
+[node name="Part7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 1, 0.25)
+material_override = SubResource("StandardMaterial3D_3m7d5")
+mesh = SubResource("SphereMesh_ey5xv")
+
+[node name="Collision" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("BoxShape3D_kns0o")

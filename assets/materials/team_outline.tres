@@ -1,0 +1,25 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://2080qn1htotm"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_edge"]
+render_priority = 12
+transparency = 1
+cull_mode = 1
+no_depth_test = true
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.9)
+grow = true
+grow_amount = 0.03
+stencil_mode = 3
+stencil_flags = 1
+stencil_compare = 5
+stencil_reference = 2
+
+[resource]
+render_priority = 11
+next_pass = SubResource("StandardMaterial3D_edge")
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0)
+stencil_mode = 3
+stencil_flags = 6
+stencil_reference = 2

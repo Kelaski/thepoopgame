@@ -143,5 +143,5 @@ func _refresh() -> void:
 				continue
 			var tag := " (host)" if id == 1 else ""
 			var me := "  < you" if id == multiplayer.get_unique_id() else ""
-			list.add_child(UiKit.label("%s%s   %s / %s%s" % [p.name, tag, Weapons.display_name(p.weapon), Addons.display_name(p.addon), me], 17))
+			list.add_child(UiKit.label("%s%s   %s / %s / %s%s" % [p.name, tag, Weapons.display_name(p.weapon), Addons.display_name(p.addon), Addons.display_name(p.get("addon2", "")), me], 17))
 	%Status.text = "%d / %d players" % [Net.players.size(), Net.MAX_PLAYERS]

@@ -1,0 +1,124 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6yyc0"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.4157, 0.4392, 0.4627, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_u88h2"]
+size = Vector3(0.8, 0.12, 0.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_e5gxf"]
+size = Vector3(0.8, 0.12, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hz1x9"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6039, 0.6392, 0.6588, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_f107f"]
+top_radius = 0.06
+bottom_radius = 0.06
+height = 5
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_pn0nu"]
+height = 5
+radius = 0.06
+
+[sub_resource type="BoxMesh" id="BoxMesh_6kcth"]
+size = Vector3(1.6, 0.04, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_u3mi2"]
+size = Vector3(0.04, 0.04, 1.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_s1rj1"]
+size = Vector3(1.2, 0.04, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_oipbv"]
+size = Vector3(0.04, 0.04, 1.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_6tqv8"]
+size = Vector3(0.8, 0.04, 0.04)
+
+[sub_resource type="BoxMesh" id="BoxMesh_bj96h"]
+size = Vector3(0.04, 0.04, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gy9ly"]
+shading_mode = 0
+albedo_color = Color(0.8863, 0.2314, 0.1804, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_q8gcu"]
+radius = 0.07
+height = 0.14
+radial_segments = 12
+rings = 6
+
+[node name="Antenna" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+material_override = SubResource("StandardMaterial3D_6yyc0")
+mesh = SubResource("BoxMesh_u88h2")
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, 0)
+material_override = SubResource("StandardMaterial3D_hz1x9")
+mesh = SubResource("CylinderMesh_f107f")
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+material_override = SubResource("StandardMaterial3D_hz1x9")
+mesh = SubResource("BoxMesh_6kcth")
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+material_override = SubResource("StandardMaterial3D_hz1x9")
+mesh = SubResource("BoxMesh_u3mi2")
+
+[node name="Part4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
+material_override = SubResource("StandardMaterial3D_hz1x9")
+mesh = SubResource("BoxMesh_s1rj1")
+
+[node name="Part5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
+material_override = SubResource("StandardMaterial3D_hz1x9")
+mesh = SubResource("BoxMesh_oipbv")
+
+[node name="Part6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_hz1x9")
+mesh = SubResource("BoxMesh_6tqv8")
+
+[node name="Part7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.7, 0)
+material_override = SubResource("StandardMaterial3D_hz1x9")
+mesh = SubResource("BoxMesh_bj96h")
+
+[node name="Part8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.1, 0)
+material_override = SubResource("StandardMaterial3D_gy9ly")
+mesh = SubResource("SphereMesh_q8gcu")
+metadata/glow = true
+
+[node name="Collision" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+shape = SubResource("BoxShape3D_e5gxf")
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, 0)
+shape = SubResource("CylinderShape3D_pn0nu")

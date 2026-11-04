@@ -1,0 +1,73 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fsbvo"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5569, 0.5843, 0.6078, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_2iyhh"]
+size = Vector3(2.2, 0.35, 1.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_96a1m"]
+size = Vector3(2.2, 0.35, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_n6zrw"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6235, 0.7765, 0.8667, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_uwq9k"]
+size = Vector3(2, 0.08, 1.3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rjpm7"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.4157, 0.4392, 0.4627, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_xlaim"]
+size = Vector3(0.05, 0.1, 1.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_7kd6w"]
+size = Vector3(2, 0.1, 0.05)
+
+[node name="Skylight" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
+material_override = SubResource("StandardMaterial3D_fsbvo")
+mesh = SubResource("BoxMesh_2iyhh")
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.9976, 0.0698, 0, -0.0698, 0.9976, 0, 0, 0, 1, 0, 0.38, 0)
+material_override = SubResource("StandardMaterial3D_n6zrw")
+mesh = SubResource("BoxMesh_uwq9k")
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42, 0)
+material_override = SubResource("StandardMaterial3D_rjpm7")
+mesh = SubResource("BoxMesh_xlaim")
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.42, 0)
+material_override = SubResource("StandardMaterial3D_rjpm7")
+mesh = SubResource("BoxMesh_7kd6w")
+
+[node name="Collision" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.175, 0)
+shape = SubResource("BoxShape3D_96a1m")

@@ -27,6 +27,8 @@ When Steam starts the game from an invite, it passes `+connect_lobby <id>`, and 
 
 **Safety checks** (`tests/checks.tscn`) cover the hit rate limit, the movement speed filter and the spray size check, with no network needed: `godot --headless --path . res://tests/checks.tscn` (exits 0 on a pass).
 
+**City test** (`tests/city.tscn`) generates 20 random cities per map size and checks that no building overlaps another, stands on a road or crosses the fence, that every building faces a street, and that spawn zones and Tag spots are outside buildings. It also times a full build of a large city: `godot --headless --path . res://tests/city.tscn`.
+
 **Rounds test** (`tests/rounds.tscn`) plays 10 rounds and checks that no team starts where it did last round, the Tag spot moves, and spawn zones stay apart: `godot --headless --path . res://tests/rounds.tscn -- --host --port=27203 --autostart=1 --size=small` (add `--classic` for the Classic city).
 
 **Two-player test** (`tests/two_player.tscn`) checks joining, unique names and movement sync. Start both copies at once; the host exits with code 0 on a pass and 1 on a failure:
@@ -38,7 +40,7 @@ godot --headless --path . res://tests/two_player.tscn -- --join=127.0.0.1:27199 
 
 ## Default controls
 
-**Changing the default controls:** the defaults are the game's actions in **Project Settings → Input Map** in the Godot editor (`move_forward`, `jump`, `addon`, `chat` and so on).
+**Changing the default controls:** the defaults are the game's actions in **Project Settings → Input Map** in the Godot editor (`move_forward`, `jump`, `addon` and `addon2` for the two addon slots, `chat` and so on).
 - **Changing a default:** change an action's key there and every player who hasn't rebound it gets the new key.
 - **Adding inputs:** you can give an action more than one input, such as a second key or a gamepad button. They all keep working until a player rebinds that action in game.
 - **Player rebinds:** a rebind in Settings → Keybinds replaces the action's inputs with the player's key or button. It's saved in their settings file, and **Reset Keybinds** brings the Input Map's inputs back.
@@ -75,6 +77,8 @@ godot --headless --path . res://tests/two_player.tscn -- --join=127.0.0.1:27199 
 - The host also turns away any Steam connection whose account isn't a member of its lobby, so the lobby's Public / Friends only / Invite only rule holds.
 - Lobby data (names, versions) comes from other players, so it's cleaned like chat before it's shown.
 Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
+
+**Movement check:** every receiver ignores updates that move further than anyone can, measured over a one-second window so the per-update slack can't add up: 70 m/s overall and 37.5 m/s along the ground. Updates are timed by the sender's own clock, mapped onto the receiver's clock using the quickest delivery seen so far. Over the internet updates arrive in bursts, and timing them by arrival froze players in 0.20.0. A sender whose clock runs fast gains nothing, because the estimate never runs ahead of arrival. Out-of-order updates are dropped. After a real teleport (the out-of-bounds reset), a second of updates moving on from the new spot is accepted.
 Shooting is resolved on the shooter's client, and the server validates every hit before applying damage:
 - The shooter is alive, the victim is an enemy, and the victim isn't spawn-protected.
 - The weapon is the one the shooter actually holds. A thrown gun only counts for a few seconds after a bat kill, for 2 hits at most.
@@ -145,9 +149,9 @@ Edit them in the Godot editor. The next match uses your changes.
 - **Placement:**
   - Props are placed on the ground at their origin.
   - Street props face their local +Z away from the road.
-  - **Furniture** is placed by each building's layout in `scripts/map/map_builder.gd` (`_lay_*`). Its footprint comes from the scene's meshes, so a bigger model automatically gets more room.
+  - **Furniture** is placed by each building's layout in `scripts/map/interiors.gd` (`_lay_*`). Its footprint comes from the scene's meshes, so a bigger model automatically gets more room.
   - **Decor:** wall pieces have their origin on the wall face at floor level and stick out along +Z into the room. Floor pieces against a wall have their back at Z = 0. Ceiling lights hang down from their origin on the ceiling. The rug is centred on its origin.
-  - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/map_builder.gd`.
+  - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/interiors.gd`.
   - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
 - **Code-side randomness:** sizes such as crates, bushes and tree heights are still random in code.
 
@@ -206,11 +210,13 @@ scripts/
   autoload/net.gd           # Steam lobbies (host/join/invites), roster, team/loadout requests
   autoload/game.gd          # server-authoritative Tag game mode
   data/weapons.gd           # weapon stats
-  data/addons.gd            # addon stats
+  data/addons.gd            # addon stats, and which are primary / secondary (Warp, Swap and Parry are checked by the host in autoload/game.gd)
   data/game_version.gd      # version number (major.minor.patch)
   map/map_data.gd           # classic layout transcribed from the sketch, map sizes
-  map/city_gen.gd           # random city layouts (one per match, from a seed)
-  map/map_builder.gd        # procedural city, interiors, where props and furniture go, spawn points
+  map/city_gen.gd           # random city layouts (one per match, from a seed): recursive splits into
+                            #   blocks with avenues / T-junction streets, street-wall lots in whole wall modules
+  map/map_builder.gd        # procedural city: streets, building shells, roofs, park, cranes, spawn points
+  map/interiors.gd          # inside the buildings: ceiling lights, wall decor and each type's furniture layout
   map/prefabs.gd            # reads prop / furniture scenes and batches them into the map
   world/world.gd            # environment, players, Tag, FX, trails, heartbeat, respawn search
   world/door.gd             # hinged doors

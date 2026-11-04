@@ -1,0 +1,98 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i0cjf"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.1647, 0.1804, 0.2, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_bnmas"]
+size = Vector3(1.9, 0.06, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_qweq2"]
+size = Vector3(0.06, 0.32, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bypnj"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2471, 0.4353, 0.6588, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_e3j1m"]
+size = Vector3(0.52, 0.07, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_jl3f6"]
+size = Vector3(0.52, 0.5, 0.06)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ip5zs"]
+size = Vector3(1.9, 1, 0.6)
+
+[node name="WaitingChairs" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32, 0)
+material_override = SubResource("StandardMaterial3D_i0cjf")
+mesh = SubResource("BoxMesh_bnmas")
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.85, 0.16, 0)
+material_override = SubResource("StandardMaterial3D_i0cjf")
+mesh = SubResource("BoxMesh_qweq2")
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 0.16, 0)
+material_override = SubResource("StandardMaterial3D_i0cjf")
+mesh = SubResource("BoxMesh_qweq2")
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.62, 0.45, 0.02)
+material_override = SubResource("StandardMaterial3D_bypnj")
+mesh = SubResource("BoxMesh_e3j1m")
+metadata/slot = "color"
+metadata/slot_choices = PackedColorArray(0.2471, 0.4353, 0.6588, 1, 0.3529, 0.3725, 0.4, 1, 0.5412, 0.3529, 0.2353, 1, 0.2275, 0.6039, 0.4157, 1)
+
+[node name="Part4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9903, -0.1392, 0, 0.1392, 0.9903, -0.62, 0.74, -0.24)
+material_override = SubResource("StandardMaterial3D_bypnj")
+mesh = SubResource("BoxMesh_jl3f6")
+metadata/slot = "color"
+
+[node name="Part5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0.02)
+material_override = SubResource("StandardMaterial3D_bypnj")
+mesh = SubResource("BoxMesh_e3j1m")
+metadata/slot = "color"
+metadata/slot_choices = PackedColorArray(0.2471, 0.4353, 0.6588, 1, 0.3529, 0.3725, 0.4, 1, 0.5412, 0.3529, 0.2353, 1, 0.2275, 0.6039, 0.4157, 1)
+
+[node name="Part6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9903, -0.1392, 0, 0.1392, 0.9903, 0, 0.74, -0.24)
+material_override = SubResource("StandardMaterial3D_bypnj")
+mesh = SubResource("BoxMesh_jl3f6")
+metadata/slot = "color"
+
+[node name="Part7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62, 0.45, 0.02)
+material_override = SubResource("StandardMaterial3D_bypnj")
+mesh = SubResource("BoxMesh_e3j1m")
+metadata/slot = "color"
+metadata/slot_choices = PackedColorArray(0.2471, 0.4353, 0.6588, 1, 0.3529, 0.3725, 0.4, 1, 0.5412, 0.3529, 0.2353, 1, 0.2275, 0.6039, 0.4157, 1)
+
+[node name="Part8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9903, -0.1392, 0, 0.1392, 0.9903, 0.62, 0.74, -0.24)
+material_override = SubResource("StandardMaterial3D_bypnj")
+mesh = SubResource("BoxMesh_jl3f6")
+metadata/slot = "color"
+
+[node name="Collision" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape9" type="CollisionShape3D" parent="Collision"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -0.02)
+shape = SubResource("BoxShape3D_ip5zs")

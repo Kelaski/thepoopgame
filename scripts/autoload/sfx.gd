@@ -43,6 +43,10 @@ func _ready() -> void:
 	streams["ping"] = _bell(1760.0, 0.35, 0.4)
 	streams["ping_danger"] = _chirp(1500.0, 950.0, 0.22, 0.45)
 	streams["hurt"] = _thud(rng, 0.15, 60.0)
+	streams["swap_beam"] = _beam(Addons.SWAP_CHARGE)
+	streams["warp"] = _chirp(1600.0, 260.0, 0.22, 0.45)
+	streams["rocket"] = _whoosh(rng, 0.55)
+	streams["parry"] = _bell(2350.0, 0.4, 0.45)
 	for i in 8:
 		var p := AudioStreamPlayer.new()
 		p.bus = "SFX"
@@ -205,6 +209,22 @@ func _chirp(f0: float, f1: float, length: float, vol: float) -> AudioStreamWAV:
 		var t := float(i) / n
 		phase += TAU * lerpf(f0, f1, t) / RATE
 		s[i] = sin(phase) * vol * sin(PI * t)
+	return _wav(s)
+
+
+## Sci-fi beam (Swap): a warbling tone that climbs as it charges, with a buzzy
+## octave on top, fading in and cutting off at the end.
+func _beam(length: float) -> AudioStreamWAV:
+	var n := int(length * RATE)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	var phase := 0.0
+	for i in n:
+		var t := float(i) / n
+		var hz := lerpf(260.0, 980.0, t * t) * (1.0 + 0.06 * sin(TAU * 14.0 * i / RATE))
+		phase += TAU * hz / RATE
+		var env := minf(1.0, t * 8.0) * minf(1.0, (1.0 - t) * 20.0)
+		s[i] = (sin(phase) * 0.6 + signf(sin(phase * 2.0)) * 0.12) * env * 0.45
 	return _wav(s)
 
 

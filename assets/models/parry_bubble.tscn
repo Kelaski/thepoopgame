@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_parry"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(1, 0.36, 0.78, 0.32)
+rim_enabled = true
+
+[sub_resource type="SphereMesh" id="SphereMesh_parry"]
+radius = 1.15
+height = 2.3
+radial_segments = 24
+rings = 12
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_parry_edge"]
+transparency = 1
+cull_mode = 1
+shading_mode = 0
+albedo_color = Color(1, 0.55, 0.88, 0.55)
+grow = true
+grow_amount = 0.03
+
+[node name="ParryBubble" type="Node3D"]
+
+[node name="Bubble" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+cast_shadow = 0
+material_override = SubResource("StandardMaterial3D_parry")
+mesh = SubResource("SphereMesh_parry")
+
+[node name="Edge" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+cast_shadow = 0
+material_override = SubResource("StandardMaterial3D_parry_edge")
+mesh = SubResource("SphereMesh_parry")
+
+[node name="Glow" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+light_color = Color(1, 0.4, 0.8, 1)
+light_energy = 1.5
+omni_range = 4.0

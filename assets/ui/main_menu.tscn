@@ -94,6 +94,45 @@ theme_override_colors/font_color = Color(1, 0.47843137, 0.41568628, 1)
 horizontal_alignment = 1
 autowrap_mode = 3
 
+[node name="NamePanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -380.0
+offset_top = -70.0
+offset_right = -60.0
+offset_bottom = 70.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="Content" type="VBoxContainer" parent="NamePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="NamePanel/Content"]
+layout_mode = 2
+theme_type_variation = &"AccentLabel"
+theme_override_font_sizes/font_size = 20
+text = "YOUR NAME"
+
+[node name="NameEdit" type="LineEdit" parent="NamePanel/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+placeholder_text = "Player"
+max_length = 20
+
+[node name="Hint" type="Label" parent="NamePanel/Content"]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 14
+text = "Shown to other players in matches."
+
+[connection signal="text_changed" from="NamePanel/Content/NameEdit" to="." method="_on_name_changed"]
 [connection signal="pressed" from="Center/Panel/Content/HostButton" to="." method="_on_host_pressed"]
 [connection signal="pressed" from="Center/Panel/Content/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="Center/Panel/Content/SettingsButton" to="." method="_on_settings_pressed"]

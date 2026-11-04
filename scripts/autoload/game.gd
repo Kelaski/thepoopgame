@@ -163,6 +163,7 @@ func on_player_left(id: int) -> void:
 	alive_ids.erase(id)
 	hp.erase(id)
 	respawn_left.erase(id)
+	_reset_abilities(id)
 	_push_state()
 
 
@@ -231,6 +232,7 @@ func _server_begin_round() -> void:
 		hp[id] = max_hp_of(id)
 		respawn_left.erase(id)
 		_last_hit[id] = -100.0
+		_reset_abilities(id)
 	_begin_round.rpc(round_num, objective, team_dots, spawns, scores)
 
 
@@ -299,6 +301,7 @@ func _server_tick(delta: float) -> void:
 				respawn_left.erase(id)
 				_respawn_hold.erase(id)
 				var pos: Vector3 = world.find_respawn(id)
+				_reset_abilities(id)
 				alive_ids[id] = true
 				hp[id] = max_hp_of(id)
 				_last_hit[id] = -100.0
@@ -541,6 +544,8 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String) -> void:
 		return
 	if world.players.has(victim) and world.players[victim].is_protected():
 		return
+	if _parry_until.get(victim, -1.0) > _now:
+		return  # parried
 	if weapon != "thrown" and not _hit_in_range(shooter, victim, weapon):
 		return
 	if weapon != "thrown" and not _take_hit_token(shooter, weapon):
@@ -581,7 +586,7 @@ func _take_hit_token(shooter: int, weapon: String) -> bool:
 	var d: Dictionary = Weapons.DATA.get(weapon, {})
 	var per_shot := 4.0 if weapon in ["shotgun", "sniper"] else (2.0 if weapon == "bat" else 1.0)
 	var rate := float(d.get("rps", 1.0)) * per_shot * HIT_RATE_SLACK
-	if Net.players.has(shooter) and Net.players[shooter].addon == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
+	if Net.players.has(shooter) and Net.players[shooter].get("addon2", "") == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
 		rate /= Addons.track_mult(weapon)  # Trackstar re-chambers the pump / bolt guns faster
 	var cap := per_shot * 2.0 + 2.0
 	var b: Array = _hit_tokens.get(shooter, [cap, _now])
@@ -602,17 +607,29 @@ func _hit_in_range(shooter: int, victim: int, weapon: String) -> bool:
 	var vp: Player = world.players[victim]
 	if sp.global_position.distance_to(vp.global_position) > reach:
 		return false
-	if weapon == "sniper":
-		return true  # pierces a wall by design
 	# No hits through walls: at least one of head, chest or knees must be in sight
 	# (three points give slack for players lagging round a corner).
 	var space: PhysicsDirectSpaceState3D = world.get_world_3d().direct_space_state
-	var from := sp.eye_pos()
 	for h in [1.6, 1.1, 0.5]:
-		var q := PhysicsRayQueryParameters3D.create(from, vp.global_position + Vector3(0, h, 0), MapBuilder.L_FLOOR | MapBuilder.L_WALL | MapBuilder.L_SOLID)
-		if space.intersect_ray(q).is_empty():
+		if in_sight(space, sp.eye_pos(), vp.global_position + Vector3(0, h, 0), weapon == "sniper"):
 			return true
 	return false
+
+
+## True if nothing solid is between from and to. With pierce, one wall (up to
+## 1 m thick, as in Player._hitscan) may be in the way, never more.
+static func in_sight(space: PhysicsDirectSpaceState3D, from: Vector3, to: Vector3, pierce: bool) -> bool:
+	var mask := MapBuilder.L_FLOOR | MapBuilder.L_WALL | MapBuilder.L_SOLID
+	var r := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, mask))
+	if r.is_empty():
+		return true
+	if not pierce:
+		return false
+	var dir := (to - from).normalized()
+	var exit := space.intersect_ray(PhysicsRayQueryParameters3D.create(r.position + dir * 1.0, r.position, mask))
+	if exit.is_empty():
+		return false  # thicker than a wall
+	return space.intersect_ray(PhysicsRayQueryParameters3D.create(exit.position + dir * 0.02, to, mask)).is_empty()
 
 
 func _take_thrown_hit(shooter: int) -> bool:
@@ -621,6 +638,133 @@ func _take_thrown_hit(shooter: int) -> bool:
 		return false
 	_thrown[shooter] = [int(t[0]) - 1, t[1]]
 	return true
+
+
+# ==================================================================== refereed addons
+# Warp, Swap and Parry change what other players see or can do, so the host
+# checks them (the right addon, alive, mid-round, off cooldown) and tells
+# everyone. Cooldowns get ABILITY_SLACK for latency, and reset on respawn like
+# the players' own do.
+const ABILITY_SLACK := 0.5
+const WARP_POS_SLACK := 8.0  # m the host's view of a warping player can lag behind them
+const PARRY_LATENCY := 0.1   # s added to a parry on the host, for shots already on their way
+const SWAP_RANGE_SLACK := 2.0  # m: the host's view of both players can lag a little
+var _ability_at := {}   # server: id -> {ability: host time last used}
+var _parry_until := {}  # server: id -> host time their parry ends
+
+
+func _ability_ok(id: int, slot_key: String, ability: String, cd: float) -> bool:
+	if not (phase in [Phase.RUSH, Phase.HELD, Phase.DROPPED]) or not alive_ids.get(id, false):
+		return false
+	if not Net.players.has(id) or Net.players[id].get(slot_key, "") != ability:
+		return false
+	var used: Dictionary = _ability_at.get(id, {})
+	if _now - float(used.get(ability, -100.0)) < cd - ABILITY_SLACK:
+		return false
+	used[ability] = _now
+	_ability_at[id] = used
+	return true
+
+
+## A respawned player's addons are ready again (Player.respawn resets them too).
+func _reset_abilities(id: int) -> void:
+	_ability_at.erase(id)
+	_parry_until.erase(id)
+
+
+## Warp: the warper has already moved; everyone else jumps them to pos.
+@rpc("any_peer", "call_local", "reliable")
+func report_warp(pos: Vector3) -> void:
+	if not multiplayer.is_server() or world == null or not pos.is_finite():
+		return
+	var id: int = Net.sender()
+	if not world.players.has(id) or world.players[id].global_position.distance_to(pos) > Addons.WARP_DIST + WARP_POS_SLACK:
+		return
+	if _ability_ok(id, "addon", "warp", Addons.WARP_CD):
+		_teleport.rpc(id, pos, false)
+
+
+## Swap: the beam plays for SWAP_CHARGE, then the swapper and the nearest enemy
+## trade places (unless that enemy is parrying).
+@rpc("any_peer", "call_local", "reliable")
+func request_swap() -> void:
+	if not multiplayer.is_server() or world == null:
+		return
+	var id: int = Net.sender()
+	if not _ability_ok(id, "addon", "swap", Addons.SWAP_CD):
+		return
+	_swap_charge.rpc(id)
+	get_tree().create_timer(Addons.SWAP_CHARGE).timeout.connect(_server_swap.bind(id, round_num))
+
+
+func _server_swap(id: int, rnd: int) -> void:
+	if not in_match or world == null or round_num != rnd or not alive_ids.get(id, false) or not world.players.has(id):
+		return
+	if not (phase in [Phase.RUSH, Phase.HELD, Phase.DROPPED]):
+		return
+	var me: Player = world.players[id]
+	var best: Player = null
+	for oid in world.players:
+		if oid == id or not alive_ids.get(oid, false) or Net.team_of(oid) == Net.team_of(id):
+			continue
+		var p: Player = world.players[oid]
+		var d := p.global_position.distance_to(me.global_position)
+		if d <= Addons.SWAP_RANGE + SWAP_RANGE_SLACK and (best == null or d < best.global_position.distance_to(me.global_position)):
+			best = p
+	if best == null:
+		# Nobody in range by the end of the beam: the swap is refunded.
+		_ability_at.get(id, {}).erase("swap")
+		_ability_msg.rpc_id(id, "No enemy within %dm to swap with" % int(Addons.SWAP_RANGE), true)
+		return
+	if _parry_until.get(best.peer_id, -1.0) > _now:
+		_ability_msg.rpc_id(id, "SWAP PARRIED!", false)
+		return
+	var a := me.global_position
+	var b := best.global_position
+	_teleport.rpc(id, b, true)
+	_teleport.rpc(best.peer_id, a, true)
+
+
+## Parry: for PARRY_TIME the host ignores hits on this player and Swap can't take them.
+@rpc("any_peer", "call_local", "reliable")
+func request_parry() -> void:
+	if not multiplayer.is_server():
+		return
+	var id: int = Net.sender()
+	if _ability_ok(id, "addon2", "parry", Addons.PARRY_TIME + Addons.PARRY_CD):
+		_parry_until[id] = _now + Addons.PARRY_TIME + PARRY_LATENCY
+		_parry_fx.rpc(id)
+
+
+@rpc("authority", "call_local", "reliable")
+func _teleport(id: int, pos: Vector3, move_self: bool) -> void:
+	if world and world.players.has(id) and pos.is_finite():
+		world.players[id].net_teleport(pos, move_self)
+
+
+@rpc("authority", "call_local", "reliable")
+func _swap_charge(id: int) -> void:
+	if world and world.players.has(id) and not world.players[id].is_local:
+		Sfx.play_at("swap_beam", world.players[id].global_position, -2.0, 60.0)
+
+
+@rpc("authority", "call_local", "reliable")
+func _parry_fx(id: int) -> void:
+	if world and world.players.has(id) and not world.players[id].is_local:
+		world.players[id].show_parry()
+		Sfx.play_at("parry", world.players[id].global_position, -3.0, 40.0)
+
+
+## A swap didn't happen: say why, and with refund the cooldown is given back.
+@rpc("authority", "call_local", "reliable")
+func _ability_msg(text: String, refund: bool) -> void:
+	var me := multiplayer.get_unique_id()
+	if world and world.players.has(me):
+		var p: Player = world.players[me]
+		p.swap_t = 0.0
+		if refund and p.addon == "swap":
+			p.addon_cd[Player.PRI] = 0.0
+	announce.emit(text, Color("ff5cc6"))
 
 
 # ==================================================================== broadcasts
@@ -692,7 +836,10 @@ func _begin_round(rnd: int, obj: int, _team_dots: Array, spawns: Dictionary, sc:
 func _sync_state(ph: int, pt: float, t: float, sc: Array, rnd: int, h: int, ht: int, tp: Vector3, obj: int, alive: Dictionary, resp: Dictionary) -> void:
 	phase = ph
 	phase_time = pt
-	timer = t
+	# Clients run the clock themselves; the server's (slightly older) time only
+	# replaces it when they've drifted apart, so the clock bar never jumps back.
+	if absf(t - timer) > 0.4:  # pickups, bonuses and new rounds are always bigger jumps
+		timer = t
 	scores = sc
 	round_num = rnd
 	holder = h
@@ -769,6 +916,8 @@ func _on_death(victim: int, killer: int, weapon: String, head: bool, victim_pos:
 		world.players[victim].set_alive(false)
 	if killer == me and victim != me:
 		local_hit.emit(0.0, head, true)
+		if world and world.players.has(me):
+			world.players[me].on_kill()  # Reload on Kill
 		# A killing bat swing launches the victim's gun where the batter is looking.
 		if weapon == "bat" and world and world.players.has(me) and Net.players.has(victim):
 			var vw: String = Net.players[victim].weapon

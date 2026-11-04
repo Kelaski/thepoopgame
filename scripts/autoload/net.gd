@@ -38,7 +38,7 @@ var _hosting := false   # waiting for Steam to create our lobby
 var _joining := 0       # lobby we asked Steam to enter
 var _reject_reason := ""
 
-var players := {}  # peer id -> {name, team, weapon, addon, kills, deaths}
+var players := {}  # peer id -> {name, team, weapon, addon (primary), addon2 (secondary), kills, deaths}
 var sprays := {}   # peer id -> PackedByteArray (validated PNG)
 var _spray_tex := {}
 var _chat_times := {}  # server: peer id -> recent message timestamps (rate limit)
@@ -330,7 +330,7 @@ func _start_server(peer: MultiplayerPeer) -> void:
 	multiplayer.multiplayer_peer = peer
 	online = true
 	players.clear()
-	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
+	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"), Settings.g("addon2"))
 	Game._set_map_size_local(str(Settings.g("map_size")))
 	roster_changed.emit()
 	upload_my_spray()
@@ -377,7 +377,7 @@ func name_of(id: int) -> String:
 # ------------------------------------------------------------ connection events
 
 func _on_connected() -> void:
-	register.rpc_id(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"), GameVersion.CURRENT)
+	register.rpc_id(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"), GameVersion.CURRENT, Settings.g("addon2"))
 	upload_my_spray()
 	joined_ok.emit()
 	# Reverse check: a host on an older build never answers the registration.
@@ -447,8 +447,10 @@ func _on_peer_disconnected(id: int) -> void:
 
 # ------------------------------------------------------------------ roster RPCs
 
+## addon2 comes last (with a default), so an older build still gets as far as the
+## version check and is told to update.
 @rpc("any_peer", "reliable")
-func register(pname: String, weapon: String, addon: String, version: String) -> void:
+func register(pname: String, weapon: String, addon: String, version: String, addon2 := "") -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
@@ -466,7 +468,7 @@ func register(pname: String, weapon: String, addon: String, version: String) -> 
 	if peer is SteamMultiplayerPeer and not _in_lobby(peer.get_steam_id_for_peer_id(id)):
 		_reject(id, "Join the host's lobby to play.")
 		return
-	_add_player(id, pname, weapon, addon)
+	_add_player(id, pname, weapon, addon, addon2)
 	_broadcast()
 	for sid in sprays:
 		_spray_data.rpc_id(id, sid, sprays[sid])
@@ -474,7 +476,7 @@ func register(pname: String, weapon: String, addon: String, version: String) -> 
 	Game.on_player_joined(id)
 
 
-func _add_player(id: int, pname: String, weapon: String, addon: String) -> void:
+func _add_player(id: int, pname: String, weapon: String, addon: String, addon2: String) -> void:
 	pname = Sanitize.player_name(pname)
 	if pname == "":
 		pname = "Player %d" % (players.size() + 1)
@@ -490,9 +492,11 @@ func _add_player(id: int, pname: String, weapon: String, addon: String) -> void:
 	var team := 0 if team_count(0) <= team_count(1) else 1
 	if not Weapons.DATA.has(weapon):
 		weapon = "ar"
-	if not Addons.DATA.has(addon):
-		addon = "trackstar"
-	players[id] = {"name": pname, "team": team, "weapon": weapon, "addon": addon, "kills": 0, "deaths": 0}
+	if Addons.slot_of(addon) != 0:
+		addon = Addons.DEFAULT_PRIMARY
+	if Addons.slot_of(addon2) != 1:
+		addon2 = Addons.DEFAULT_SECONDARY
+	players[id] = {"name": pname, "team": team, "weapon": weapon, "addon": addon, "addon2": addon2, "kills": 0, "deaths": 0}
 
 
 func _broadcast() -> void:
@@ -526,7 +530,7 @@ func request_team(team: int) -> void:
 
 
 @rpc("any_peer", "call_local", "reliable")
-func request_loadout(weapon: String, addon: String) -> void:
+func request_loadout(weapon: String, addon: String, addon2: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var id := sender()
@@ -537,8 +541,10 @@ func request_loadout(weapon: String, addon: String) -> void:
 		return
 	if Weapons.DATA.has(weapon):
 		players[id].weapon = weapon
-	if Addons.DATA.has(addon):
+	if Addons.slot_of(addon) == 0:
 		players[id].addon = addon
+	if Addons.slot_of(addon2) == 1:
+		players[id].addon2 = addon2
 	if Game.in_match and Game.is_alive(id):
 		Game.hp[id] = Game.max_hp_of(id)  # swapped in the countdown: full health for the new weapon (the bat has 150)
 	_broadcast()

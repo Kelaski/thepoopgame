@@ -10,7 +10,13 @@
 [ext_resource type="PackedScene" path="res://assets/ui/loadout_panel.tscn" id="8_k7jnj"]
 [ext_resource type="Script" path="res://scripts/ui/loadout_panel.gd" id="9_neqbl"]
 [ext_resource type="PackedScene" path="res://assets/ui/tag_indicator.tscn" id="10_tagin"]
+[ext_resource type="PackedScene" path="res://assets/ui/addon_bar.tscn" id="11_abar"]
 [ext_resource type="PackedScene" path="res://assets/ui/countdown.tscn" id="12_count"]
+[ext_resource type="Shader" path="res://assets/materials/clock_bar.gdshader" id="13_clock"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_clock"]
+shader = ExtResource("13_clock")
+shader_parameter/fill = 1.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vitals"]
 content_margin_left = 16.0
@@ -206,8 +212,13 @@ color = Color(0, 0, 0, 0.45)
 
 [node name="ClockFill" type="ColorRect" parent="TopCentre/TopBar/Rows/ClockTrack" unique_id=1016578]
 unique_name_in_owner = true
-layout_mode = 0
-offset_bottom = 3.0
+material = SubResource("ShaderMaterial_clock")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 color = Color(0.95, 0.95, 0.95, 0.95)
 
@@ -378,52 +389,15 @@ grow_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 6
 
-[node name="AddonPanel" type="PanelContainer" parent="WeaponBox" unique_id=546038836]
-layout_mode = 2
-size_flags_horizontal = 8
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_gear")
-
-[node name="AddonRows" type="VBoxContainer" parent="WeaponBox/AddonPanel" unique_id=546038837]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 4
-
-[node name="AddonTop" type="HBoxContainer" parent="WeaponBox/AddonPanel/AddonRows" unique_id=546038838]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 12
-
-[node name="AddonName" type="Label" parent="WeaponBox/AddonPanel/AddonRows/AddonTop" unique_id=366000562]
+[node name="AddonBar" parent="WeaponBox" instance=ExtResource("11_abar")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-theme_type_variation = &"HudAccentLabel"
-theme_override_font_sizes/font_size = 15
-text = "TRACKSTAR"
+size_flags_horizontal = 1
 
-[node name="AddonText" type="Label" parent="WeaponBox/AddonPanel/AddonRows/AddonTop" unique_id=1840531389]
+[node name="Addon2Bar" parent="WeaponBox" instance=ExtResource("11_abar")]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"HudMutedLabel"
-theme_override_font_sizes/font_size = 13
-text = "READY"
-horizontal_alignment = 2
-
-[node name="AddonBar" type="ColorRect" parent="WeaponBox/AddonPanel/AddonRows" unique_id=546038835]
-custom_minimum_size = Vector2(220, 6)
-layout_mode = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0.55)
-
-[node name="AddonFill" type="ColorRect" parent="WeaponBox/AddonPanel/AddonRows/AddonBar" unique_id=1921031704]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 1.0
-offset_top = 1.0
-offset_right = 219.0
-offset_bottom = 5.0
-mouse_filter = 2
+size_flags_horizontal = 1
 
 [node name="WeaponPanel" type="PanelContainer" parent="WeaponBox" unique_id=795490120]
 layout_mode = 2

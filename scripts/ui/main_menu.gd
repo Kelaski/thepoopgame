@@ -11,6 +11,11 @@ var message := ""
 func _ready() -> void:
 	%Message.text = message
 	%Message.visible = message != ""
+	%NameEdit.text = str(Settings.g("player_name"))
+
+
+func _on_name_changed(t: String) -> void:
+	Settings.s("player_name", t)
 
 
 func _on_host_pressed() -> void:

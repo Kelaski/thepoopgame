@@ -1,0 +1,164 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_64rjr"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.8314, 0.6863, 0.2157, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ej8dl"]
+top_radius = 0.02
+bottom_radius = 0.02
+height = 0.8
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_0yg72"]
+top_radius = 0.6
+bottom_radius = 0.6
+height = 0.06
+radial_segments = 20
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_2t277"]
+top_radius = 0.35
+bottom_radius = 0.35
+height = 0.05
+radial_segments = 20
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qmvpk"]
+shading_mode = 0
+albedo_color = Color(1, 0.9529, 0.7843, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_vq28m"]
+radius = 0.08
+height = 0.16
+radial_segments = 12
+rings = 6
+
+[sub_resource type="SphereMesh" id="SphereMesh_zgphu"]
+radius = 0.06
+height = 0.12
+radial_segments = 12
+rings = 6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7hcwj"]
+shading_mode = 0
+albedo_color = Color(0.9098, 0.9569, 1, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_bsr3s"]
+radius = 0.12
+height = 0.24
+radial_segments = 12
+rings = 6
+
+[node name="Chandelier" type="Node3D"]
+
+[node name="Part0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+material_override = SubResource("StandardMaterial3D_64rjr")
+mesh = SubResource("CylinderMesh_ej8dl")
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.85, 0)
+material_override = SubResource("StandardMaterial3D_64rjr")
+mesh = SubResource("CylinderMesh_0yg72")
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.05, 0)
+material_override = SubResource("StandardMaterial3D_64rjr")
+mesh = SubResource("CylinderMesh_2t277")
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.58, -0.78, 0)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4101, -0.78, 0.4101)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.78, 0.58)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4101, -0.78, 0.4101)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.58, -0.78, 0)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4101, -0.78, -0.4101)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.78, -0.58)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part10" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4101, -0.78, -0.4101)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_vq28m")
+metadata/glow = true
+
+[node name="Part11" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, -1, 0)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_zgphu")
+metadata/glow = true
+
+[node name="Part12" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0927, -1, 0.2853)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_zgphu")
+metadata/glow = true
+
+[node name="Part13" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2427, -1, 0.1763)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_zgphu")
+metadata/glow = true
+
+[node name="Part14" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2427, -1, -0.1763)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_zgphu")
+metadata/glow = true
+
+[node name="Part15" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0927, -1, -0.2853)
+material_override = SubResource("StandardMaterial3D_qmvpk")
+mesh = SubResource("SphereMesh_zgphu")
+metadata/glow = true
+
+[node name="Part16" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.15, 0)
+material_override = SubResource("StandardMaterial3D_7hcwj")
+mesh = SubResource("SphereMesh_bsr3s")
+metadata/glow = true
+
+[node name="Light0" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.2, 0)
+light_color = Color(1, 0.9098, 0.7529, 1)
+light_energy = 1
+omni_range = 7

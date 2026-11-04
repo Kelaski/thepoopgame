@@ -13,8 +13,8 @@ const DATA := {
 	},
 	"smg": {
 		"name": "SMG",
-		"desc": "22 / 30 head dmg (less past 15m). 14 rounds/s. Beats the AR up close.",
-		"body": 22.0, "head": 30.0, "falloff": 15.0, "body_far": 13.0, "head_far": 18.0, "rps": 14.0, "zoom": 1.2,
+		"desc": "22 / 30 head dmg (less past 25m). 14 rounds/s. Matches the AR up to mid range.",
+		"body": 22.0, "head": 30.0, "falloff": 25.0, "body_far": 13.0, "head_far": 18.0, "rps": 14.0, "zoom": 1.2,
 		"mag": 40, "reload": 1.8, "hip": 1.7, "ads": 0.9, "range": 200.0, "kick": 0.35,
 	},
 	"shotgun": {

@@ -585,7 +585,7 @@ func _process(delta: float) -> void:
 ## (only on the Stalker's own screen).
 func _update_stalker_scan() -> void:
 	var lp := local_player()
-	var scanning := lp != null and lp.alive and lp.addon == "stalker" and lp.addon_active > 0.0
+	var scanning := lp != null and lp.alive and lp.addon2 == "stalker" and lp.addon_active[Player.SEC] > 0.0
 	for id in players:
 		var p: Player = players[id]
 		if p != lp:
@@ -720,7 +720,7 @@ func _update_trails() -> void:
 			times = times.slice(keep_from)
 		_trails[id] = tr
 		_trail_times[id] = times
-	if lp.addon != "stalker" or not lp.alive:
+	if lp.addon2 != "stalker" or not lp.alive:
 		return
 	var any := false
 	for id in _trails:

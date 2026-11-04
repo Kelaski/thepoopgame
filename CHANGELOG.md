@@ -7,6 +7,51 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.21.0
+
+### Added
+- **Two addon slots:** pick a **primary** and a **secondary** addon. The primary's ability is on **E**, the secondary's on **Q** (both rebindable). Your old addon moves into the right slot.
+  - Primary: Grapple, Hider, and the new **Warp**, **Swap** and **Moonwalker**.
+  - Secondary: Trackstar, Stalker, Skywalker, Phantom, and the new **Reload on Kill** and **Parry**.
+- **Interact (doors) moves to F**, to make room for the primary addon on E. If you kept the old defaults, your keys move over automatically.
+- **Warp:** blink 15 m the way you're looking. It stops at walls and keeps all your speed in the direction you warped. 8 s cooldown.
+- **Swap:** a sci-fi beam charges for 0.8 s, then you swap places with the nearest enemy within 20 m. If nobody is in range by then, you get the cooldown back. 18 s cooldown.
+- **Moonwalker:** 20% less gravity and 15% better air control. Its ability makes your next jump a rocket jump 8 m up, with flames from your boots. 10 s cooldown.
+- **Reload on Kill:** each kill refills your magazine and chambers a round, so the shotgun and sniper can shoot again straight away.
+- **Parry:** 0.4 s of invulnerability inside a pink bubble. Shots, swings, grapple pulls and swaps don't affect you. 10 s cooldown.
+- **Automatic updates:** when you start the game it checks GitHub for a newer version. If there is one, it downloads it, checks the file against GitHub's checksum, installs it and restarts into the new version. If the game folder can't be written to, it offers the download page instead. (Updating to this version from 0.20.0 still has to be done by hand.)
+- **Teammate outlines:** your teammates have a thin, hollow white outline, visible through walls too.
+- **Tag spots on upper floors:** a Tag spot inside a building can be on any of its floors, like the 3rd floor of a tower, not just the ground floor.
+- **Name on the main menu:** type your name in the box on the right of the main menu.
+- **New props, as editable scenes:**
+  - streets: traffic lights, street signs, parking meters, bike racks, planters, bollards
+  - rooftops: big A/C condensers, duct runs, roof hatches, antennas, satellite dishes, skylights, pipe racks, billboards, roof terraces
+  - interiors: school lockers, bank queue posts and ATMs, waiting chairs, a DJ booth and club booths, roulette tables, chandeliers and casino carpet, conference tables, a reception desk with a logo wall, lounge sets, kitchen islands, library reading tables, cinema ticket kiosks, warehouse loading dock doors and floor lines, a checked diner floor, motel wall A/C units
+
+### Changed
+- **Random cities look like cities:**
+  - The map is split into blocks of different sizes by a wide avenue and side streets that end in T-junctions, instead of an even grid.
+  - Buildings line the pavement with narrow alleys between them, instead of standing in big empty lots.
+  - Deep blocks have a service lane with dumpsters, or a car park, behind the buildings.
+  - Buildings get taller towards the middle of the city.
+  - Large cities have about 30 buildings (they had 18).
+  - Small cities get Tag spots on streets when there aren't enough other places.
+- **Interiors and rooftops** are laid out the way the real places are. Rooftops get A/C banks and ducts, skylights over big halls, billboards over bars, diners, arcades, clubs, motels and cinemas, and terraces, antennas and dishes on homes.
+- **Wall running:** a run starts if you hold forward (as before), hold any movement key towards the wall, or hug the wall. It lasts while you hold a movement key.
+- **SMG:** its damage drops off past 25 m (was 15 m), so it matches the Assault Rifle up to mid range. It's still weaker at long range, with less damage there, a wider aim and a shorter range.
+
+### Fixed
+- **Addon bars fill all the way:** a long addon name no longer leaves the bar short, and every cooldown (a missed grapple's short one, for example) now fills the whole bar.
+- **Players froze on other people's screens:** over the internet, movement updates often arrive in bursts, and the new anti-teleport check mistook those for teleports. It now times updates by when they were sent.
+- **The clock bar under the top HUD** now shrinks smoothly. It used to jump a little every half second and step pixel by pixel.
+- **Rooftop bridges:** the crane cables, slings and the bridge boards no longer block you. The walkway still holds you up.
+- **The little bridge on the pond** no longer has collision.
+- **Joining from Steam checks for updates first:** starting the game from a Steam invite or a friend's "Join Game" now runs the update check before joining, so you aren't turned away for being on an older version.
+- **Anti-cheat:**
+  - The host now checks that a sniper shot goes through at most one wall (it used to accept shots through any number).
+  - The Spiked Bat's speed bonus can no longer be faked by sending movement updates in bursts.
+- **Building names are unique:** Large cities sometimes had two buildings with the same name, so a Tag spot could point to the wrong one.
+
 ## 0.20.0
 
 ### Changed

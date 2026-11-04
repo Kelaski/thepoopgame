@@ -23,7 +23,8 @@ const ACTIONS := [
 	["jump", "Jump / Double Jump"],
 	["crouch", "Crouch / Slide"],
 	["crouch_only", "Crouch"],
-	["addon", "Use Addon (ability)"],
+	["addon", "Use Primary Addon"],
+	["addon2", "Use Secondary Addon"],
 	["interact", "Interact / Doors"],
 	["fire", "Fire"],
 	["aim", "Aim Down Sights"],
@@ -41,7 +42,8 @@ const DEFAULTS := {
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
 	"map_random": true,   # host: a new random city every match (false = the classic city)
-	"addon": "trackstar",
+	"addon": "grapple",     # primary addon (Addons.PRIMARY)
+	"addon2": "trackstar",  # secondary addon (Addons.SECONDARY)
 	# Controls
 	"sensitivity": 0.10,
 	"ads_sens_mult": 0.85,
@@ -107,9 +109,10 @@ const DEFAULTS := {
 
 # Saved keybinds are migrated when the defaults change: a bind still set to an old
 # default moves to the new default (binds the player changed are kept).
-const BINDS_VERSION := 2
+const BINDS_VERSION := 3
 const OLD_DEFAULT_BINDS := {
 	2: {"addon": ["k", KEY_F]},
+	3: {"addon": ["k", KEY_SHIFT], "interact": ["k", KEY_E]},  # 0.21.0: primary addon on E, doors on F
 }
 # Raising this wipes everyone's saved settings and binds back to the defaults once
 # (1: 0.18.0, when leaning was removed and Interact moved back to E).
@@ -210,9 +213,23 @@ func load_settings() -> void:
 				if b is Array and b.size() == 2:
 					binds[a[0]] = b
 		_migrate_binds(int(cf.get_value("meta", "binds_version", 1)))
+		_migrate_addons()
 		if int(values.get("max_fps", 144)) <= 0:
 			values["max_fps"] = 500  # the old "Unlimited"; the FPS cap is a 30-500 slider now
 	_apply_binds()
+
+
+## Before 0.21.0 there was one addon slot: a saved secondary addon moves to the
+## secondary slot, and anything that isn't an addon any more goes back to the default.
+func _migrate_addons() -> void:
+	var a := str(values.addon)
+	if Addons.slot_of(a) == 1:
+		values["addon2"] = a
+		values["addon"] = Addons.DEFAULT_PRIMARY
+	if Addons.slot_of(str(values.addon)) != 0:
+		values["addon"] = Addons.DEFAULT_PRIMARY
+	if Addons.slot_of(str(values.addon2)) != 1:
+		values["addon2"] = Addons.DEFAULT_SECONDARY
 
 
 func _migrate_binds(saved_version: int) -> void:
@@ -335,7 +352,7 @@ func make_event(b: Array) -> InputEvent:
 	k.physical_keycode = b[1]
 	if b[1] == KEY_SHIFT:
 		# Right Shift is reserved for team chat (Right Shift + Enter), so a Shift
-		# bind (the ability key by default) only means Left Shift.
+		# bind only means Left Shift.
 		k.location = KEY_LOCATION_LEFT
 	return k
 

@@ -25,6 +25,7 @@ const SPRAY_SCENE := preload("res://assets/ui/spray_menu.tscn")
 const SKYBOX_SCENE := preload("res://assets/ui/skybox_menu.tscn")
 const CHAT_SCENE := preload("res://assets/ui/chat_box.tscn")
 const VERSION_SCENE := preload("res://assets/ui/version_label.tscn")
+const UPDATE_SCENE := preload("res://assets/ui/update_screen.tscn")
 
 var ui_layer: CanvasLayer
 var ui_root: Control
@@ -62,7 +63,18 @@ func _ready() -> void:
 	Game.match_started.connect(_on_match_started)
 	Game.match_ended.connect(_on_match_ended)
 	if not _handle_cmdline():
-		show_main_menu()
+		_after_update(show_main_menu.bind(""))
+
+
+## Exported builds check for a newer version first (assets/ui/update_screen.tscn),
+## then carry on with `next`.
+func _after_update(next: Callable) -> void:
+	if not UpdateScreen.applies():
+		next.call()
+		return
+	var u: UpdateScreen = UPDATE_SCENE.instantiate()
+	u.finished.connect(next)
+	_set_screen(u)
 
 
 ## Game version in the bottom-left corner of every screen (menus, lobby and
@@ -90,8 +102,8 @@ func _handle_cmdline() -> bool:
 		elif a.begins_with("--autostart="):
 			_autostart = int(a.substr(12))
 	var lobby := Net.launch_lobby()
-	if lobby != 0:
-		join_lobby(lobby)
+	if lobby != 0:  # started from Steam's "Join Game": update first, or the host may refuse our version
+		_after_update(join_lobby.bind(lobby))
 		return true
 	if OS.is_debug_build() and (port > 0 or join_addr != ""):
 		return _local_cmdline(host, port, join_addr)
