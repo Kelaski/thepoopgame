@@ -22,8 +22,7 @@ const ACTIONS := [
 	["move_right", "Move Right"],
 	["jump", "Jump / Double Jump"],
 	["crouch", "Crouch / Slide"],
-	["lean_left", "Lean Left"],
-	["lean_right", "Lean Right"],
+	["crouch_only", "Crouch"],
 	["addon", "Use Addon (ability)"],
 	["interact", "Interact / Doors"],
 	["fire", "Fire"],
@@ -50,7 +49,6 @@ const DEFAULTS := {
 	"invert_y": false,
 	"toggle_aim": false,
 	"toggle_crouch": false,
-	"toggle_lean": true,  # Rainbow Six style: tap to lean and stay leaned
 	# Video
 	"fov": 100.0,
 	"brightness": 1.0,
@@ -65,6 +63,7 @@ const DEFAULTS := {
 	"msaa": 0,
 	"view_distance": 260.0,
 	"show_fps": true,
+	"show_speed": true,  # speedometer above the health bar
 	# Audio
 	"master_volume": 0.8,
 	"sfx_volume": 1.0,
@@ -80,6 +79,11 @@ const DEFAULTS := {
 	"minimap_scale": 1.0,      # 0.6 - 2.0
 	"minimap_labels": true,    # location names on the minimap
 	"crosshair_color": "ffffff",
+	# Holo sight reticle (AR / SMG), set in the crosshair editor
+	"holo_style": "circle_dot",
+	"holo_color": "ff3b30",
+	"holo_size": 1.0,
+	"holo_brightness": 1.6,
 	# Crosshair editor (Counter-Strike style)
 	"xh_style": "classic",      # classic, circle, dot, image
 	"xh_length": 8.0,
@@ -106,8 +110,11 @@ const DEFAULTS := {
 # default moves to the new default (binds the player changed are kept).
 const BINDS_VERSION := 2
 const OLD_DEFAULT_BINDS := {
-	2: {"lean_right": ["k", KEY_C], "addon": ["k", KEY_F], "interact": ["k", KEY_E]},
+	2: {"addon": ["k", KEY_F]},
 }
+# Raising this wipes everyone's saved settings and binds back to the defaults once
+# (1: 0.18.0, when leaning was removed and Interact moved back to E).
+const RESET_VERSION := 1
 
 const MOUSE_NAMES := {
 	MOUSE_BUTTON_LEFT: "Mouse Left",
@@ -192,7 +199,9 @@ func load_settings() -> void:
 	for a in ACTIONS:
 		binds[a[0]] = default_bind(a[0])
 	var cf := ConfigFile.new()
-	if cf.load(PATH) == OK:
+	if cf.load(PATH) == OK and int(cf.get_value("meta", "reset_version", 0)) < RESET_VERSION:
+		save_settings.call_deferred()  # an update reset everything: start from the defaults
+	elif cf.load(PATH) == OK:
 		for k in DEFAULTS.keys():
 			if cf.has_section_key("settings", k):
 				values[k] = cf.get_value("settings", k)
@@ -225,6 +234,7 @@ func save_settings() -> void:
 	for a in binds.keys():
 		cf.set_value("binds", a, binds[a])
 	cf.set_value("meta", "binds_version", BINDS_VERSION)
+	cf.set_value("meta", "reset_version", RESET_VERSION)
 	cf.save(PATH)
 
 

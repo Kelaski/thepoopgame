@@ -2,14 +2,14 @@
 
 A team-based, first-person objective shooter built in **Godot 4.7 (GDScript only, no extra plugins)**.
 Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and the team holding it
-has to keep its **Runner** alive for 2 minutes. Best of 7 (first to 4 round wins).
+has to keep its **Runner** alive for 2 minutes. Best of 5 (first to 3 round wins).
 
 Models are being moved from code into Godot scenes you can open and edit in the editor:
 - **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), all 82 map props and furniture items plus 30 interior decor pieces (`assets/props/`, `assets/furniture/`), the 16 modular building pieces (`assets/building/`), and every menu and the HUD (`assets/ui/`). See **Editing models**, **Editing props**, **Editing buildings** and **Editing the UI** below.
 - **Still built in code:** the ground, roads, road markings and boundary fence, which are generated from the layout. The UI also builds lists that depend on game data, such as rosters, keybinds and the playlist, at runtime.
 - **Always in code:** sounds and music are synthesized.
 
-The only binary files are the easter egg's image and sound in `assets/` (see Easter egg below).
+There are no binary assets: every model, sound and image is made from scenes, code and synthesis.
 
 ## Running it
 
@@ -48,10 +48,10 @@ Optional command-line flags (after `--`):
 | Move | W A S D |
 | Jump / double jump (Skywalker) | Space |
 | Crouch / slide (crouch while sprinting) | Ctrl |
-| Lean left / right | Q / E (tap to lean, tap again to stand up) |
+| Crouch (only ever crouches) | C |
 | Ping | Middle mouse (double tap: danger) |
 | Addon ability | Left Shift |
-| Interact (doors) | F |
+| Interact (doors) | E |
 | Fire / Aim | Mouse 1 / Mouse 2 |
 | Reload | R |
 | Scoreboard | Tab |
@@ -60,8 +60,8 @@ Optional command-line flags (after `--`):
 | Chat (all / team) | Enter / Right Shift + Enter |
 | Pause / settings | Esc |
 
-There is no sprint key: moving forward is always a sprint. Aiming, crouching or leaning slows you to a walk.
-If you played an older version, the old default binds for lean right (C), addon (F) and interact (E) move to the new defaults automatically. Binds you changed yourself are kept.
+There is no sprint key: moving forward is always a sprint. Aiming or crouching slows you to a walk.
+Updating to 0.18.0 resets every setting and keybind to the defaults once (leaning was removed and Interact moved back to E).
 
 **Changing the default controls:** the defaults are the game's actions in **Project Settings → Input Map** in the Godot editor (`move_forward`, `jump`, `addon`, `chat` and so on).
 - **Changing a default:** change an action's key there and every player who hasn't rebound it gets the new key.
@@ -92,9 +92,9 @@ The map itself (ground, roads, grass and buildings) always uses its built-in col
 
 Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu and sky colours change instantly. Team colours apply when the next match loads. Colours are personal and don't affect other players.
 
-Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim, crouch and lean,
+Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch,
 FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows, shadow quality (Low 70 m / Medium 130 m / High 220 m / Ultra 320 m), interior lights (off / low / high), bloom,
-view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, and an FPS counter.
+view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, an FPS counter, and a speedometer (on by default).
 
 ## Rules
 
@@ -106,13 +106,14 @@ view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap 
   - An enemy picks it up: their team becomes the defenders, and the timer resumes from the value at the drop **+10 s**.
   - A teammate picks it up: the timer resumes **+15 s**.
   - The timer is capped at 2:00.
-- **Winning a round:** the timer reaches 0. The team holding the Tag wins, or, if it's on the ground, the team that held it last. First to 4 wins the match.
+- **Winning a round:** the timer reaches 0 and the team holding the Tag wins. If the Tag is on the ground when it hits 0, it's **overtime**: whoever picks it up first wins the round for their team. First to 3 wins the match.
+- **HUD:** your health is in the bottom-left corner (marked off every 25 HP), with a small speedometer above it showing your speed across the ground in m/s (turn it off in Settings > HUD). Your weapon, ammo and addon are in the bottom-right.
 - **Runner self-defence:** every kill the Runner gets takes 5 s off their team's timer.
 - **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
 - **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s). Every kill gives you back 30 HP (up to your max).
-- **Minimap:** shows location names on the buildings and park, each shrunk to fit inside its building so names never overlap. Its size is adjustable in Settings > HUD.
+- **Minimap:** roads (with curbs and centre lines), car parks, buildings with their outside doors, and the park's paths, court, sandpit, fountain and pond. It shows location names on the buildings and park, each shrunk to fit inside its building so names never overlap. Its size is adjustable in Settings > HUD.
 - **Damage direction:** when you're shot, a red arc around the crosshair points at the shooter (up = in front of you, down = behind). It follows them as they move and fades after about 2 s.
-- **Respawn:** after a 6 s timer (7 s if your team is holding the Tag, the Runner included), press **Jump (Space)** to respawn. Use the wait to change loadouts. Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
+- **Respawn:** after a 6 s timer (7 s if your team is holding the Tag, the Runner included), you respawn automatically. If you open the loadout screen (**B**) while dead, you stay down until you close it, then respawn straight away (if the timer is done). Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
   A spawn point is rejected if any living enemy has line of sight to it (or is within 12 m).
   You get 3 s of spawn protection from the moment you spawn. Moving or shooting ends it early.
 - **Loadouts** (weapon and addon) can be changed in the lobby, or while dead (press **B**). Changes apply on respawn.
@@ -123,7 +124,7 @@ view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap 
 | Weapon | Damage | Rate | Sight | Notes |
 |---|---|---|---|---|
 | Assault Rifle | 33 body / 45 head, 22 / 30 beyond 25 m | 9.5 rps | 1.5x holo | 30-round magazine |
-| SMG | 19 / 26, 12 / 19 beyond 18 m | 13 rps | 1.2x holo | 40-round magazine |
+| SMG | 22 / 30, 13 / 18 beyond 15 m | 14 rps, tight hip fire (beats the AR up close, loses at range) | 1.2x holo | 40-round magazine |
 | Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1 rps | 1.15x irons | 12° cone, 6 shells |
 | Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready. Its shot is 60% louder than before. The AR, SMG and Shotgun are 35% louder |
 | Spiked Bat | 35 per swing, ×1.1 for every m/s you're moving above your own sprint speed (compounding: +1 m/s 38.5, +2 42, +3 47, +5 56, +10 91, +14 133; capped at 300). Measured from your horizontal speed when you swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
@@ -139,26 +140,24 @@ Every player holds a visible model of their weapon (the same model as your own f
 | Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
 | Stalker | Passive: see wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. Shift: for 4 s, see a red outline of every player through walls (only on your screen). 14 s cooldown from activation. |
 | Phantom | Shift: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
-| Grapple | Hold Shift: throw a grappling hook up to 27 m (it flies out over about 0.3 s). It latches onto whatever it hits (walls, floors, doors, props or players) and reels you in while you keep steering, up to 20 m/s for at most 2.5 s. The grapple never gives you more than 20 m/s, including the pop at the end. The rope only ever shortens, so hooking something above you swings you underneath it. Reaching the hook pops you upwards so you can climb onto ledges. The grapple only lasts while you hold Shift: releasing it (or pressing Jump) lets go with your momentum, and releasing while the hook is still flying reels it back in (counts as a miss). The rope also snaps if something gets in the way. Hooking an enemy yanks them towards you. 9 s cooldown after a hit; a miss only costs 1 s. Everyone sees the hook and rope. |
+| Grapple | Hold Shift: throw a grappling hook up to 27 m (it flies out over about 0.3 s). It latches onto whatever it hits (walls, floors, doors, props or players) and reels you in while you keep steering, up to 20 m/s for at most 2.5 s. The grapple never gives you more than 20 m/s, including the pop at the end. The rope only ever shortens, so hooking something above you swings you underneath it. Reaching the hook pops you upwards so you can climb onto ledges. The grapple only lasts while you hold Shift: releasing it (or pressing Jump) lets go with your momentum, and releasing while the hook is still flying reels it back in (counts as a miss). The rope also snaps if something gets in the way. Hooking an enemy yanks them towards you. 6.5 s cooldown after a hit; a miss only costs 1 s. Everyone sees the hook and rope. |
 
 ### Movement
 
-Snappy ground acceleration, sprinting by default (9 m/s forward; 5 m/s strafing, backwards or leaning; 2.8 m/s crouched), crouch, and a momentum slide (crouch while sprinting). You can start a slide in mid-air and it carries on after you land until your momentum runs out. Sliding downhill keeps accelerating the longer you stay on the slope.
-Slide-jumping keeps your speed, and air strafing is limited while momentum is preserved (air acceleration 19.2 m/s², which steers you in the air without going past your current speed).
-**Wall running:** jump into a wall at speed while holding forward to run along it for up to 1.6 s.
-Press Jump to kick off the wall. The kick keeps your speed and adds a little, so you can chain it into another wall run, a slide or a slide-jump. Crouch drops you off. Jumping and wall jumps both have 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
-**Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
-**Leaning** (Q / E) works like Rainbow Six Siege:
-- **Toggle by default:** tap Q or E to lean, and you stay leaned until you tap the same key again or the other side. Turn off **Toggle lean** in Settings > Controls to lean only while holding the key.
-- **From the waist:** your head swings out 0.4 m in an arc, drops slightly, and the view tilts 15°. It's quick: about 0.1 s to lean out, and about 0.1 s to swap sides, straight through the middle with no pause.
-- **While leaning** you walk (no sprint), and you can aim and shoot. Sliding or wall running stands you back up.
-- Your head hitbox and third-person body move with the lean, and walls limit how far you can lean.
+Pilot-style movement in the spirit of Titanfall 2: everything keeps your momentum and chains together. Snappy ground acceleration, sprinting by default (7.4 m/s forward; 5 m/s strafing or backwards; 2.8 m/s crouched).
 
+- **Slides:** Crouch / Slide while sprinting (or moving fast, or in the air: the slide starts when you land). Your speed carries straight in, plus a 3.6 m/s boost, scaled by speed bonuses, up to 20 m/s. The boost comes back 2 s after it's used, so spamming slides doesn't stack speed. Slides keep going the way you were moving, slow down on flat ground and uphill, and speed up downhill (more on steeper slopes, and the longer you stay on the slope). Landing in a slide after a big fall turns part of the fall into speed: 45% of anything over 7 m/s.
+- **Slide-hopping and bunny hopping:** jumping keeps all your speed. When you land faster than you run there's no ground friction for 0.12 s, and a jump pressed up to 0.1 s before landing fires the moment you touch down, so well-timed hops keep your speed going. Stop hopping and the extra speed bleeds off quickly on the ground.
+- **Air strafing:** below your run speed you speed up and steer freely in the air. Above it, it works like Titanfall: strafing while turning adds speed (up to 17 m/s), pushing straight on adds nothing, and holding back brakes.
+- **Mantling:** jump at a ledge (or fall past one) while pushing into it and you climb straight up onto it (ledges from about foot height up to 1.9 m above your feet, with room to stand on top), then carry on over.
+**Wall running:** jump at or alongside a wall while holding forward to run along it for up to 1.75 s. A run starts at least at 7 m/s and speeds you up towards 10.5 m/s (never slowing you if you came in faster). It catches your fall with a small lift, stays roughly level, then slowly sinks as wall gravity builds. You can't run straight back onto the wall you just left (another wall or the floor resets that).
+Press Jump to kick off the wall: out, up and along it, keeping your speed and adding a little, so you can chain it into another wall run, a slide or a slide-hop. Crouch drops you off. Jumping has 0.12 s and wall jumps 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
+**Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
 **Pings** (middle mouse) work like Fortnite's. Ping where you're aiming to put a small marker there for you and your team, with a dim beam of light rising from it. A single ping is yellow, and enemy and danger pings are red. It shows through walls and on the minimap, with a sound. It fades only while you look straight at it, so it never covers a fight.
 - **Aim at an enemy** to mark them (red **ENEMY** ping). **Aim at the Tag** to mark it.
 - **Double tap** for a red **DANGER** ping.
 - Pings last 4.5–6 s. Each player can have 3 at once, and older ones disappear. The server limits pings to 5 every 3 s.
-Doors fill their doorways exactly and swing open, away from you and at full speed, when you sprint or slide into them. **F** opens and closes them normally.
+Doors fill their doorways exactly and swing open, away from you and at full speed, when you sprint or slide into them. **E** opens and closes them normally.
 
 ## Map sizes
 
@@ -246,7 +245,7 @@ Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**
 
 **The park** is laid out like a real one: two paved paths crossing at a fountain plaza with flower beds, benches, bins and lamp posts along the paths, a row of trees round the edge, the basketball court (marked like a real one, with the benches beside it facing the game), a playground on a sandpit, the pond, and picnic tables with umbrellas on the lawns.
 
-**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up twice as high as a jump. Umbrella tops tilt 15° on their poles, so the low edge is about 1.7 m up (the high edge about 2.4 m). Landing anywhere on the top counts, rim included.
+**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up twice as high as a jump. Umbrella tops tilt 15° on their poles, so the low edge is about 1.7 m up (the high edge about 2.4 m). Landing anywhere on the top counts, rim included. Only landing on top bounces you: if you get caught under the low edge you slide out from under it.
 
 Six tower cranes hang planks or sheet metal between rooftops as bridges: Warehouse–School, Apartments–Meridian Tower, Meridian Tower–Casino, the two Tenements, Theater–Bank, and Water Treatment–Library. Crates on each roof help you climb onto them.
 The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).
@@ -278,7 +277,7 @@ Every peer also checks what other players send:
 - Doors only move for a living player standing near them.
 - Shot effects must be a real weapon, fired from where the shooter is, with at most 16 tracers.
 - A thrown gun can only be launched by its thrower.
-- Movement updates with broken numbers are dropped, and lean and look angles are clamped.
+- Movement updates with broken numbers are dropped, and look angles are clamped.
 - A player can't register twice, and pings are rate-limited.
 Round state, the timer, respawns, the Tag and health regeneration all run on the server.
 
@@ -370,7 +369,7 @@ You can reshape the inside of a module freely: move the jambs, change the window
 Every screen is a scene in `assets/ui/`:
 - **Menus:** `main_menu`, `join_menu`, `lobby`, `pause_menu`, `settings_menu`, `customize_hub`, `colors_menu`, `crosshair_editor`, `music_menu`, `spray_menu` and `skybox_menu`.
 - **In-match:** `hud`, `chat_box` and `loadout_panel`.
-- **Smaller pieces:** `crosshair`, `minimap`, `damage_indicator`, `connecting`, `bird_event` and `version_label`.
+- **Smaller pieces:** `crosshair`, `minimap`, `damage_indicator`, `connecting` and `version_label`.
 
 **What's where:**
 - **Layout:** each scene holds the layout. Its script (`scripts/ui/`) holds the behaviour and finds nodes by their unique name (`%Name`), so keep the names the scripts use. You can move, resize, restyle or reorder anything else.
@@ -445,16 +444,18 @@ Customize → **Crosshair Editor** has Counter-Strike-style options:
 
 It has a live preview and copy/paste **share codes**. Pasted codes are parsed as data only: unknown keys are ignored and every value is checked and clamped.
 
+The **Holo Sight** section sets the AR and SMG holo reticle: dot, circle and dot, chevron or cross, its colour, size and brightness (it glows, and the preview shows it in the corner).
+
 You can also upload a **custom crosshair image** (with a scale slider) and a **custom sniper scope** image. The scope is fitted to the screen height and the rest is blacked out, so a transparent PNG with a see-through centre works best.
 
 ## Assumptions and choices not covered by the spec
 
-- **Sprint is the default pace** (no sprint key). Leaning (toggled on), aiming and crouching drop you to walking speed.
+- **Sprint is the default pace** (no sprint key). Aiming and crouching drop you to walking speed.
 - **Reloading and magazine sizes** were added (R key), with the values above.
 - **Sniper:** inaccurate unless aimed. **Shotgun and sniper** pellets and rounds deal the same damage to the head (headshots still break Hider invisibility).
 - **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.
 - **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Foliage blocks sight but not bullets.
-- **Dropped-Tag timer:** the timer keeps running while the Tag is on the ground (it only waits for the first pickup of a round). A pickup adds +10 s (enemy) or +15 s (teammate), capped at 2:00. If it runs out while the Tag is down, the team that held it last wins.
+- **Dropped-Tag timer:** the timer keeps running while the Tag is on the ground (it only waits for the first pickup of a round). A pickup adds +10 s (enemy) or +15 s (teammate), capped at 2:00. If it runs out while the Tag is down, the round goes to overtime and the next pickup wins it.
 - **Phantom's** 23 s cooldown starts when the phase ends. Trackstar's 30 s cooldown starts at activation, as specified.
 - Skywalker's double jump is passive, so the ability key does nothing for it.
 - **Grapple's** cooldown starts when the hook hits (like Trackstar's, from activation). A miss only costs 1 s so you can try again.

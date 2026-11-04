@@ -8,6 +8,9 @@ extends Control
 ## aspect ratio, so elements stay centred / in their corners at any size.
 
 const FEED_MAX := 6
+const HP_FILL_W := 258.0     # inner width of the health bar
+const ADDON_FILL_W := 218.0  # inner width of the addon bar
+const HP_SEGMENT := 25.0     # the health bar is marked off every 25 HP
 const FEED_TIME := 7.0
 
 var main
@@ -23,7 +26,12 @@ var loadout_open := false
 @onready var _round: Label = %Round
 @onready var _hp_fill: ColorRect = %HpFill
 @onready var _hp_label: Label = %HpLabel
+@onready var _hp_max: Label = %HpMax
+@onready var _hp_ticks: Control = %HpTicks
+var _ticks_for := 0.0  # max health the segment marks were laid out for
+@onready var _speed: Label = %Speed
 @onready var _ammo: Label = %Ammo
+@onready var _ammo_max: Label = %AmmoMax
 @onready var _weapon: Label = %Weapon
 @onready var _addon_name: Label = %AddonName
 @onready var _addon_fill: ColorRect = %AddonFill
@@ -82,6 +90,8 @@ func _ignore_mouse(c: Control) -> void:
 
 
 func set_loadout_open(o: bool) -> void:
+	if o != loadout_open and Game.in_match:
+		Game.set_respawn_hold.rpc_id(1, o)  # no respawning while you pick a loadout
 	loadout_open = o
 	_loadout_panel.visible = o
 	if main:
@@ -176,15 +186,19 @@ func _process(delta: float) -> void:
 			timer_col = Mats.team_color(Game.holding_team).lightened(0.4)
 			phase_txt = "DEFEND YOUR RUNNER" if Game.holding_team == my_team else "HUNT THE RUNNER"
 		Game.Phase.DROPPED:
-			timer_col = Color(0.75, 0.75, 0.75)
-			phase_txt = "TAG DROPPED - GRAB IT!  (enemy +%ds / team +%ds)" % [int(Game.ENEMY_PICKUP_BONUS), int(Game.TEAM_PICKUP_BONUS)]
+			if Game.is_overtime():
+				timer_col = Mats.TAG_COLOR
+				phase_txt = "OVERTIME - FIRST TO GRAB THE TAG WINS THE ROUND!"
+			else:
+				timer_col = Color(0.75, 0.75, 0.75)
+				phase_txt = "TAG DROPPED - GRAB IT!  (enemy +%ds / team +%ds)" % [int(Game.ENEMY_PICKUP_BONUS), int(Game.TEAM_PICKUP_BONUS)]
 		Game.Phase.ROUND_END:
 			phase_txt = "Next round in %d" % int(ceil(Game.phase_time))
 		Game.Phase.MATCH_END:
 			var winner: int = Game.match_winner if Game.match_winner >= 0 else (0 if Game.scores[0] > Game.scores[1] else 1)
 			phase_txt = "%s TEAM WINS! Returning to lobby in %d" % [Mats.team_name(winner).to_upper(), int(ceil(Game.phase_time))]
 	_phase.text = phase_txt
-	_timer.text = UiKit.format_time(Game.timer)
+	_timer.text = "OVERTIME" if Game.is_overtime() else UiKit.format_time(Game.timer)
 	_timer.add_theme_color_override("font_color", timer_col)
 	if Game.holder != 0:
 		_runner_label.text = "YOU ARE THE RUNNER" if Game.holder == me else "Runner: %s" % Net.name_of(Game.holder)
@@ -225,24 +239,33 @@ func _process(delta: float) -> void:
 	var hp: float = Game.my_hp() if alive else 0.0
 	_hp_label.text = str(int(ceil(hp)))
 	var max_hp: float = Game.my_max_hp()
-	_hp_fill.size.x = 276.0 * clampf(hp / max_hp, 0.0, 1.0)
+	_hp_max.text = "/ %d  HP" % int(max_hp)
+	_hp_fill.size.x = HP_FILL_W * clampf(hp / max_hp, 0.0, 1.0)
+	if max_hp != _ticks_for:
+		_layout_hp_ticks(max_hp)
 	_hp_fill.color = Color("7ad16a").lerp(Color("e0503a"), clampf(1.0 - hp / max_hp, 0.0, 1.0))
 	var low := clampf((45.0 - hp) / 45.0, 0.0, 1.0) if alive else 0.0
 	_vignette.color.a = maxf(lp.damage_flash * 0.28, low * (0.12 + 0.06 * sin(Time.get_ticks_msec() * 0.008)))
+	# Speedometer: how fast you're moving across the ground
+	_speed.visible = Settings.g("show_speed") and alive
+	if _speed.visible:
+		_speed.text = "%.1f M/S" % Vector2(lp.velocity.x, lp.velocity.z).length()
 
 	# Weapon
 	var wd: Dictionary = Weapons.DATA[lp.weapon]
-	_weapon.text = wd.name
+	_weapon.text = String(wd.name).to_upper()
 	if lp.weapon == "bat":
-		_ammo.text = "MELEE"
-	elif lp.reloading > 0.0:
-		_ammo.text = "RELOADING"
+		_ammo.text = "-"
+		_ammo_max.text = "MELEE"
 	else:
-		_ammo.text = "%d / %d" % [lp.ammo, wd.mag]
+		_ammo.text = str(lp.ammo)
+		_ammo_max.text = "RELOADING  %.1fs" % lp.reloading if lp.reloading > 0.0 else "/ %d" % wd.mag
+	# Running low: the count turns red
+	_ammo.modulate = Color(1, 0.55, 0.45) if lp.weapon != "bat" and lp.ammo <= maxi(1, int(wd.mag) / 4) else Color.WHITE
 	var st: Array = lp.addon_status()
-	_addon_name.text = Addons.display_name(lp.addon)
+	_addon_name.text = Addons.display_name(lp.addon).to_upper()
 	_addon_text.text = st[0]
-	_addon_fill.size.x = 302.0 * clampf(st[1], 0.0, 1.0)
+	_addon_fill.size.x = ADDON_FILL_W * clampf(st[1], 0.0, 1.0)
 	match st[2]:
 		"active":
 			_addon_fill.color = Color("49d6e0")
@@ -316,12 +339,12 @@ func _process(delta: float) -> void:
 		if not round_live:
 			_death_timer.text = "Waiting for the next round"
 		elif left > 0.0:
-			_death_timer.text = "Respawn available in %.1f" % left
+			_death_timer.text = "Respawning in %.1f" % left
+		elif loadout_open:
+			_death_timer.text = "Close the loadout to respawn"
 		else:
-			_death_timer.text = "Press %s to respawn" % Settings.bind_text("jump").to_upper()
-			if Input.is_action_just_pressed("jump") and main and main.overlay == null and not Game.typing:
-				Game.request_respawn.rpc_id(1)
-		_death_hint.text = "Press %s to change your weapon / addon" % Settings.bind_text("loadout") if not loadout_open else "Changes apply when you respawn. Esc to close."
+			_death_timer.text = "Respawning..."
+		_death_hint.text = "Press %s to change your weapon / addon (you respawn when you close it)" % Settings.bind_text("loadout") if not loadout_open else "Changes apply when you respawn. Esc to close and respawn."
 		if Input.is_action_just_pressed("loadout") and not loadout_open and main and main.overlay == null and not Game.typing:
 			set_loadout_open(true)
 	if alive and not _was_alive:
@@ -329,6 +352,21 @@ func _process(delta: float) -> void:
 		if loadout_open:
 			set_loadout_open(false)
 	_was_alive = alive
+
+
+## Marks across the health bar every HP_SEGMENT, so it reads at a glance.
+func _layout_hp_ticks(max_hp: float) -> void:
+	_ticks_for = max_hp
+	for c in _hp_ticks.get_children():
+		c.queue_free()
+	var n := int(ceil(max_hp / HP_SEGMENT))
+	for i in range(1, n):
+		var tick := ColorRect.new()
+		tick.color = Color(0, 0, 0, 0.7)
+		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tick.position = Vector2(HP_FILL_W * i * HP_SEGMENT / max_hp, 0)
+		tick.size = Vector2(2, 10)
+		_hp_ticks.add_child(tick)
 
 
 func _refresh_scoreboard() -> void:

@@ -32,7 +32,7 @@ const DATA := {
 	},
 	"grapple": {
 		"name": "Grapple",
-		"desc": "Hold the ability key: throw a grappling hook (27m range, up to 20 m/s). It latches onto whatever it hits and reels you in while you steer: hook something above you to swing, and get a pop up at the end to climb ledges. Release the key (or jump) to let go with your momentum. Hooking an enemy yanks them towards you. 9s cooldown from a hit; a miss only costs 1s.",
+		"desc": "Hold the ability key: throw a grappling hook (27m range, up to 20 m/s). It latches onto whatever it hits and reels you in while you steer: hook something above you to swing, and get a pop up at the end to climb ledges. Release the key (or jump) to let go with your momentum. Hooking an enemy yanks them towards you. 6.5s cooldown from a hit; a miss only costs 1s.",
 		"active": true,
 	},
 }
@@ -55,7 +55,7 @@ const STALKER_SCAN_TIME := 4.0   # ability: every player's outline shows through
 const STALKER_SCAN_CD := 14.0    # ...and it's ready again this long after activation
 const SKYWALKER_CD := 5.0
 const GRAPPLE_RANGE := 27.0
-const GRAPPLE_CD := 9.0          # starts when the hook latches on
+const GRAPPLE_CD := 6.5          # starts when the hook latches on
 const GRAPPLE_MISS_CD := 1.0
 const GRAPPLE_HOOK_SPEED := 110.0  # thrown hook speed (m/s): ~0.27 s to full range
 const GRAPPLE_PULL := 42.0       # reel-in acceleration (m/s^2)

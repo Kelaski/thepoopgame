@@ -1,6 +1,8 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/player/weapon_model.gd" id="1_ipcyv"]
+[ext_resource type="PackedScene" path="res://assets/models/holo_reticle.tscn" id="2_nkgw3"]
+[ext_resource type="Script" path="res://scripts/player/holo_reticle.gd" id="3_02jwa"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ccs34"]
 diffuse_mode = 3
@@ -54,24 +56,10 @@ size = Vector3(0.078, 0.008, 0.012)
 transparency = 1
 cull_mode = 2
 shading_mode = 0
-albedo_color = Color(0.62352943, 0.9019608, 1, 0.12)
+albedo_color = Color(0.8, 0.95, 1, 0.05)
 
 [sub_resource type="BoxMesh" id="BoxMesh_1wp01"]
 size = Vector3(0.07, 0.056, 0.002)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jstx2"]
-cull_mode = 2
-shading_mode = 0
-albedo_color = Color(1, 0.23137255, 0.1882353, 1)
-
-[sub_resource type="SphereMesh" id="SphereMesh_5dn26"]
-radius = 0.0016
-height = 0.0032
-radial_segments = 6
-rings = 3
-
-[sub_resource type="BoxMesh" id="BoxMesh_4hxlb"]
-size = Vector3(0.0035, 0.0012, 0.001)
 
 [node name="AssaultRifle" type="Node3D" unique_id=674541529]
 script = ExtResource("1_ipcyv")
@@ -123,70 +111,14 @@ material_override = SubResource("StandardMaterial3D_8oday")
 cast_shadow = 0
 mesh = SubResource("BoxMesh_1wp01")
 
-[node name="ReticleDot" type="MeshInstance3D" parent="." unique_id=1691912483 groups=["first_person_only"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.118, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("SphereMesh_5dn26")
-
-[node name="ReticleRing1" type="MeshInstance3D" parent="." unique_id=238208095 groups=["first_person_only"]]
-transform = Transform3D(-4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0, 1, 0.011, 0.118, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing2" type="MeshInstance3D" parent="." unique_id=1426780783 groups=["first_person_only"]]
-transform = Transform3D(-0.50000006, -0.8660254, 0, 0.8660254, -0.50000006, 0, 0, 0, 1, 0.00952628, 0.1235, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing3" type="MeshInstance3D" parent="." unique_id=1122178593 groups=["first_person_only"]]
-transform = Transform3D(-0.8660254, -0.50000006, 0, 0.50000006, -0.8660254, 0, 0, 0, 1, 0.0055, 0.12752628, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing4" type="MeshInstance3D" parent="." unique_id=1958267666 groups=["first_person_only"]]
-transform = Transform3D(-1, 8.742278e-08, 0, -8.742278e-08, -1, 0, 0, 0, 1, 6.735335e-19, 0.129, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing5" type="MeshInstance3D" parent="." unique_id=946523622 groups=["first_person_only"]]
-transform = Transform3D(-0.8660254, 0.49999997, 0, -0.49999997, -0.8660254, 0, 0, 0, 1, -0.0055, 0.12752628, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing6" type="MeshInstance3D" parent="." unique_id=1260400102 groups=["first_person_only"]]
-transform = Transform3D(-0.4999999, 0.86602545, 0, -0.86602545, -0.4999999, 0, 0, 0, 1, -0.00952628, 0.1235, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing7" type="MeshInstance3D" parent="." unique_id=473043028 groups=["first_person_only"]]
-transform = Transform3D(1.1924881e-08, 1, 0, -1, 1.1924881e-08, 0, 0, 0, 1, -0.011, 0.118, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing8" type="MeshInstance3D" parent="." unique_id=588661809 groups=["first_person_only"]]
-transform = Transform3D(0.4999999, 0.86602545, 0, -0.86602545, 0.4999999, 0, 0, 0, 1, -0.00952628, 0.1125, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing9" type="MeshInstance3D" parent="." unique_id=597350810 groups=["first_person_only"]]
-transform = Transform3D(0.8660253, 0.5000002, 0, -0.5000002, 0.8660253, 0, 0, 0, 1, -0.0055, 0.10847372, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing10" type="MeshInstance3D" parent="." unique_id=6493579 groups=["first_person_only"]]
-transform = Transform3D(1, -1.7484555e-07, 0, 1.7484555e-07, 1, 0, 0, 0, 1, -2.0206004e-18, 0.107, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing11" type="MeshInstance3D" parent="." unique_id=1686740043 groups=["first_person_only"]]
-transform = Transform3D(0.8660254, -0.50000006, 0, 0.50000006, 0.8660254, 0, 0, 0, 1, 0.0055, 0.10847372, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
-[node name="ReticleRing12" type="MeshInstance3D" parent="." unique_id=1481432427 groups=["first_person_only"]]
-transform = Transform3D(0.50000006, -0.8660254, 0, 0.8660254, 0.50000006, 0, 0, 0, 1, 0.00952628, 0.1125, -0.062)
-material_override = SubResource("StandardMaterial3D_jstx2")
-mesh = SubResource("BoxMesh_4hxlb")
-
 [node name="Muzzle" type="Marker3D" parent="." unique_id=652025437]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.72)
+
+[node name="HoloReticle" type="Sprite3D" parent="." unique_id=1533132567 groups=["first_person_only"] instance=ExtResource("2_nkgw3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.118, -0.063999996)
+cast_shadow = 0
+pixel_size = 0.00014
+no_depth_test = true
+texture_filter = 4
+render_priority = 10
+script = ExtResource("3_02jwa")

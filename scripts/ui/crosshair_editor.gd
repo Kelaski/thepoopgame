@@ -23,6 +23,10 @@ const CODE_FIELDS := {
 	"xh_dynamic": ["b"],
 	"xh_image_scale": ["f", 0.25, 3.0],
 	"crosshair_color": ["c"],
+	"holo_style": ["s", HoloReticle.STYLES],
+	"holo_color": ["c"],
+	"holo_size": ["f", 0.5, 2.0],
+	"holo_brightness": ["f", 0.5, 3.0],
 }
 
 const COLOR_PRESETS := ["ffffff", "4dff6a", "ffd23f", "4de1ff", "ff4df0", "ff5a4d"]
@@ -68,6 +72,13 @@ func _draw_preview() -> void:
 	pv.draw_rect(Rect2(s.x * 0.55, s.y * 0.45, s.x * 0.45, s.y * 0.55), Color("3c3d42"))
 	pv.draw_rect(Rect2(s.x * 0.6, s.y * 0.25, s.x * 0.18, s.y * 0.45), Mats.team_color(1))
 	Crosshair.draw_crosshair(pv, (s * 0.5).floor(), _preview_spread)
+	# Holo sight preview in the corner: the reticle as it looks through the glass
+	var hr := Rect2(s.x - 96.0, s.y - 96.0, 84.0, 84.0)
+	pv.draw_rect(hr, Color(0.08, 0.1, 0.12, 0.85))
+	var hc := Color.from_string(str(Settings.g("holo_color")), Color("ff3b30"))
+	var hs := 56.0 * clampf(float(Settings.g("holo_size")), 0.5, 2.0) * 0.6
+	pv.draw_texture_rect(HoloReticle.texture_for(str(Settings.g("holo_style"))), Rect2(hr.get_center() - Vector2(hs, hs) * 0.5, Vector2(hs, hs)), false, hc)
+	pv.draw_rect(hr, Color(1, 1, 1, 0.3), false, 1.0)
 	pv.draw_rect(Rect2(Vector2.ZERO, s), Color(1, 1, 1, 0.3), false, 2.0)
 
 

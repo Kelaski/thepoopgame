@@ -7,9 +7,10 @@ extends Node
 ##               The clock doesn't run until that first pickup.
 ##   HELD      - the timer counts down while a Runner carries the Tag.
 ##   DROPPED   - Runner died; the timer keeps running. Enemy pickup: +10s,
-##               teammate pickup: +15s.
-##   ROUND_END - the team that held the Tag last wins when the timer hits 0.
-##               First to 4 wins the match.
+##               teammate pickup: +15s. If the timer hits 0 with the Tag on the
+##               ground it's overtime: whoever picks it up first wins the round.
+##   ROUND_END - the Runner's team wins when the timer hits 0 while they hold it.
+##               First to 3 wins the match.
 
 signal match_started
 signal match_ended
@@ -25,7 +26,7 @@ signal time_of_day_changed  # World blends to the new time of day
 enum Phase { LOBBY, PREROUND, RUSH, HELD, DROPPED, ROUND_END, MATCH_END }
 
 const ROUND_TIME := 120.0
-const ROUNDS_TO_WIN := 4
+const ROUNDS_TO_WIN := 3
 const RESPAWN_TIME := 6.0
 const HOLDER_RESPAWN_PENALTY := 1.0  # extra respawn time for the team carrying the Tag
 const PREROUND_TIME := 5.0
@@ -63,7 +64,7 @@ var match_winner := -1
 var alive_ids := {}       # id -> bool (replicated to everyone)
 var hp := {}              # id -> float (replicated to everyone)
 var respawn_left := {}    # id -> seconds (replicated)
-var _respawn_ready := {}  # server: id -> true once the player pressed Respawn
+var _respawn_hold := {}  # server: id -> true while the player has the loadout screen open
 
 # Server only
 var _last_hit := {}
@@ -74,6 +75,11 @@ var _now := 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
+## The clock ran out with the Tag on the ground: the next pickup wins the round.
+func is_overtime() -> bool:
+	return phase == Phase.DROPPED and timer <= 0.0
 
 
 func is_alive(id: int) -> bool:
@@ -199,7 +205,7 @@ func _server_begin_round() -> void:
 		for i in ids.size():
 			spawns[ids[i]] = spots[i]
 	alive_ids.clear()
-	_respawn_ready.clear()
+	_respawn_hold.clear()
 	for id in Net.players:
 		alive_ids[id] = true
 		hp[id] = max_hp_of(id)
@@ -236,13 +242,14 @@ func _server_tick(delta: float) -> void:
 			_check_pickups()  # the clock only starts at the first pickup
 		Phase.DROPPED:
 			# The clock keeps running while the Tag is on the ground; if it runs out,
-			# the team that held it last wins the round.
-			timer -= delta
-			if timer <= 0.0:
-				timer = 0.0
-				_server_round_won(holding_team)
-			else:
-				_check_pickups()
+			# it's overtime and whoever grabs the Tag first wins the round.
+			if timer > 0.0:
+				timer -= delta
+				if timer <= 0.0:
+					timer = 0.0
+					_announce.rpc("OVERTIME! First to grab the Tag wins!", Mats.TAG_COLOR)
+					_push_state()
+			_check_pickups()
 		Phase.HELD:
 			if world.players.has(holder):
 				tag_pos = world.players[holder].global_position
@@ -263,11 +270,11 @@ func _server_tick(delta: float) -> void:
 	if phase in [Phase.RUSH, Phase.HELD, Phase.DROPPED]:
 		for id in respawn_left.keys():
 			respawn_left[id] = maxf(0.0, respawn_left[id] - delta)
-			# Players respawn manually (Jump key) once the timer is done, so they
-			# have time to change loadouts.
-			if respawn_left[id] <= 0.0 and _respawn_ready.get(id, false) and Net.players.has(id):
+			# Players respawn as soon as the timer is done, unless they're changing
+			# their loadout: then they respawn when they close that screen.
+			if respawn_left[id] <= 0.0 and not _respawn_hold.get(id, false) and Net.players.has(id):
 				respawn_left.erase(id)
-				_respawn_ready.erase(id)
+				_respawn_hold.erase(id)
 				var pos: Vector3 = world.find_respawn(id)
 				alive_ids[id] = true
 				hp[id] = max_hp_of(id)
@@ -300,6 +307,12 @@ func _check_pickups() -> void:
 
 func _server_pickup(id: int) -> void:
 	var team: int = Net.team_of(id)
+	if is_overtime():
+		holder = id
+		holding_team = team
+		_tag_event.rpc("pickup", id, team, tag_pos)
+		_server_round_won(team)
+		return
 	if phase == Phase.RUSH:
 		timer = ROUND_TIME
 	elif phase == Phase.DROPPED:
@@ -353,7 +366,7 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool) -> void:
 	alive_ids[victim] = false
 	hp[victim] = 0.0
 	respawn_left[victim] = respawn
-	_respawn_ready.erase(victim)
+	_respawn_hold.erase(victim)
 	if Net.players.has(victim):
 		Net.players[victim].deaths += 1
 	if weapon == "bat" and killer != victim:
@@ -464,14 +477,17 @@ func _set_map_size_local(size: String) -> void:
 		map_size_changed.emit(size)
 
 
-## Dead player asks to respawn. Honoured once their respawn timer has run out.
+## A dead player opened (true) or closed (false) the loadout screen. While it's
+## open they aren't respawned; closing it respawns them if their timer is done.
 @rpc("any_peer", "call_local", "reliable")
-func request_respawn() -> void:
+func set_respawn_hold(hold: bool) -> void:
 	if not multiplayer.is_server() or not in_match:
 		return
 	var id: int = Net.sender()
-	if not alive_ids.get(id, false) and respawn_left.has(id) and respawn_left[id] <= 0.3:
-		_respawn_ready[id] = true
+	if hold and not alive_ids.get(id, false):
+		_respawn_hold[id] = true
+	else:
+		_respawn_hold.erase(id)
 
 
 func _push_state() -> void:

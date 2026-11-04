@@ -7,6 +7,43 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.18.0
+
+**All settings and keybinds are reset to the defaults once with this update.**
+
+### Added
+- **Holo sight options:** the crosshair editor has a Holo Sight section for the AR and SMG reticle: dot, circle and dot, chevron or cross, plus colour, size and brightness. The reticle is bolder and glows, and the sight glass is clearer.
+- **Reload timer:** the HUD shows the time left next to RELOADING.
+- **Overtime:** if the timer runs out while the Tag is on the ground, the round goes to overtime. Whoever picks up the Tag first wins the round for their team. The clock shows OVERTIME in the Tag's colour.
+- **Speedometer:** a small readout above your health bar shows how fast you're moving, in m/s. It's on by default and can be turned off in Settings > HUD.
+
+### Changed
+- **Titanfall-style movement:** everything keeps your momentum and chains together.
+  - **Slides** keep your speed and add a 3.6 m/s boost that comes back every 2 s, so slide spam doesn't stack. They follow the way you're moving, slow down uphill and speed up downhill. A slide pressed in the air starts when you land.
+  - **Slide-hopping and bunny hopping:** no ground friction for a moment after landing, and jumps pressed just before landing still fire, so well-timed hops keep your speed.
+  - **Air strafing:** strafing while turning adds speed (up to 17 m/s), and holding back brakes.
+  - **Wall runs** start at 7 m/s, speed you up towards 10.5 m/s, stay level and slowly sink, and last up to 1.75 s. Running alongside a wall starts one too, and you can't run straight back onto the wall you just left.
+  - **Mantling:** jump at a ledge up to about 1.9 m above your feet while pushing into it and you climb up and over.
+  - Sprint speed is 7.4 m/s (was 9). The faster air control stays.
+- **Leaning is removed.** Interact (doors) is back on **E**.
+- **New Crouch key (C):** it only ever crouches, while Crouch / Slide still slides when you press it while sprinting.
+- **SMG:** 22 body / 30 head at 14 rounds/s with tighter hip fire, so it beats the AR up close. It now drops to 13 / 18 beyond 15 m (was 18 m), so the AR still wins at medium and long range.
+- **Matches are first to 3** round wins (was 4).
+- **Grapple cooldown** is 6.5 s after a hit (was 9 s).
+- **Windows are bigger** (small 1.4 x 1.9 m, wide 1.7 x 2.0 m, tall 1.2 x 2.8 m), so you can jump or grapple through them cleanly.
+- **Removed the easter egg.**
+- **Respawning is automatic again:** you respawn as soon as the respawn timer is done, with no need to press Jump. If you open the loadout screen while dead, you stay down until you close it, then respawn straight away.
+- **Bottom HUD** is cleaner: slanted dark panels, a health bar marked off every 25 HP with your max health beside the number, a big ammo count next to the weapon name (it turns red when you're running low), and the addon in its own panel above.
+- **Minimap** is more detailed: roads have curbs and centre lines, car parks show, buildings have roofs and their outside doors marked, and the park shows its paths, basketball court, sandpit, fountain plaza and pond.
+- **Basketball hoops** have a padded pole, a support arm, a framed backboard with a shooting square, a real ring rim and a net.
+- **Big buildings** (4+ storeys or long walls) have about half as many windows.
+
+### Fixed
+- **Video settings dropdowns** were see-through, so their options were hard to make out over the menu or the match. Dropdown lists are now solid with a border and a highlight on hover.
+- **Car windscreens:** standing on one could leave you stuck, unable to jump (they were just too steep to count as ground). They now count as ground.
+- **Car wheels:** the part of the tyre sticking out past the body no longer has collision.
+- **Umbrellas:** jumping into the low edge of a picnic umbrella no longer gets you stuck with the jump sound repeating. Only landing on top bounces you, and you slide out if you end up under the edge.
+
 ## 0.17.4
 
 ### Fixed

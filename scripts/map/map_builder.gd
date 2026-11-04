@@ -101,6 +101,7 @@ var night_lights: Array = []     # OmniLight3D that only shine in the evening an
 var buildings: Array = []        # {id, name, rect: Rect2, floors, fh, top, color}
 var road_rects: Array = []       # Rect2 (clipped to the map bounds)
 var park_rect := Rect2()
+var map_marks: Array = []      # [kind, Rect2]: park features and car parks for the minimap ("path", "court", "sand", "pond", "plaza", "lot")
 var has_park := true
 var map_size := MapData.DEFAULT_SIZE
 var bounds := Rect2()            # playable area (inside the fence), metres
@@ -803,6 +804,7 @@ static func _road_yaw(along_x: bool) -> float:
 func _build_parking_lots() -> void:
 	var line := Color("d8d4c8")
 	for lot: Rect2 in _lots:
+		map_marks.append(["lot", lot])
 		var inner := lot.grow(-1.0)
 		if inner.size.x < 6.0 or inner.size.y < 6.0:
 			continue
@@ -1267,6 +1269,9 @@ func _stair_rail(y: float, count: int, yaw: float, cols: Dictionary) -> void:
 func _build_exterior_walls(type: String, floors: int, fh: float, x0: float, z0: float, x1: float, z1: float, door_spots: Array, st: Dictionary, solid := {}) -> void:
 	var top := floors * fh
 	var p_win := 0.2 if type in ["warehouse", "water", "sports"] else 0.35
+	# Big buildings (tall, or long walls) get fewer windows, so they don't read as glass boxes
+	if floors >= 4 or maxi(_modules_along(x1 - x0), _modules_along(z1 - z0)) >= 10:
+		p_win *= 0.55
 	var window: String = WINDOW_PIECES[rng.randi() % WINDOW_PIECES.size()]
 	var cols := {"wall": st.wall, "trim": st.trim}
 	for side in 4:
@@ -2124,11 +2129,13 @@ func _build_park() -> void:
 	var court := Rect2(x0 + 2.5 * kx, z0 + minf(13.0 * kz, r.size.y - 27.0), 14.0, 26.0)
 	var cc := court.get_center()
 	_prefab("props/park/basketball_court", _at(Vector3(cc.x, 0, cc.y)))  # hoops, fence, lines, benches, ball rack, floodlights
+	map_marks.append(["court", court])
 	court.size.x += 1.6  # the team benches, ball rack and floodlights stand along its +X side
 	var pg := Rect2(x0 + 6.5 * kx - 4.0, z0 + 5.1 * kz - 2.6, 8.0, 5.2)
 	var pc := pg.get_center()
 	var sand := pg.grow(1.2)  # props/park/sandpit is this size
 	_prefab("props/park/sandpit", _at(Vector3(pc.x, 0, pc.y)))
+	map_marks.append(["sand", sand])
 	_prefab("props/park/playground", _at(Vector3(pc.x, 0, pc.y)))
 
 	# Paths first: everything else keeps off them.
@@ -2139,6 +2146,8 @@ func _build_park() -> void:
 	if cross:
 		paths.append(Rect2(x0, path_z - PATH_W * 0.5, r.size.x, PATH_W))
 	_park_path(paths[0])
+	for pr: Rect2 in paths:
+		map_marks.append(["path", pr])
 	for pi in range(1, paths.size()):
 		for piece: Rect2 in _subtract(paths[pi], paths[0]):
 			_park_path(piece)
@@ -2168,12 +2177,14 @@ func _build_park() -> void:
 	var plaza_rect := Rect2()
 	if plaza.is_finite():
 		plaza_rect = Rect2(plaza - Vector2.ONE * (plaza_r + 2.2), Vector2.ONE * (plaza_r + 2.2) * 2.0)
+		map_marks.append(["plaza", Rect2(plaza - Vector2.ONE * plaza_r, Vector2.ONE * plaza_r * 2.0)])
 
 	# The pond: by default bottom right; moved off the paths and plaza (and shrunk
 	# on small parks) so it never lies across a path.
 	var pond := _place_pond(r, kx, kz, paths, plaza_rect, [court.grow(0.6), sand.grow(0.6)])
 	if pond.has_area():
 		avoid.append(pond.grow(0.8))
+		map_marks.append(["pond", pond])
 	if plaza.is_finite():
 		_prefab("props/park/plaza", _at(Vector3(plaza.x, 0, plaza.y)))
 		_prefab("props/park/fountain", _at(Vector3(plaza.x, 0, plaza.y)))

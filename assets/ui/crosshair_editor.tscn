@@ -175,6 +175,54 @@ script = ExtResource("7_h5qly")
 setting = "xh_dynamic"
 label_text = "Dynamic (spreads with accuracy)"
 
+[node name="HoloSeparator" type="HSeparator" parent="Center/Panel/Content/Body/ControlsScroll/Controls" unique_id=1710116031]
+layout_mode = 2
+
+[node name="HoloTitle" type="Label" parent="Center/Panel/Content/Body/ControlsScroll/Controls" unique_id=1710116032]
+layout_mode = 2
+theme_type_variation = &"AccentLabel"
+theme_override_font_sizes/font_size = 16
+text = "HOLO SIGHT (AR / SMG)"
+
+[node name="HoloStyle" type="HBoxContainer" parent="Center/Panel/Content/Body/ControlsScroll/Controls" unique_id=1710116033 instance=ExtResource("2_qgs5e")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("3_hm3yo")
+setting = "holo_style"
+label_text = "Reticle"
+items = PackedStringArray("Dot", "Circle and dot", "Chevron", "Cross")
+values = ["dot", "circle_dot", "chevron", "cross"]
+
+[node name="HoloColor" type="HBoxContainer" parent="Center/Panel/Content/Body/ControlsScroll/Controls" unique_id=1710116034 instance=ExtResource("2_qgs5e")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("3_hm3yo")
+setting = "holo_color"
+label_text = "Reticle colour"
+items = PackedStringArray("Red", "Green", "Cyan", "Yellow", "Magenta", "White")
+values = ["ff3b30", "4dff6a", "4de1ff", "ffd23f", "ff4df0", "ffffff"]
+
+[node name="HoloSize" type="HBoxContainer" parent="Center/Panel/Content/Body/ControlsScroll/Controls" unique_id=1710116035 instance=ExtResource("4_70486")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("5_sycw3")
+setting = "holo_size"
+label_text = "Reticle size"
+min_value = 0.5
+max_value = 2.0
+step = 0.05
+format = "%.2fx"
+
+[node name="HoloBrightness" type="HBoxContainer" parent="Center/Panel/Content/Body/ControlsScroll/Controls" unique_id=1710116036 instance=ExtResource("4_70486")]
+layout_mode = 2
+theme_override_constants/separation = 12
+script = ExtResource("5_sycw3")
+setting = "holo_brightness"
+label_text = "Reticle brightness"
+min_value = 0.5
+max_value = 3.0
+step = 0.05
+
 [node name="@HSeparator@136" type="HSeparator" parent="Center/Panel/Content/Body/ControlsScroll/Controls" unique_id=1710116024]
 layout_mode = 2
 

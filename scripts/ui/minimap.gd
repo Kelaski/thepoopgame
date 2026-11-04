@@ -81,6 +81,100 @@ func _draw_label(font: Font, fs: int, text: String, rect: Rect2) -> void:
 		y += line_h
 
 
+## Roads with curbs and centre dashes, car parks, and the park's paths, court,
+## sandpit, pond and fountain plaza.
+func _draw_ground(builder) -> void:
+	var dash := maxf(1.0, 3.0 * _scale)
+	for r: Rect2 in builder.road_rects:
+		var rr := _r(r)
+		draw_rect(rr.grow(maxf(1.0, 1.2 * _scale)), Color(0.3, 0.31, 0.34))  # sidewalk / curb
+	for r: Rect2 in builder.road_rects:
+		draw_rect(_r(r), Color(0.22, 0.23, 0.27))
+	for r: Rect2 in builder.road_rects:
+		var rr := _r(r)
+		var c := rr.get_center()
+		var along_x := rr.size.x >= rr.size.y
+		var length := rr.size.x if along_x else rr.size.y
+		if length < dash * 4.0:
+			continue
+		var d := 0.0
+		while d + dash <= length:
+			if along_x:
+				draw_line(Vector2(rr.position.x + d, c.y), Vector2(rr.position.x + d + dash, c.y), Color(0.78, 0.7, 0.35, 0.55), 1.0)
+			else:
+				draw_line(Vector2(c.x, rr.position.y + d), Vector2(c.x, rr.position.y + d + dash), Color(0.78, 0.7, 0.35, 0.55), 1.0)
+			d += dash * 2.0
+	for m: Array in builder.map_marks:
+		if m[0] == "lot":
+			var lr := _r(m[1])
+			draw_rect(lr, Color(0.26, 0.27, 0.3))
+			draw_rect(lr, Color(0.55, 0.55, 0.5, 0.4), false, 1.0)
+	if not builder.has_park:
+		return
+	var pr := _r(builder.park_rect)
+	draw_rect(pr, Color(0.32, 0.55, 0.28))
+	draw_rect(pr, Color(0.22, 0.4, 0.2), false, 1.0)
+	for m: Array in builder.map_marks:
+		var r := _r(m[1])
+		match m[0]:
+			"path":
+				draw_rect(r, Color(0.72, 0.68, 0.58))
+			"sand":
+				draw_rect(r, Color(0.86, 0.76, 0.5))
+			"court":
+				draw_rect(r, Color(0.86, 0.5, 0.25))
+				draw_rect(r, Color(1, 1, 1, 0.6), false, 1.0)
+				draw_line(Vector2(r.position.x, r.get_center().y), Vector2(r.end.x, r.get_center().y), Color(1, 1, 1, 0.6), 1.0)
+	for m: Array in builder.map_marks:
+		var r := _r(m[1])
+		match m[0]:
+			"plaza":
+				draw_circle(r.get_center(), r.size.x * 0.5, Color(0.8, 0.76, 0.66))
+				draw_circle(r.get_center(), r.size.x * 0.22, Color(0.37, 0.72, 0.9))
+			"pond":
+				_draw_ellipse(r, Color(0.25, 0.55, 0.8))
+
+
+func _draw_ellipse(r: Rect2, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 24:
+		var a := i * TAU / 24.0
+		pts.append(r.get_center() + Vector2(cos(a) * r.size.x * 0.5, sin(a) * r.size.y * 0.5))
+	draw_colored_polygon(pts, col)
+
+
+## Buildings: a soft shadow, the walls in the building's colour (taller ones
+## lighter), a roof inset and their outside doors.
+func _draw_buildings(builder) -> void:
+	var tallest := 1
+	for b in builder.buildings:
+		tallest = maxi(tallest, int(b.floors))
+	var sh := maxf(1.0, 0.8 * _scale)
+	for b in builder.buildings:
+		draw_rect(_r(b.rect).grow(0.5), Color(0, 0, 0, 0.3))
+		draw_rect(Rect2(_r(b.rect).position + Vector2(sh, sh), _r(b.rect).size), Color(0, 0, 0, 0.35))
+	for b in builder.buildings:
+		var rr := _r(b.rect)
+		var h := float(b.floors) / tallest
+		var base := (b.color as Color).darkened(0.45 - 0.25 * h)
+		draw_rect(rr, base)
+		var inset := maxf(1.0, 1.1 * _scale)
+		if rr.size.x > inset * 4.0 and rr.size.y > inset * 4.0:
+			draw_rect(rr.grow(-inset), base.lightened(0.12))
+		draw_rect(rr, Color(0, 0, 0, 0.55), false, 1.0)
+	# Outside doors: a bright notch on the wall
+	for d in builder.doors:
+		if not is_instance_valid(d):
+			continue
+		var p := Vector2(d.global_position.x, d.global_position.z)
+		for b in builder.buildings:
+			var br: Rect2 = b.rect
+			if not br.grow(0.6).has_point(p) or br.grow(-0.6).has_point(p):
+				continue
+			draw_rect(Rect2(_p(d.global_position) - Vector2(1.5, 1.5), Vector2(3, 3)), Color(0.95, 0.85, 0.55, 0.9))
+			break
+
+
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.1, 0.12, 0.14, 0.85))
 	var w = Game.world
@@ -91,14 +185,8 @@ func _draw() -> void:
 	_origin = area.position
 	_pad = (size - area.size * _scale) * 0.5
 	draw_rect(_r(area), Color(0.16, 0.18, 0.2, 0.9))
-	for r: Rect2 in w.builder.road_rects:
-		draw_rect(_r(r), Color(0.24, 0.25, 0.29))
-	if w.builder.has_park:
-		draw_rect(_r(w.builder.park_rect), Color(0.32, 0.55, 0.28))
-	for b in w.builder.buildings:
-		var rr := _r(b.rect)
-		draw_rect(rr, (b.color as Color).darkened(0.35))
-		draw_rect(rr, Color(0, 0, 0, 0.5), false, 1.0)
+	_draw_ground(w.builder)
+	_draw_buildings(w.builder)
 	if Settings.g("minimap_labels"):
 		_draw_labels(w.builder)
 	var t := Time.get_ticks_msec() * 0.001

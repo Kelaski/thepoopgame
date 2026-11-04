@@ -13,9 +13,9 @@ const DATA := {
 	},
 	"smg": {
 		"name": "SMG",
-		"desc": "19 body / 26 head, dropping to 12 / 19 beyond 18m. 13 rounds/s. 1.2x holo sight.",
-		"body": 19.0, "head": 26.0, "falloff": 18.0, "body_far": 12.0, "head_far": 19.0, "rps": 13.0, "zoom": 1.2,
-		"mag": 40, "reload": 1.8, "hip": 2.6, "ads": 0.9, "range": 200.0, "kick": 0.35,
+		"desc": "22 body / 30 head, dropping to 13 / 18 beyond 15m. 14 rounds/s, tight hip fire. Out-guns the AR up close, loses to it at range. 1.2x holo sight.",
+		"body": 22.0, "head": 30.0, "falloff": 15.0, "body_far": 13.0, "head_far": 18.0, "rps": 14.0, "zoom": 1.2,
+		"mag": 40, "reload": 1.8, "hip": 1.7, "ads": 0.9, "range": 200.0, "kick": 0.35,
 	},
 	"shotgun": {
 		"name": "Shotgun",
@@ -38,7 +38,7 @@ const DATA := {
 }
 
 const MAX_DAMAGE := {
-	"ar": 45.0, "smg": 26.0, "shotgun": 195.0, "sniper": 150.0, "bat": 300.0, "thrown": 70.0,
+	"ar": 45.0, "smg": 30.0, "shotgun": 195.0, "sniper": 150.0, "bat": 300.0, "thrown": 70.0,
 }
 
 # Spiked Bat momentum damage: 35 at or below your sprint speed, multiplied by 1.1

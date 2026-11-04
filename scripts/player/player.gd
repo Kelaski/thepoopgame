@@ -10,40 +10,55 @@ const RADIUS := 0.38
 const EYE_STAND := 1.62
 const EYE_CROUCH := 1.02
 const WALK := 5.0
-const SPRINT := 9.0
+const SPRINT := 7.4
 const CROUCH_SPEED := 2.8
 const ADS_MULT := 0.62
 const ACCEL := 60.0
 const DECEL := 45.0
-const AIR_ACCEL := 19.2  # air strafing (was 16, +20%)
+const AIR_ACCEL := 19.2  # air control below your run speed (was 16, +20%)
+# Air strafing works like Titanfall / Source: above your run speed, strafing while
+# you turn adds speed (up to AIR_SPEED_LIMIT); pushing straight on adds nothing.
+const AIR_STRAFE_ACCEL := 60.0
+const AIR_WISH_CAP := 1.0
+const AIR_SPEED_LIMIT := 17.0
+const JUMP_BUFFER := 0.1        # a jump pressed this long before landing still happens
+const LAND_GRACE := 0.12        # no ground friction for this long after landing, so hops keep speed
+const OVERSPEED_FRICTION := 8.0 # how fast speed above your run speed bleeds off on the ground
+const MANTLE_MIN := -0.2        # ledges from about level with your feet...
+const MANTLE_MAX := 1.9         # ...up to this high can be mantled onto
+const MANTLE_MAX_UP := 4.0      # only while not still shooting upwards faster than this
+const MANTLE_PUSH := 3.5        # forward speed over the ledge
+const MANTLE_RISE := 6.0        # climbing speed up the face
+const MANTLE_TIME := 0.6        # longest a mantle can take
 const GRAVITY := 16.0
 const JUMP_V := 6.4
 const DJUMP_V := 7.0
 const BOUNCE_V := JUMP_V * 1.4142  # bounce pads: sqrt(2) x jump speed = 2x the jump height
 const WALLJUMP_BOOST := 2.5
 const SLOPE_ACCEL_RAMP := 0.6  # extra downhill acceleration per second spent on the slope
-const MAX_SLIDE_SPEED := 22.0
+const MAX_SLIDE_SPEED := 20.0
 const SPAWN_PROTECTION := 3.0
-const WALLRUN_MIN_SPEED := 4.5
-const WALLRUN_TIME := 1.6
-const WALLRUN_GRAVITY := 3.0
+const WALLRUN_MIN_SPEED := 3.0
+const WALLRUN_TIME := 1.75       # longest a single wall run lasts
+const WALLRUN_GRAVITY := 2.5     # gravity on the wall at the start of a run...
+const WALLRUN_GRAVITY_END := 9.0 # ...building to this, so a run slowly sinks
+const WALLRUN_START := 7.0       # a run starts at least this fast
+const WALLRUN_SPEED := 10.5      # and speeds you up towards this
+const WALLRUN_ACCEL := 4.0
+const WALLRUN_LIFT := 1.4        # a little upward pop when a run starts
 const WALLJUMP_OUT := 6.0
 const WALLJUMP_UP := 6.2
 const WALLJUMP_FREE := 3           # wall jumps before fatigue sets in
 const WALLJUMP_FATIGUE := 0.75     # each later wall jump keeps 75% of the previous one's speed
 const FATIGUE_GRAVITY_STEP := 0.5  # ...and adds +50% gravity
 const FATIGUE_GRAVITY_MAX := 6.0   # up to 600%
-# Leaning works like Rainbow Six Siege: tap Q / E to lean and stay leaned (tap
-# again, or the other side, to change), or hold it with Toggle lean off. You
-# lean from the waist, so your head swings out in an arc, drops a little and the
-# view tilts with it. You walk while leaned, and can aim and shoot.
-const LEAN_DIST := 0.4           # sideways head offset at full lean (m)
-const LEAN_PIVOT := 1.0          # the lean pivots this far below your eyes (the waist)
-const LEAN_ROLL := 15.0          # view tilt at full lean (degrees)
-const LEAN_SPEED := 11.0         # lean amount per second (0 -> full lean in ~0.09 s)
-const LEAN_SWITCH_SPEED := 18.0  # full left -> full right in ~0.11 s, straight through the middle
 const SLIDE_START_MIN := 5.5
-const SLIDE_FRICTION := 4.6
+const SLIDE_FRICTION := 3.2
+const SLIDE_DRAG := 0.12          # extra slowdown per m/s above sprint speed, so fast slides bleed off sooner
+const SLIDE_BOOST := 3.6          # speed a slide adds when it starts...
+const SLIDE_BOOST_CD := 2.0       # ...at most once every this many seconds (no stacking from slide spam)
+const LAND_SLIDE_MIN_FALL := 7.0  # landing in a slide faster than this (m/s down)...
+const LAND_SLIDE_GAIN := 0.45     # ...turns this share of the extra fall speed into slide speed
 const SLIDE_END := 3.6
 const SLIDE_CD := 0.6
 const MAX_GROUND_SPEED := 14.0
@@ -124,6 +139,7 @@ var sprinting := false
 var slide_dir := Vector3.ZERO
 var slide_cd := 0.0
 var coyote := 0.0
+var _bounce_cd := 0.0  # stops a bounce pad firing again while you leave it
 var dj_ready := true
 var aiming := false
 var ads_t := 0.0
@@ -139,7 +155,7 @@ var bob := 0.0
 var cam_roll := 0.0
 var damage_flash := 0.0
 
-# Wall running & leaning
+# Wall running
 var wallrunning := false
 var wall_normal := Vector3.ZERO
 var wallrun_t := 0.0
@@ -150,11 +166,6 @@ var _wall_touch_n := Vector3.ZERO
 var _wall_jump_t := 0.0           # coyote: recently left a wall run
 var _wall_jump_n := Vector3.ZERO
 var wall_jumps := 0               # wall jumps since you last touched the floor
-var lean := 0.0          # -1 (left) .. 1 (right), smoothed
-var _lean_side := 0      # where you want to lean: -1, 0 or 1 (toggled or held)
-var lean_drop := 0.0     # how far the lean lowers your head (m)
-var _prev_lean := 0.0    # lean_offset on the previous physics tick (the camera interpolates)
-var lean_offset := 0.0   # metres, clamped against walls
 var _step_t := 0.0
 
 # Addon state
@@ -181,6 +192,18 @@ var _hook_mesh: MeshInstance3D
 var prot_pending := false  # kept for compatibility; protection is now a plain timer
 var _vm_ads := VM_ADS
 var _slope_t := 0.0
+var _air_fall := 0.0  # fastest you were falling since you left the ground (m/s)
+var _recent_fall := 0.0    # how hard you last landed, for a slide started just after
+var _recent_fall_t := 0.0  # ...and how long that still counts
+var _jump_buffer_t := 0.0  # a jump press waiting for you to land
+var _land_grace := 0.0     # time left without ground friction after landing
+var _slide_boost_cd := 0.0
+var _slide_pending_boost := false  # a slide started in the air gets its boost when it lands
+var _mantle_cd := 0.0
+var _mantle_t := 0.0       # time left in a mantle
+var _mantle_dir := Vector3.ZERO
+var _mantle_top := 0.0     # height of the ledge being climbed
+var _mantle_speed := 0.0
 var prot_left := 0.0
 
 var _door_exceptions := {}
@@ -195,7 +218,6 @@ var net_vel := Vector3.ZERO
 var net_yaw := 0.0
 var net_pitch := 0.0
 var net_flags := 0
-var net_lean := 0.0
 var _has_net := false
 
 
@@ -213,7 +235,7 @@ func _ready() -> void:
 	add_to_group("players")
 	collision_layer = MapBuilder.L_PLAYER
 	collision_mask = MASK_FULL
-	floor_max_angle = deg_to_rad(50.0)
+	floor_max_angle = deg_to_rad(55.0)  # car windscreens (about 52 degrees) count as floor, so you can jump off them
 	floor_snap_length = 0.45
 	floor_constant_speed = true
 
@@ -292,40 +314,30 @@ static func _meshes_under(n: Node, out: Array) -> Array:
 	return out
 
 
-## Lean input: Toggle lean (the default) flips a side on each tap; otherwise the
-## side follows the key you're holding (the last one pressed wins). Sliding and
-## wall running stand you back up.
-func _update_lean_side(input_ok: bool) -> void:
-	var can_lean := input_ok and not sliding and not wallrunning and alive
-	if not can_lean:
-		if sliding or wallrunning or not alive:
-			_lean_side = 0
-		return
-	var left := Input.is_action_just_pressed("lean_left")
-	var right := Input.is_action_just_pressed("lean_right")
-	if Settings.g("toggle_lean"):
-		if left:
-			_lean_side = 0 if _lean_side == -1 else -1
-		elif right:
-			_lean_side = 0 if _lean_side == 1 else 1
-		return
-	if left:
-		_lean_side = -1
-	elif right:
-		_lean_side = 1
-	elif _lean_side == -1 and not Input.is_action_pressed("lean_left"):
-		_lean_side = 1 if Input.is_action_pressed("lean_right") else 0
-	elif _lean_side == 1 and not Input.is_action_pressed("lean_right"):
-		_lean_side = -1 if Input.is_action_pressed("lean_left") else 0
-
-
-## Landing on a bounce pad (umbrella and awning tops) launches you up.
-func _check_bounce_pad() -> void:
+## Landing on a bounce pad (umbrella and awning tops) launches you up. Only a
+## landing counts: you were falling and the pad met the bottom of your capsule, so
+## bumping your head on the underside of a low umbrella edge doesn't fire it.
+func _check_bounce_pad(fall_v: float) -> void:
+	var feet := global_position.y + RADIUS + 0.05
 	for i in get_slide_collision_count():
 		var c := get_slide_collision(i)
 		var body := c.get_collider() as CollisionObject3D
+		if not body or not body.collision_layer & MapBuilder.L_BOUNCE:
+			continue
+		var at := c.get_position()
+		if at.y > feet:
+			# Your head or body is caught in the pad (standing on a bench under an
+			# umbrella's low edge): slide out from under it instead of sticking.
+			var out := Vector3(global_position.x - at.x, 0.0, global_position.z - at.z)
+			if out.length() < 0.01:
+				out = Vector3(global_position.x - body.global_position.x, 0.0, global_position.z - body.global_position.z)
+			global_position += out.normalized() * 0.08
+			continue
+		if fall_v > 0.5 or _bounce_cd > 0.0:
+			continue
 		# Edge landings count too (the round bottom of your capsule meets the rim at an angle).
-		if body and body.collision_layer & MapBuilder.L_BOUNCE and c.get_normal().y > 0.3:
+		if c.get_normal().y > 0.3:
+			_bounce_cd = 0.2
 			velocity.y = BOUNCE_V
 			coyote = 0.0
 			dj_ready = true
@@ -453,11 +465,6 @@ func set_alive(a: bool) -> void:
 	if not a:
 		sliding = false
 		wallrunning = false
-		lean = 0.0
-		lean_offset = 0.0
-		_lean_side = 0
-		lean_drop = 0.0
-		_prev_lean = 0.0
 		if invisible:
 			invisible = false
 		phasing = 0.0
@@ -498,11 +505,11 @@ func respawn(pos: Vector3, protect: bool) -> void:
 	wallrun_cd = 0.0
 	wall_jumps = 0
 	_last_wall_normal = Vector3.ZERO
-	lean = 0.0
-	lean_offset = 0.0
-	_lean_side = 0
-	lean_drop = 0.0
-	_prev_lean = 0.0
+	_slide_boost_cd = 0.0
+	_slide_pending_boost = false
+	_jump_buffer_t = 0.0
+	_land_grace = 0.0
+	_mantle_t = 0.0
 	prot_pending = false
 	# Protection runs for 3 s from the moment you spawn, and ends early as soon
 	# as you move or shoot.
@@ -516,8 +523,6 @@ func respawn(pos: Vector3, protect: bool) -> void:
 		pitch = 0.0
 		rotation.y = yaw
 	set_alive(true)
-	if is_local:
-		BirdEvent.roll()  # 1% chance on every spawn / respawn
 
 
 func on_damaged(_head_hit: bool) -> void:
@@ -616,23 +621,40 @@ func _physics_process(delta: float) -> void:
 	else:
 		aiming = can_input and Input.is_action_pressed("aim")
 
-	# --- Crouch input
+	# --- Crouch input. Crouch / Slide (crouch_tap) also starts slides; Crouch
+	# (crouch_only) only ever crouches.
 	var crouch_tap := can_input and not frozen and Input.is_action_just_pressed("crouch")
+	var any_crouch_tap := crouch_tap or (can_input and not frozen and Input.is_action_just_pressed("crouch_only"))
 	var want_crouch: bool
 	if Settings.g("toggle_crouch"):
-		if crouch_tap:
+		if any_crouch_tap:
 			_crouch_toggle = not _crouch_toggle
 		want_crouch = _crouch_toggle
 	else:
-		want_crouch = can_input and Input.is_action_pressed("crouch")
-	if crouch_tap:
+		want_crouch = can_input and (Input.is_action_pressed("crouch") or Input.is_action_pressed("crouch_only"))
+	if any_crouch_tap:
 		if phasing > 0.0 and _now - _last_crouch_tap < 0.35:
 			floor_phase = 0.4  # Phantom: drop through the floor
 		_last_crouch_tap = _now
+	var jump_tap := can_input and not frozen and Input.is_action_just_pressed("jump")
+	# A jump pressed just before you land happens the moment you touch down.
+	_jump_buffer_t = JUMP_BUFFER if jump_tap else _jump_buffer_t - delta
 
 	var on_floor := is_on_floor()
+	var landed_fall := 0.0  # how hard you just landed (m/s), 0 if you didn't
+	_recent_fall_t -= delta
 	if on_floor:
-		coyote = 0.1
+		landed_fall = _air_fall
+		_air_fall = 0.0
+		if landed_fall > 0.0:
+			_recent_fall = landed_fall
+			_recent_fall_t = 0.3
+			_land_grace = LAND_GRACE  # no ground friction for a moment: time a hop to keep your speed
+	else:
+		_air_fall = maxf(_air_fall, -velocity.y)
+	_land_grace -= delta
+	if on_floor:
+		coyote = 0.12
 		_last_wall_normal = Vector3.ZERO
 		if wallrunning:
 			_end_wallrun()
@@ -640,15 +662,16 @@ func _physics_process(delta: float) -> void:
 		wall_jumps = 0   # ...and so does wall-jump fatigue
 	else:
 		coyote -= delta
+	_slide_boost_cd -= delta
+	_mantle_cd -= delta
 
 	var hvel := Vector3(velocity.x, 0.0, velocity.z)
 	var speed_now := hvel.length()
 	var forward_in := move_in.y < -0.3
 	# Sprint is the default pace: moving forward is always a sprint, except while
-	# aiming, crouching, sliding or holding a lean key (leaning slows you to a walk).
+	# aiming, crouching or sliding.
 	var sprint_in := can_input
-	_update_lean_side(can_input and not frozen)
-	sprinting = sprint_in and forward_in and not aiming and not sliding and not want_crouch and _lean_side == 0
+	sprinting = sprint_in and forward_in and not aiming and not sliding and not want_crouch
 
 	# --- Wall contact coyote time (0.1 s)
 	_wall_touch_t -= delta
@@ -656,63 +679,112 @@ func _physics_process(delta: float) -> void:
 	if not on_floor and is_on_wall():
 		_wall_touch_t = 0.1
 		_wall_touch_n = get_wall_normal()
+	elif not on_floor and not wallrunning and speed_now > WALLRUN_MIN_SPEED:
+		# A wall just beside you counts too, so running alongside one (without
+		# steering into it) still starts a wall run.
+		var side_n := _side_wall(Basis(Vector3.UP, yaw).x)
+		if side_n != Vector3.ZERO:
+			_wall_touch_t = 0.1
+			_wall_touch_n = side_n
 
-	# --- Wall run start: airborne, moving fast along a wall, holding forward.
-	# No limit on how many walls you can chain before landing.
+	# --- Mantle: jump at a ledge (or fall past one) while pushing into it and you
+	# climb straight up onto it, keeping some of your speed.
+	var facing := Basis(Vector3.UP, yaw) * Vector3.FORWARD
+	if not on_floor and not wallrunning and forward_in and _mantle_cd <= 0.0 and _wall_touch_t > 0.0 and velocity.y < MANTLE_MAX_UP and facing.dot(-_wall_touch_n) > 0.5:
+		var mh := _mantle_height(-Vector3(_wall_touch_n.x, 0.0, _wall_touch_n.z).normalized())
+		if mh > -1.0:
+			_mantle_t = MANTLE_TIME
+			_mantle_dir = -Vector3(_wall_touch_n.x, 0.0, _wall_touch_n.z).normalized()
+			_mantle_top = global_position.y + maxf(mh, 0.0)
+			_mantle_speed = maxf(speed_now * 0.6, MANTLE_PUSH)
+			_mantle_cd = 0.5
+			_wall_touch_t = 0.0
+			Sfx.play("jump", -6.0, 0.8)
+			_on_moved()
+
+	# --- Wall run start: airborne, moving along a wall, holding forward. A run
+	# starts at least at WALLRUN_START, lifts you a little, and can't go straight
+	# back onto the wall you just left (another wall, or the floor, resets that).
 	if not on_floor and not wallrunning and phasing <= 0.0 and wallrun_cd <= 0.0 and forward_in and _wall_touch_t > 0.0:
 		var n := _wall_touch_n
 		var along := hvel.normalized().dot(n)
-		if absf(n.y) < 0.3 and speed_now > WALLRUN_MIN_SPEED and velocity.y > -8.0 and absf(along) < 0.85:
+		var same_wall := _last_wall_normal != Vector3.ZERO and Vector3(n.x, 0.0, n.z).normalized().dot(_last_wall_normal) > 0.9
+		if absf(n.y) < 0.3 and speed_now > WALLRUN_MIN_SPEED and velocity.y > -9.0 and absf(along) < 0.9 and not same_wall:
 			wallrunning = true
 			wall_normal = Vector3(n.x, 0.0, n.z).normalized()
-			wallrun_t = WALLRUN_TIME
-			velocity.y = maxf(velocity.y, 2.0)
+			wallrun_t = 0.0
+			# Entering a run catches your fall and gives a small lift (Titanfall-style:
+			# runs stay roughly level and sink slowly at the end).
+			velocity.y = clampf(velocity.y, WALLRUN_LIFT, WALLRUN_LIFT * 1.6)
 			sliding = false
 			_on_moved()
 
-	# --- Slide start
+	# --- Slide start: Crouch / Slide while sprinting (or fast, or in the air: then
+	# it starts when you land). Momentum carries straight in, and the boost only
+	# comes back after SLIDE_BOOST_CD, so slide-hopping keeps speed without
+	# stacking boosts.
 	if crouch_tap and not sliding and not wallrunning and slide_cd <= 0.0 and speed_now > SLIDE_START_MIN and (sprint_in or speed_now > SPRINT or not on_floor):
 		sliding = true
 		_slope_t = 0.0
 		slide_dir = hvel.normalized()
-		if on_floor:
-			var boosted := maxf(speed_now + 2.2, SPRINT * 1.35 * _speed_mult())
-			hvel = slide_dir * minf(boosted, MAX_GROUND_SPEED)
+		_slide_pending_boost = _slide_boost_cd <= 0.0
 		_on_moved()
+	if sliding and on_floor and _slide_pending_boost:
+		_slide_pending_boost = false
+		_slide_boost_cd = SLIDE_BOOST_CD
+		var fall := _recent_fall if _recent_fall_t > 0.0 else 0.0
+		hvel = slide_dir * minf(hvel.length() + SLIDE_BOOST * _speed_mult() + _landing_bonus(fall), MAX_SLIDE_SPEED * _speed_mult())
+		_recent_fall_t = 0.0
+		landed_fall = 0.0  # already used
 
 	if wallrunning:
-		wallrun_t -= delta
+		wallrun_t += delta
 		var tangent := Vector3.UP.cross(wall_normal).normalized()
 		if tangent.dot(hvel) < 0.0:
 			tangent = -tangent
-		# Wall runs hold you at running speed, but not once wall-jump fatigue sets in.
-		hvel = tangent * maxf(hvel.length(), SPRINT * _speed_mult() * 0.95 * _wall_fatigue()) - wall_normal * 1.0
+		# Wall runs speed you up towards WALLRUN_SPEED (never slowing you if you came
+		# in faster), but not once wall-jump fatigue sets in.
+		var run_speed := maxf(hvel.length(), WALLRUN_START * _speed_mult() * _wall_fatigue())
+		var top := WALLRUN_SPEED * _speed_mult() * _wall_fatigue()
+		if run_speed < top:
+			run_speed = minf(top, run_speed + WALLRUN_ACCEL * delta)
+		hvel = tangent * run_speed - wall_normal * 1.0
+		# Gravity on the wall starts light and builds, so a run slowly sinks.
 		var fg := _fatigue_gravity()
-		velocity.y = maxf(velocity.y - WALLRUN_GRAVITY * fg * delta, -1.5 * fg)
+		var g := lerpf(WALLRUN_GRAVITY, WALLRUN_GRAVITY_END, clampf(wallrun_t / WALLRUN_TIME, 0.0, 1.0))
+		velocity.y = maxf(velocity.y - g * fg * delta, -3.0 * fg)
 		var still_on_wall := _ray_hits(global_position + Vector3(0, 1.0, 0), -wall_normal * (RADIUS + 0.4))
-		if wallrun_t <= 0.0 or not still_on_wall or not forward_in or crouch_tap:
+		if wallrun_t >= WALLRUN_TIME or not still_on_wall or not forward_in or any_crouch_tap:
 			_end_wallrun()
 		crouching = false
 	elif sliding:
 		var spd := hvel.length()
 		if on_floor:
+			# Landing hard in a slide turns some of the fall into speed.
+			spd += _landing_bonus(landed_fall)
 			var n := get_floor_normal()
 			var downhill := Vector3(n.x, 0.0, n.z).dot(slide_dir)
 			if downhill > 0.05:
-				# Sliding downhill: accelerate, and keep accelerating the longer you stay on the slope.
+				# Sliding downhill: accelerate (more on steeper slopes), and keep
+				# accelerating the longer you stay on the slope.
 				_slope_t += delta
 				spd += GRAVITY * downhill * (1.0 + _slope_t * SLOPE_ACCEL_RAMP) * delta
 			else:
+				# Flat or uphill: gravity slows you going up, plus friction, plus drag
+				# above sprint speed so a big boost still falls off.
 				_slope_t = 0.0
 				spd += GRAVITY * downhill * delta
-				spd -= SLIDE_FRICTION * delta
+				var over := maxf(0.0, spd - SPRINT * _speed_mult())
+				spd -= (SLIDE_FRICTION + over * SLIDE_DRAG * SLIDE_FRICTION) * delta
+		# A slide keeps going the way you were moving; steering only bends it a little.
 		if wish != Vector3.ZERO:
-			slide_dir = (slide_dir + wish * delta * 1.2).normalized()
-		hvel = slide_dir * clampf(spd, 0.0, MAX_SLIDE_SPEED)
+			slide_dir = (slide_dir + wish * delta * 1.0).normalized()
+		hvel = slide_dir * clampf(spd, 0.0, MAX_SLIDE_SPEED * _speed_mult())
 		# Midair slides carry on until you land; on the ground they run until momentum is gone.
 		var end_slide: bool = (on_floor and spd < SLIDE_END) or (not bool(Settings.g("toggle_crouch")) and not want_crouch)
 		if end_slide:
 			sliding = false
+			_slide_pending_boost = false
 			slide_cd = SLIDE_CD
 		crouching = sliding or want_crouch
 	else:
@@ -727,28 +799,47 @@ func _physics_process(delta: float) -> void:
 		base *= _speed_mult()
 		var target := wish * base
 		if on_floor:
-			if wish != Vector3.ZERO and speed_now > base + 0.2 and hvel.normalized().dot(wish) > 0.5:
-				# Keep some slide-jump momentum when landing.
-				hvel = hvel.move_toward(target, 14.0 * delta)
+			if _land_grace > 0.0 and speed_now > base:
+				# Just landed faster than you run: no friction yet, so a hop now keeps it all.
+				hvel = _air_strafe(hvel, wish, base, delta)
+			elif speed_now > base + 0.2:
+				# Faster than you run (after a slide or hops): bleed it off quickly,
+				# while you can still steer.
+				var spd := maxf(base, speed_now - OVERSPEED_FRICTION * delta)
+				var dir := (hvel / speed_now).lerp(wish if wish != Vector3.ZERO else hvel / speed_now, clampf(6.0 * delta, 0.0, 1.0)).normalized()
+				hvel = dir * spd
 			else:
 				hvel = hvel.move_toward(target, (ACCEL if wish != Vector3.ZERO else DECEL) * delta)
 		else:
-			var cap := maxf(speed_now, base)
-			hvel += wish * AIR_ACCEL * delta
-			if hvel.length() > cap:
-				hvel = hvel.normalized() * cap
+			hvel = _air_strafe(hvel, wish, base, delta)
 	_set_crouch_shape(crouching)
 
+	# --- Mantling: rise up the face until your feet clear the ledge, then carry
+	# over the top (so it works even on narrow ledges like a car roof).
+	var mantling := _mantle_t > 0.0
+	if mantling:
+		_mantle_t -= delta
+		if is_on_ceiling() or (_mantle_t < MANTLE_TIME - 0.4 and global_position.y < _mantle_top + 0.08):
+			# Blocked overhead, or not clearing it: give up and fall back.
+			_mantle_t = 0.0
+			mantling = false
+		elif global_position.y < _mantle_top + 0.08:
+			velocity.y = MANTLE_RISE
+			hvel = Vector3.ZERO  # straight up the face (pushing in would catch on lips)
+		else:
+			velocity.y = minf(velocity.y, 1.0)
+			hvel = _mantle_dir * _mantle_speed
+			_mantle_t = minf(_mantle_t, 0.12)  # a moment over the top, then you're free
+
 	# --- Gravity & jumping
-	if not on_floor and not wallrunning:
+	if not on_floor and not wallrunning and not mantling:
 		velocity.y -= GRAVITY * _fatigue_gravity() * delta
-	var jump_tap := can_input and not frozen and Input.is_action_just_pressed("jump")
-	if jump_tap:
+	if _jump_buffer_t > 0.0:
 		if wallrunning or (_wall_jump_t > 0.0 and not on_floor):
-			# Kick off the wall, keeping (and adding to) the speed along it so it chains
-			# into the next wall run, a slide, or a slide-jump. Also works up to 0.1 s
-			# after leaving the wall. Fatigue: from the 4th wall jump without touching
-			# the floor, each kick loses speed instead of adding it.
+			# Kick off the wall: out, up, and along it, keeping (and adding to) your
+			# speed so it chains into the next wall run, a slide, or a slide-hop.
+			# Also works up to 0.1 s after leaving the wall. Fatigue: from the 4th
+			# wall jump without touching the floor, each kick loses speed instead.
 			var n := wall_normal if wallrunning else _wall_jump_n
 			wall_jumps += 1
 			var fatigue := _wall_fatigue()
@@ -762,25 +853,31 @@ func _physics_process(delta: float) -> void:
 			_end_wallrun()
 			_wall_jump_t = 0.0
 			_wall_touch_t = 0.0
+			_jump_buffer_t = 0.0
 			_on_moved()
 		elif coyote > 0.0:
+			# Jumping keeps all your speed: slide-hops and bunny hops chain.
 			if crouching and not sliding and _can_stand():
 				crouching = false
 				_crouch_toggle = false
 				_set_crouch_shape(false)
 			velocity.y = JUMP_V
 			coyote = 0.0
+			_jump_buffer_t = 0.0
+			_land_grace = 0.0
 			if sliding:
 				sliding = false
+				_slide_pending_boost = false
 				slide_cd = SLIDE_CD
 				crouching = false
 				_crouch_toggle = false
 				_set_crouch_shape(false)
 			_on_moved()
-		elif addon == "skywalker" and dj_ready:
+		elif jump_tap and addon == "skywalker" and dj_ready:
 			# Extra height, current momentum kept as-is (no added speed).
 			dj_ready = false
 			velocity.y = DJUMP_V
+			_jump_buffer_t = 0.0
 			if sliding:
 				sliding = false
 				slide_cd = SLIDE_CD
@@ -799,30 +896,6 @@ func _physics_process(delta: float) -> void:
 	if hvel.length() > DOOR_SLAM_SPEED:
 		_check_door_slam(hvel.normalized())
 
-	# --- Leaning (sliding and wall running stand you back up)
-	var lean_in := float(_lean_side)
-	var lean_rate := LEAN_SPEED
-	if lean_in != 0.0 and lean != 0.0 and signf(lean_in) != signf(lean):
-		lean_rate = LEAN_SWITCH_SPEED
-	lean = move_toward(lean, lean_in, delta * lean_rate)
-	# Along an arc round the waist. (No easing round the middle, so swapping sides
-	# goes straight through without a pause.)
-	var max_angle := asin(LEAN_DIST / LEAN_PIVOT)
-	var want_off := sin(lean * max_angle) * LEAN_PIVOT
-	if absf(want_off) > 0.01:
-		var right := Basis(Vector3.UP, yaw).x
-		var eye := global_position + Vector3(0, head.position.y, 0)
-		var space := get_world_3d().direct_space_state
-		var q := PhysicsRayQueryParameters3D.create(eye, eye + right * signf(want_off) * (absf(want_off) + 0.3), MASK_AIM, [get_rid()])
-		var r := space.intersect_ray(q)
-		if not r.is_empty():
-			var hit: Vector3 = r.position
-			want_off = signf(want_off) * maxf(0.0, eye.distance_to(hit) - 0.3)
-	_prev_lean = lean_offset
-	lean_offset = want_off
-	lean_drop = LEAN_PIVOT - sqrt(LEAN_PIVOT * LEAN_PIVOT - lean_offset * lean_offset)
-	head_col.position.x = lean_offset
-
 	# --- Phantom collision masks
 	if floor_phase > 0.0:
 		collision_mask = MASK_PHASE_DOWN
@@ -831,8 +904,10 @@ func _physics_process(delta: float) -> void:
 	else:
 		collision_mask = MASK_FULL
 
+	_bounce_cd -= delta
+	var fall_v := velocity.y
 	move_and_slide()
-	_check_bounce_pad()
+	_check_bounce_pad(fall_v)
 	if global_position.y < -25.0:
 		global_position = Vector3(global_position.x, 2.0, global_position.z)
 		velocity = Vector3.ZERO
@@ -862,7 +937,70 @@ func _physics_process(delta: float) -> void:
 	_net_acc += delta
 	if _net_acc >= NET_INTERVAL:
 		_net_acc = 0.0
-		_net_state.rpc(global_position, yaw, pitch, velocity, _flags(), lean_offset)
+		_net_state.rpc(global_position, yaw, pitch, velocity, _flags())
+
+
+## Extra slide speed from landing hard: a share of the fall speed beyond
+## LAND_SLIDE_MIN_FALL.
+func _landing_bonus(fall: float) -> float:
+	return maxf(0.0, fall - LAND_SLIDE_MIN_FALL) * LAND_SLIDE_GAIN
+
+
+## Air movement. Below your run speed you speed up and steer freely; above it,
+## it works like Titanfall / Source air strafing: strafing while you turn adds a
+## little speed (up to AIR_SPEED_LIMIT), pushing straight on adds nothing, and
+## holding back brakes.
+func _air_strafe(hvel: Vector3, wish: Vector3, base: float, delta: float) -> Vector3:
+	if wish == Vector3.ZERO:
+		return hvel
+	var speed := hvel.length()
+	if speed < base:
+		hvel += wish * AIR_ACCEL * delta
+		if hvel.length() > base:
+			hvel = hvel.normalized() * base
+		return hvel
+	var wd := wish.normalized()
+	var add := AIR_WISH_CAP - hvel.dot(wd)
+	if add <= 0.0:
+		return hvel
+	var out := hvel + wd * minf(AIR_STRAFE_ACCEL * delta, add)
+	var limit := maxf(speed, AIR_SPEED_LIMIT * _speed_mult())
+	if out.length() > limit:
+		out = out.normalized() * limit
+	return out
+
+
+## Normal of a wall right beside you (to your left or right, within reach), or ZERO.
+func _side_wall(right: Vector3) -> Vector3:
+	var space := get_world_3d().direct_space_state
+	var from := global_position + Vector3(0, 1.0, 0)
+	for side: float in [1.0, -1.0]:
+		var q := PhysicsRayQueryParameters3D.create(from, from + right * side * (RADIUS + 0.45), MapBuilder.L_WALL | MapBuilder.L_SOLID, [get_rid()])
+		var r := space.intersect_ray(q)
+		if not r.is_empty() and absf((r.normal as Vector3).y) < 0.3:
+			return r.normal
+	return Vector3.ZERO
+
+
+## How high (above your feet) the top of a ledge just ahead in dir is, if you can
+## mantle onto it (a flat top MANTLE_MIN..MANTLE_MAX up, with room to stand), or -1.
+func _mantle_height(dir: Vector3) -> float:
+	var space := get_world_3d().direct_space_state
+	var mask := MASK_FULL & ~MapBuilder.L_PLAYER & ~64
+	var from := global_position + Vector3(0, MANTLE_MAX + 0.3, 0) + dir * (RADIUS + 0.45)
+	var q := PhysicsRayQueryParameters3D.create(from, from - Vector3(0, MANTLE_MAX + 0.3 - MANTLE_MIN, 0), mask, [get_rid()])
+	var r := space.intersect_ray(q)
+	if r.is_empty() or (r.normal as Vector3).y < 0.7:
+		return -1.0
+	var top: Vector3 = r.position
+	var room := PhysicsShapeQueryParameters3D.new()
+	room.shape = probe_shape
+	room.transform = Transform3D(Basis.IDENTITY, top + Vector3(0, STAND_H * 0.5 + 0.1, 0))
+	room.collision_mask = mask
+	room.exclude = [get_rid()]
+	if not space.intersect_shape(room, 1).is_empty():
+		return -1.0
+	return top.y - global_position.y
 
 
 func _tick_timers(delta: float) -> void:
@@ -961,11 +1099,10 @@ func _flags() -> int:
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
-func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int, ln: float) -> void:
-	if not (pos.is_finite() and vel.is_finite() and is_finite(y) and is_finite(p) and is_finite(ln)):
+func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int) -> void:
+	if not (pos.is_finite() and vel.is_finite() and is_finite(y) and is_finite(p)):
 		return
 	_observe_speed(pos)
-	net_lean = clampf(ln, -LEAN_DIST, LEAN_DIST)
 	net_pos = pos
 	net_yaw = y
 	net_pitch = clampf(p, -PI * 0.5, PI * 0.5)
@@ -1018,8 +1155,6 @@ func _remote_update(delta: float) -> void:
 	rotation.y = lerp_angle(rotation.y, net_yaw, clampf(delta * 18.0, 0.0, 1.0))
 	head.rotation.x = net_pitch
 	_set_crouch_shape((net_flags & (F_CROUCH | F_SLIDE)) != 0)
-	head_col.position.x = lerpf(head_col.position.x, net_lean, clampf(delta * 25.0, 0.0, 1.0))
-	body_root.rotation.z = -asin(clampf(head_col.position.x / 1.7, -1.0, 1.0))  # tilt the body so the head is where they lean
 	var me := multiplayer.get_unique_id()
 	nameplate.visible = alive and Game.in_match and Net.team_of(me) == team
 	if nameplate.visible:
@@ -1081,13 +1216,7 @@ func _local_visuals(delta: float) -> void:
 	head.rotation.x = pitch
 	var f := Engine.get_physics_interpolation_fraction()
 	var p := _prev_pos.lerp(_cur_pos, f) if alive else global_position
-	# The lean is interpolated between physics ticks like the position, and its
-	# tilt follows it directly (not smoothed), so it never steps or lags.
-	var lean_now := lerpf(_prev_lean, lean_offset, f)
-	var lean_roll := -lean_now / LEAN_DIST * deg_to_rad(LEAN_ROLL)
-	var drop := LEAN_PIVOT - sqrt(LEAN_PIVOT * LEAN_PIVOT - lean_now * lean_now)
-	var lean_v := Basis(Vector3.UP, yaw).x * lean_now
-	cam.global_transform = Transform3D(Basis.from_euler(Vector3(pitch + deg_to_rad(recoil * 1.2), yaw, cam_roll + lean_roll)), p + Vector3(0, head.position.y - drop, 0) + lean_v)
+	cam.global_transform = Transform3D(Basis.from_euler(Vector3(pitch + deg_to_rad(recoil * 1.2), yaw, cam_roll)), p + Vector3(0, head.position.y, 0))
 	if viewmodel == null:
 		return
 	var hspeed := Vector2(velocity.x, velocity.z).length()

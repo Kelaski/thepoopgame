@@ -22,7 +22,6 @@ const CROSSHAIR_SCENE := preload("res://assets/ui/crosshair_editor.tscn")
 const SPRAY_SCENE := preload("res://assets/ui/spray_menu.tscn")
 const SKYBOX_SCENE := preload("res://assets/ui/skybox_menu.tscn")
 const CHAT_SCENE := preload("res://assets/ui/chat_box.tscn")
-const BIRD_SCENE := preload("res://assets/ui/bird_event.tscn")
 const VERSION_SCENE := preload("res://assets/ui/version_label.tscn")
 
 var ui_layer: CanvasLayer
@@ -49,7 +48,6 @@ func _ready() -> void:
 	ui_root.theme = UiKit.make_theme()
 	ui_layer.add_child(ui_root)
 	Settings.colors_changed.connect(_on_colors_changed)
-	add_child(BIRD_SCENE.instantiate())
 	var chat: ChatBox = CHAT_SCENE.instantiate()
 	chat.name = "Chat"
 	ui_root.add_child(chat)

@@ -75,7 +75,16 @@ static func make_theme() -> Theme:
 	t.set_stylebox("panel", "ItemList", _sb(BG_SOFT, 6, 6.0))
 	t.set_color("font_selected_color", "TabContainer", ACCENT)
 	t.set_color("font_unselected_color", "TabContainer", TEXT)
-	t.set_stylebox("panel", "PopupMenu", _sb(BG_SOFT, 6, 6.0))
+	# Dropdown lists: fully opaque with a border, so the options never blend into
+	# the menu (or the match) behind them.
+	var pop := _sb(Color(BG_SOFT, 1.0).darkened(0.15), 6, 6.0)
+	pop.set_border_width_all(1)
+	pop.border_color = Color(ACCENT, 0.6)
+	t.set_stylebox("panel", "PopupMenu", pop)
+	t.set_stylebox("hover", "PopupMenu", _sb(Color(ACCENT, 0.35), 4, 4.0))
+	t.set_color("font_color", "PopupMenu", TEXT)
+	t.set_color("font_hover_color", "PopupMenu", Color.WHITE)
+	t.set_font_size("font_size", "PopupMenu", 18)
 	# Type variations used by the scenes in assets/ui (Theme Type Variation in the
 	# Inspector), so palette changes recolour every screen.
 	for v: Array in [["TitleLabel", ACCENT], ["AccentLabel", ACCENT], ["MutedLabel", MUTED]]:

@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player/holo_reticle.gd" id="1_holo"]
+
+[node name="HoloReticle" type="Sprite3D" groups=["first_person_only"]]
+cast_shadow = 0
+pixel_size = 0.00014
+shaded = false
+double_sided = true
+no_depth_test = true
+render_priority = 10
+texture_filter = 4
+script = ExtResource("1_holo")

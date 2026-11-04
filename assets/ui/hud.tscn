@@ -11,6 +11,38 @@
 [ext_resource type="Script" path="res://scripts/ui/loadout_panel.gd" id="9_neqbl"]
 [ext_resource type="PackedScene" path="res://assets/ui/tag_indicator.tscn" id="10_tagin"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vitals"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 10.0
+bg_color = Color(0.03, 0.035, 0.05, 0.62)
+border_width_left = 4
+border_color = Color(0.95, 0.95, 0.95, 0.9)
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+skew = Vector2(0.22, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gear"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.03, 0.035, 0.05, 0.62)
+border_width_right = 4
+border_color = Color(0.95, 0.95, 0.95, 0.9)
+corner_radius_top_left = 3
+corner_radius_bottom_left = 3
+skew = Vector2(-0.22, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_chip"]
+content_margin_left = 12.0
+content_margin_top = 3.0
+content_margin_right = 12.0
+content_margin_bottom = 4.0
+bg_color = Color(0.03, 0.035, 0.05, 0.5)
+skew = Vector2(0.22, 0)
+
 [node name="Hud" type="Control" unique_id=1473329737]
 layout_mode = 3
 anchors_preset = 0
@@ -202,102 +234,187 @@ theme_override_constants/separation = 4
 layout_mode = 0
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_left = 24.0
+offset_left = 28.0
 offset_top = -24.0
-offset_right = 24.0
+offset_right = 28.0
 offset_bottom = -24.0
 grow_vertical = 0
 mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="SpeedChip" type="PanelContainer" parent="Health" unique_id=1820463178]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_chip")
+
+[node name="Speed" type="Label" parent="Health/SpeedChip" unique_id=1820463177]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudMutedLabel"
+theme_override_font_sizes/font_size = 14
+text = "0.0 M/S"
+
+[node name="HpPanel" type="PanelContainer" parent="Health" unique_id=1820463179]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_vitals")
+
+[node name="HpRows" type="VBoxContainer" parent="Health/HpPanel" unique_id=1820463180]
+layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="HpLabel" type="Label" parent="Health" unique_id=1991799914]
+[node name="HpTop" type="HBoxContainer" parent="Health/HpPanel/HpRows" unique_id=1820463181]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="HpLabel" type="Label" parent="Health/HpPanel/HpRows/HpTop" unique_id=1991799914]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudLabel"
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 32
 text = "100"
 
-[node name="HpBar" type="ColorRect" parent="Health" unique_id=1283184226]
-custom_minimum_size = Vector2(280, 16)
+[node name="HpMax" type="Label" parent="Health/HpPanel/HpRows/HpTop" unique_id=1820463182]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 8
+theme_type_variation = &"HudMutedLabel"
+theme_override_font_sizes/font_size = 15
+text = "/ 100  HP"
+
+[node name="HpBar" type="ColorRect" parent="Health/HpPanel/HpRows" unique_id=1283184226]
+custom_minimum_size = Vector2(260, 10)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.55)
 
-[node name="HpFill" type="ColorRect" parent="Health/HpBar" unique_id=1496832007]
+[node name="HpFill" type="ColorRect" parent="Health/HpPanel/HpRows/HpBar" unique_id=1496832007]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = 278.0
-offset_bottom = 14.0
+offset_left = 1.0
+offset_top = 1.0
+offset_right = 259.0
+offset_bottom = 9.0
 mouse_filter = 2
 color = Color(0.47843137, 0.81960785, 0.41568628, 1)
 
+[node name="HpTicks" type="Control" parent="Health/HpPanel/HpRows/HpBar" unique_id=1820463183]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="WeaponBox" type="VBoxContainer" parent="." unique_id=1028570859]
-custom_minimum_size = Vector2(306, 0)
 layout_mode = 0
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -24.0
+offset_left = -28.0
 offset_top = -24.0
-offset_right = -24.0
+offset_right = -28.0
 offset_bottom = -24.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 6
 
-[node name="Ammo" type="Label" parent="WeaponBox" unique_id=795490119]
+[node name="AddonPanel" type="PanelContainer" parent="WeaponBox" unique_id=546038836]
+layout_mode = 2
+size_flags_horizontal = 8
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_gear")
+
+[node name="AddonRows" type="VBoxContainer" parent="WeaponBox/AddonPanel" unique_id=546038837]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="AddonTop" type="HBoxContainer" parent="WeaponBox/AddonPanel/AddonRows" unique_id=546038838]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="AddonName" type="Label" parent="WeaponBox/AddonPanel/AddonRows/AddonTop" unique_id=366000562]
 unique_name_in_owner = true
 layout_mode = 2
-theme_type_variation = &"HudLabel"
-theme_override_font_sizes/font_size = 34
-text = "30 / 30"
-horizontal_alignment = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HudAccentLabel"
+theme_override_font_sizes/font_size = 15
+text = "TRACKSTAR"
 
-[node name="Weapon" type="Label" parent="WeaponBox" unique_id=803706230]
+[node name="AddonText" type="Label" parent="WeaponBox/AddonPanel/AddonRows/AddonTop" unique_id=1840531389]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudMutedLabel"
-theme_override_font_sizes/font_size = 18
-text = "Assault Rifle"
+theme_override_font_sizes/font_size = 13
+text = "READY"
 horizontal_alignment = 2
 
-[node name="AddonName" type="Label" parent="WeaponBox" unique_id=366000562]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudAccentLabel"
-theme_override_font_sizes/font_size = 16
-text = "Trackstar"
-horizontal_alignment = 2
-
-[node name="AddonBar" type="ColorRect" parent="WeaponBox" unique_id=546038835]
-custom_minimum_size = Vector2(306, 22)
+[node name="AddonBar" type="ColorRect" parent="WeaponBox/AddonPanel/AddonRows" unique_id=546038835]
+custom_minimum_size = Vector2(220, 6)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.55)
 
-[node name="AddonFill" type="ColorRect" parent="WeaponBox/AddonBar" unique_id=1921031704]
+[node name="AddonFill" type="ColorRect" parent="WeaponBox/AddonPanel/AddonRows/AddonBar" unique_id=1921031704]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 2.0
-offset_top = 2.0
-offset_right = 304.0
-offset_bottom = 20.0
+offset_left = 1.0
+offset_top = 1.0
+offset_right = 219.0
+offset_bottom = 5.0
 mouse_filter = 2
 
-[node name="AddonText" type="Label" parent="WeaponBox/AddonBar" unique_id=1840531389]
+[node name="WeaponPanel" type="PanelContainer" parent="WeaponBox" unique_id=795490120]
+layout_mode = 2
+size_flags_horizontal = 8
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_gear")
+
+[node name="WeaponRow" type="HBoxContainer" parent="WeaponBox/WeaponPanel" unique_id=795490121]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="WeaponInfo" type="VBoxContainer" parent="WeaponBox/WeaponPanel/WeaponRow" unique_id=795490122]
+layout_mode = 2
+size_flags_vertical = 8
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Weapon" type="Label" parent="WeaponBox/WeaponPanel/WeaponRow/WeaponInfo" unique_id=803706230]
 unique_name_in_owner = true
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
+layout_mode = 2
 theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 16
+text = "ASSAULT RIFLE"
+horizontal_alignment = 2
+
+[node name="AmmoMax" type="Label" parent="WeaponBox/WeaponPanel/WeaponRow/WeaponInfo" unique_id=795490123]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudMutedLabel"
 theme_override_font_sizes/font_size = 14
-text = "READY"
-horizontal_alignment = 1
-vertical_alignment = 1
+text = "/ 30"
+horizontal_alignment = 2
+
+[node name="Ammo" type="Label" parent="WeaponBox/WeaponPanel/WeaponRow" unique_id=795490119]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 40
+text = "30"
+horizontal_alignment = 2
 
 [node name="Fps" type="Label" parent="." unique_id=2017711065]
 unique_name_in_owner = true
