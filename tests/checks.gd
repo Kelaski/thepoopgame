@@ -66,8 +66,32 @@ func _ready() -> void:
 	rk.fire_cd = 1.0
 	rk.reloading = 2.0
 	rk.on_kill()
-	_check(rk.ammo == int(Weapons.DATA.sniper.mag) and rk.fire_cd == 0.0 and rk.reloading == 0.0, "Reload on Kill refills and re-chambers")
+	_check(rk.ammo == int(Weapons.DATA.sniper.mag) and rk.fire_cd == 0.0 and rk.reloading == 0.0, "Reload on Kill re-chambers the sniper")
+	# Other guns: the magazine is topped off, the time between shots is left alone.
+	rk.weapon = "ar"
+	rk.ammo = 3
+	rk.fire_cd = 0.08
+	rk.on_kill()
+	_check(rk.ammo == int(Weapons.DATA.ar.mag) and is_equal_approx(rk.fire_cd, 0.08), "Reload on Kill tops off the AR")
 	rk.free()
+
+	# Kill reward: nothing for 0.3 s, then 30 health over 3 s.
+	var saved_alive: Dictionary = Game.alive_ids
+	var saved_hp: Dictionary = Game.hp
+	Game.alive_ids = {7: true}
+	Game.hp = {7: 50.0}
+	Game._now = 0.0
+	Game._kill_heals = {7: [[Game.KILL_HEAL_DELAY, Game.KILL_HEAL]]}
+	var at := {}
+	for i in 240:  # 4 s at 60 frames a second
+		Game._now = i / 60.0
+		Game._tick_kill_heals(1.0 / 60.0)
+		if i == 17 or i == 108 or i == 239:  # 0.28 s, 1.8 s, 4 s
+			at[i] = Game.hp[7]
+	_check(is_equal_approx(at[17], 50.0) and absf(at[108] - 65.0) < 1.0 and absf(at[239] - 80.0) < 0.01, "kill heal: %.0f, %.0f, %.0f health at 0.28 s, 1.8 s, 4 s" % [at[17], at[108], at[239]])
+	Game.alive_ids = saved_alive
+	Game.hp = saved_hp
+	Game._kill_heals.clear()
 
 	# Sprays: a small PNG is fine, one whose header claims 4096x4096 is refused before decoding.
 	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)

@@ -149,6 +149,7 @@ var bridges: Array = []      # [building A id, building B id, material]
 var sky_height := 0.0        # height of the sky barrier
 var _tallest := 0.0          # top of the tallest structure built so far
 var _in: Interiors           # furnishes the buildings (scripts/map/interiors.gd), during build() only
+var wide_decor: Array = []   # [wall face point, half width along the wall] of each wide wall piece (tests/city.gd checks them)
 
 
 ## Height of a Tag spot: the floor of the storey it names (o[3], 0 = ground) in
@@ -1144,7 +1145,7 @@ func _build_building(b: Array) -> void:
 		var dt: float = ds[1]
 		var outward: Vector3 = [Vector3.FORWARD, Vector3.BACK, Vector3.LEFT, Vector3.RIGHT][dside]
 		var door_c: Vector3 = [Vector3(dt, 0, z0), Vector3(dt, 0, z1), Vector3(x0, 0, dt), Vector3(x1, 0, dt)][dside]
-		_prefab("building/door_awning", _at(door_c, _yaw_to(outward)))
+		_prefab("building/door_awning", _at(door_c, _yaw_to(outward)), {"awning": st.trim})  # in the building's accent colour
 		if dside in signed:
 			continue
 		signed.append(dside)

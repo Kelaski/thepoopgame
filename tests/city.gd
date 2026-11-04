@@ -79,6 +79,7 @@ func _ready() -> void:
 	await _check_sniper_walls()
 	await _check_upper_tags()
 	await _check_mantles()
+	_check_dock_doors()
 	print("TEST PASS" if _fails == 0 else "TEST FAIL (%d)" % _fails)
 	get_tree().quit(1 if _fails else 0)
 
@@ -188,3 +189,28 @@ func _check_mantles() -> void:
 		else:
 			print("CITY mantle at a %s: %.2f m" % [c[0], h])
 	stage.queue_free()
+
+
+## Loading dock doors (4 m wide) only on the ground floor, wholly inside their building.
+func _check_dock_doors() -> void:
+	var n := 0
+	var parent := Node3D.new()
+	add_child(parent)
+	for seed in range(1, 16):
+		var mb := MapBuilder.new()
+		mb.build(parent, "large", seed * 31)
+		for d in mb.wide_decor:
+			n += 1
+			var face: Vector3 = d[0]
+			var along: Vector3 = d[1]
+			var inside := false
+			for b in mb.buildings:
+				var r: Rect2 = b.rect.grow(0.05)
+				if r.has_point(Vector2(face.x - along.x, face.z - along.z)) and r.has_point(Vector2(face.x + along.x, face.z + along.z)):
+					inside = true
+			if face.y > 0.5 or not inside:
+				_fail("seed %d: loading dock door at %s is %s" % [seed * 31, face, "above the ground floor" if face.y > 0.5 else "past its building's wall"])
+		for c in parent.get_children():
+			c.free()
+	parent.free()
+	print("CITY loading dock doors checked: %d" % n)

@@ -7,6 +7,22 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.23.0
+
+### Changed
+- **Shooting while you run** brings your gun up to the same position as when you're standing still, instead of firing from the lowered sprint pose.
+- **Other players' shots** now come out of their gun, not the middle of their body.
+- **Kill reward:** a kill now heals you 30 health over 3 seconds, starting a moment after the kill, instead of all at once. Several kills heal at the same time.
+- **Death screen:** it says "they have xx health left" again, with the killer's health when they got you.
+- **Ping** in the lobby and scoreboard updates every 5 seconds, so the numbers don't flicker.
+- **Reload on Kill:** a kill tops off your magazine (finishing any reload at once). The shotgun and sniper are also ready to fire again straight away, but only when you click again, so holding fire doesn't waste the shot.
+- **Slides above 20 m/s keep their speed:** a slide no longer cuts a faster speed down to 20 m/s. Friction slows it the same way as a slower slide.
+- **Warp** plays its sound once for everyone else, where the player reappears.
+- **No glide on landing:** landing without holding a movement key stops you quickly, like letting go on the ground.
+- **Warehouse loading dock doors** only appear on the ground floor, and never next to a corner or a window, where they used to stick out of the building.
+- **Door awnings** no longer block you, and each building's awnings are in its own accent colour.
+- **Cars and taxis** have a new, simpler model: one flush body, glass set into the cabin, and wheels tucked in under the arches.
+
 ## 0.22.0
 
 ### Added

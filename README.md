@@ -26,7 +26,7 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 
 **Staying in the fight:**
 - **Respawn:** 6 s after you're eliminated (7 s if your team has the Tag), near your team. You get 3 s of spawn protection, which ends early if you move or shoot.
-- **Health:** 100 HP (150 with the Spiked Bat). It regenerates quickly after 8 s without taking damage, and every kill gives you 30 HP back.
+- **Health:** 100 HP (150 with the Spiked Bat). It regenerates quickly after 8 s without taking damage, and every kill heals you 30 HP over 3 s.
 - **No friendly fire.** Bullets pass through teammates.
 - **Damage direction:** a red arc around your crosshair points at whoever is shooting you.
 
@@ -62,7 +62,7 @@ You pick one **primary** and one **secondary** addon. Each has its own ability k
 | **Stalker** | See red trails behind every enemy. Ability: see every player through walls for 4 s. 14 s cooldown. |
 | **Skywalker** | A double jump that keeps your momentum. |
 | **Phantom** | Phase through walls and doors for 2 s, and double-tap crouch to drop through a floor. 23 s cooldown. |
-| **Reload on Kill** | Every kill refills your magazine and chambers a round, so the shotgun and sniper can fire again straight away. |
+| **Reload on Kill** | Every kill tops off your magazine. The shotgun and sniper are re-chambered too, so your next click fires straight away. |
 | **Parry** | 0.4 s of invulnerability inside a pink bubble: bullets, swings, grapple pulls and swaps all bounce off. 10 s cooldown. |
 
 ## Movement

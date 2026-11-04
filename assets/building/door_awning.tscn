@@ -12,9 +12,6 @@ rim_tint = 0.6
 [sub_resource type="BoxMesh" id="BoxMesh_uqjtl"]
 size = Vector3(2.3, 0.08, 1.1)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_frh3n"]
-size = Vector3(2.3, 0.08, 1.1)
-
 [sub_resource type="BoxMesh" id="BoxMesh_11nrp"]
 size = Vector3(2.3, 0.2, 0.03)
 
@@ -39,21 +36,14 @@ size = Vector3(0.04, 0.04, 1)
 transform = Transform3D(1, 0, 0, 0, 0.9848077, -0.17364818, 0, 0.17364818, 0.9848077, 0, 2.86, 0.56)
 material_override = SubResource("StandardMaterial3D_35rqj")
 mesh = SubResource("BoxMesh_uqjtl")
-metadata/slot_choices = PackedColorArray(0.7529412, 0.27058825, 0.22745098, 1, 0.18431373, 0.41568628, 0.2901961, 1, 0.24705882, 0.43529412, 0.65882355, 1, 0.9098039, 0.84705883, 0.6901961, 1, 0.2901961, 0.16470589, 0.3529412, 1)
-
-[node name="Collision" type="StaticBody3D" parent="." unique_id=1080176469]
-collision_layer = 2
-collision_mask = 0
-
-[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=920036431]
-transform = Transform3D(1, 0, 0, 0, 0.9848077, -0.17364818, 0, 0.17364818, 0.9848077, 0, 2.86, 0.56)
-shape = SubResource("BoxShape3D_frh3n")
+metadata/slot = "awning"
 
 [node name="Part1" type="MeshInstance3D" parent="." unique_id=1905337977]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.76, 1.1)
 material_override = SubResource("StandardMaterial3D_35rqj")
 mesh = SubResource("BoxMesh_11nrp")
-metadata/slot_choices = PackedColorArray(0.7529412, 0.27058825, 0.22745098, 1, 0.18431373, 0.41568628, 0.2901961, 1, 0.24705882, 0.43529412, 0.65882355, 1, 0.9098039, 0.84705883, 0.6901961, 1, 0.2901961, 0.16470589, 0.3529412, 1)
+metadata/slot = "awning"
+metadata/slot_darken = 0.18
 
 [node name="Part2" type="MeshInstance3D" parent="." unique_id=302119246]
 transform = Transform3D(1, 0, 0, 0, 0.9396926, 0.34202012, 0, -0.34202012, 0.9396926, -1.05, 2.7, 0.5)

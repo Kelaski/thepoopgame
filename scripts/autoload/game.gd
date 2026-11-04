@@ -38,7 +38,10 @@ const PICKUP_RADIUS := 1.7
 const ENEMY_PICKUP_BONUS := 10.0
 const TEAM_PICKUP_BONUS := 15.0
 const RUNNER_KILL_REWARD := 5.0
-const KILL_HEAL := 30.0  # health given back to the killer
+const KILL_HEAL := 30.0       # health a kill gives back to the killer...
+const KILL_HEAL_TIME := 3.0   # ...over this long...
+const KILL_HEAL_DELAY := 0.3  # ...starting this long after the kill
+var _kill_heals := {}  # server: id -> [[start time, health still to give], ...] (kills stack)
 
 const TIMES_OF_DAY := ["Morning", "Afternoon", "Evening", "Night"]
 
@@ -306,6 +309,7 @@ func _server_tick(delta: float) -> void:
 				hp[id] = max_hp_of(id)
 				_last_hit[id] = -100.0
 				_on_respawn.rpc(id, pos)
+	_tick_kill_heals(delta)
 	# Health regeneration
 	for id in hp.keys():
 		if alive_ids.get(id, false) and hp[id] < max_hp_of(id) and _now - _last_hit.get(id, -100.0) >= REGEN_DELAY:
@@ -318,6 +322,28 @@ func _server_tick(delta: float) -> void:
 	if _sync_acc >= 0.5:
 		_sync_acc = 0.0
 		_push_state()
+
+
+## Kill rewards in progress: each heals KILL_HEAL / KILL_HEAL_TIME per second
+## once it starts, up to max health. Dying ends them.
+func _tick_kill_heals(delta: float) -> void:
+	for id in _kill_heals.keys():
+		if not alive_ids.get(id, false):
+			_kill_heals.erase(id)
+			continue
+		var left := []
+		for h: Array in _kill_heals[id]:
+			if _now < float(h[0]):
+				left.append(h)
+				continue
+			var amount := minf(float(h[1]), KILL_HEAL / KILL_HEAL_TIME * delta)
+			hp[id] = minf(max_hp_of(id), float(hp.get(id, 0.0)) + amount)
+			if float(h[1]) - amount > 0.001:
+				left.append([h[0], float(h[1]) - amount])
+		if left.is_empty():
+			_kill_heals.erase(id)
+		else:
+			_kill_heals[id] = left
 
 
 func _check_pickups() -> void:
@@ -399,10 +425,11 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool, noscope 
 		_thrown[killer] = [THROWN_HITS, _now + THROWN_WINDOW]  # the victim's gun goes flying
 	if Net.players.has(killer) and killer != victim:
 		Net.players[killer].kills += 1
-		# Kill reward: heal the killer (capped at their max health).
+		# Kill reward: the killer regenerates KILL_HEAL over KILL_HEAL_TIME (see _tick_kill_heals).
 		if alive_ids.get(killer, false):
-			hp[killer] = minf(max_hp_of(killer), float(hp.get(killer, 0.0)) + KILL_HEAL)
-			_sync_hp.rpc(hp)
+			if not _kill_heals.has(killer):
+				_kill_heals[killer] = []
+			_kill_heals[killer].append([_now + KILL_HEAL_DELAY, KILL_HEAL])
 	var victim_pos := Vector3.ZERO
 	if world.players.has(victim):
 		victim_pos = world.players[victim].global_position

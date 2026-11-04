@@ -84,10 +84,16 @@ func decorate_interior(type: String, floors: int, fh: float, inner: Rect2, stair
 					mb._prefab("furniture/decor/rug", MapBuilder._at(Vector3(rc.x, y, rc.y), PI * 0.5 if turn else 0.0))
 					break
 	# Wall modules: a wall piece, a floor piece against the wall, or nothing
+	var slots := {}    # [storey, face position] of every solid module, to find neighbours
+	var covered := {}  # ...and the ones a wide piece covers
+	for ws: Array in mb._wall_slots:
+		slots[_slot_key(ws[2], ws[0])] = true
 	for ws: Array in mb._wall_slots:
 		var face: Vector3 = ws[0]
 		var inward: Vector3 = ws[1]
 		var k: int = ws[2]
+		if covered.has(_slot_key(k, face)):
+			continue  # behind a loading dock door
 		var zones: Array = floor_zones[k]
 		var xf := MapBuilder._at(face, MapBuilder._yaw_to(inward))
 		var roll := mb.rng.randf()
@@ -95,8 +101,11 @@ func decorate_interior(type: String, floors: int, fh: float, inner: Rect2, stair
 			if not _blocked(_wall_foot(face, inward, 0.4), zones):
 				mb._prefab("furniture/decor/fire_extinguisher", xf)
 		elif roll < 0.03 + P_WALL_DECOR:
+			var item: String = wall_items[mb.rng.randi() % wall_items.size()]
+			if item in WIDE_WALL_ITEMS and not _wide_slot_free(slots, covered, ws):
+				continue  # it would hang over a corner, a window or the floor above
 			if not _blocked(_wall_foot(face, inward, 0.4), zones):
-				mb._prefab("furniture/decor/" + wall_items[mb.rng.randi() % wall_items.size()], xf)
+				mb._prefab("furniture/decor/" + item, xf)
 		elif roll < 0.03 + P_WALL_DECOR + P_FLOOR_DECOR and not floor_items.is_empty():
 			var foot := _wall_foot(face, inward, 1.2)
 			if not _blocked(foot, zones) and not mb._hits_any(foot, floor_cells[k], 0.2):
@@ -112,6 +121,33 @@ func decorate_interior(type: String, floors: int, fh: float, inner: Rect2, stair
 		][side]
 		var inward: Vector3 = [Vector3.BACK, Vector3.FORWARD, Vector3.RIGHT, Vector3.LEFT][side]
 		mb._prefab("furniture/decor/exit_sign", MapBuilder._at(p + Vector3(0, MapBuilder.DOOR_H + 0.35, 0), MapBuilder._yaw_to(inward)))
+
+
+## Wall pieces wider than their 2 m module (the 4 m loading dock door). They go
+## only on the ground floor, on a module with solid wall on both sides, and
+## never overlap each other.
+const WIDE_WALL_ITEMS := ["loading_dock_door"]
+
+
+static func _slot_key(storey: int, face: Vector3) -> Vector3i:
+	return Vector3i(roundi(face.x * 10.0), storey, roundi(face.z * 10.0))
+
+
+## True (and the three modules are marked covered) if a wide piece fits on wall slot ws.
+func _wide_slot_free(slots: Dictionary, covered: Dictionary, ws: Array) -> bool:
+	var face: Vector3 = ws[0]
+	var inward: Vector3 = ws[1]
+	if int(ws[2]) != 0:
+		return false
+	var along := Vector3(inward.z, 0.0, -inward.x) * MapBuilder.MODULE
+	var keys := [_slot_key(0, face - along), _slot_key(0, face), _slot_key(0, face + along)]
+	for k: Vector3i in keys:
+		if not slots.has(k) or covered.has(k):
+			return false  # missing (a corner, a window, a door) or under another wide piece
+	for k: Vector3i in keys:
+		covered[k] = true
+	mb.wide_decor.append([face, along])
+	return true
 
 
 ## Floor rect in front of a wall module: 1.9 m along the wall, depth into the room.

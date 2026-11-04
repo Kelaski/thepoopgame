@@ -63,24 +63,31 @@ func _ready() -> void:
 
 # ------------------------------------------------------------------ ping
 # The host times a round trip to each player once a second and shares the
-# numbers: everyone's game goes through the host, so that's the ping that counts.
+# numbers every 5 s (so the lobby and scoreboard don't flicker): everyone's game
+# goes through the host, so that's the ping that counts.
 const PING_INTERVAL := 1.0
+const PING_SHOW_INTERVAL := 5.0
 var pings := {}  # peer id -> round trip to the host in ms (the host itself isn't listed)
+var _measured := {}  # host: the latest (smoothed) measurements, shared every PING_SHOW_INTERVAL
 var _ping_acc := 0.0
+var _ping_show_acc := PING_SHOW_INTERVAL  # the first numbers go out straight away
 
 
 func _process(delta: float) -> void:
 	if not online or not multiplayer.is_server():
 		return
 	_ping_acc += delta
+	_ping_show_acc += delta
 	if _ping_acc < PING_INTERVAL:
 		return
 	_ping_acc = 0.0
-	for id in pings.keys():
+	for id in _measured.keys():
 		if not players.has(id):
-			pings.erase(id)
-	_sync_pings.rpc(pings)
-	_on_pings(pings)
+			_measured.erase(id)
+	if _ping_show_acc >= PING_SHOW_INTERVAL and not _measured.is_empty():
+		_ping_show_acc = 0.0
+		_sync_pings.rpc(_measured)
+		_on_pings(_measured.duplicate())
 	_ping.rpc(Time.get_ticks_usec())
 
 
@@ -103,7 +110,7 @@ func _pong(t: int) -> void:
 	if not multiplayer.is_server() or not players.has(id) or t > now or now - t > 10_000_000:
 		return  # a time we never sent
 	var ms := (now - t) / 1000.0
-	pings[id] = roundi(lerpf(float(pings.get(id, ms)), ms, 0.5))  # smoothed a little
+	_measured[id] = roundi(lerpf(float(_measured.get(id, ms)), ms, 0.5))  # smoothed a little
 
 
 @rpc("authority", "call_remote", "unreliable")
@@ -525,6 +532,8 @@ func leave() -> void:
 	_chat_times.clear()
 	_spray_up_at.clear()
 	pings.clear()
+	_measured.clear()
+	_ping_show_acc = PING_SHOW_INTERVAL
 	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()

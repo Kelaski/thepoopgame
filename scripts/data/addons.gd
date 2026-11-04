@@ -58,7 +58,7 @@ const DATA := {
 	},
 	"reloader": {
 		"name": "Reload on Kill",
-		"desc": "Every kill refills your magazine and re-chambers, so the shotgun and sniper can fire again straight away.",
+		"desc": "Every kill tops off your magazine. The shotgun and sniper are re-chambered too: click again to fire straight away.",
 		"active": false,
 	},
 	"parry": {

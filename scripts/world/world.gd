@@ -520,7 +520,7 @@ func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
 		if not e.is_finite() or e.distance_to(origin) > 450.0:
 			return
 	Sfx.play_at(weapon, origin, 0.0, 140.0 if weapon == "sniper" else 90.0, randf_range(0.95, 1.05))
-	add_tracers(origin, ends, weapon)
+	add_tracers(p.tp_muzzle_pos(origin), ends, weapon)  # from their gun, not the middle of their body
 
 
 func add_tracers(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:

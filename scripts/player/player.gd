@@ -117,6 +117,7 @@ const ROCKET_SCENE := preload("res://assets/models/rocket_flame.tscn")
 const PRI := 0  # addon slots: primary (Use Primary key)...
 const SEC := 1  # ...and secondary (Use Secondary key)
 const ROCKET_FLAME_TIME := 0.6
+const SHOT_POSE_TIME := 0.45  # s the gun is held up (the standing pose) after each shot
 const TELEPORT_GRACE := 0.6  # s after the host moves someone (Warp, Swap) that their updates skip the movement check
 
 var peer_id := 0
@@ -144,6 +145,8 @@ var head_col: CollisionShape3D
 var viewmodel: Node3D
 var vm_gun: Node3D
 var vm_muzzle: Node3D
+var _tp_muzzle: Node3D   # muzzle of the gun everyone else sees (their tracers start here)
+var _shot_pose := 0.0    # time left holding the gun up after a shot (no sprint pose, no bob)
 var vm_flash: MeshInstance3D
 
 # Local simulation state
@@ -193,6 +196,7 @@ var _rocket_t := 0.0       # flame showing (local: time left; sent as F_ROCKET)
 var swap_t := 0.0          # Swap: beam charging (the host does the swap)
 var _parry_t := 0.0        # pink bubble showing (everyone)
 var _parry_bubble: Node3D
+var _fresh_click := false  # Reload on Kill re-chambered the gun: the next shot waits for a new click
 var _predicted_kills := {}  # Reload on Kill: victim id -> when we refilled for their kill ahead of the host
 var _rocket_flame: Node3D
 var invisible := false
@@ -457,6 +461,7 @@ func _rebuild_tp_gun() -> void:
 	var wm: WeaponModel = WEAPON_SCENES[weapon].instantiate()
 	wm.make_third_person()
 	tp_gun.add_child(wm)
+	_tp_muzzle = wm.muzzle()
 	var gp := wm.glint_point()
 	if gp:
 		_glint = GLINT_SCENE.instantiate()
@@ -464,6 +469,12 @@ func _rebuild_tp_gun() -> void:
 		gp.add_child(_glint)
 	if body_root:
 		_apply_overlay()  # the new gun gets the outline too
+
+
+## Where this player's shots start for everyone else: the muzzle of their
+## third-person gun (which follows where they aim), or fallback without one.
+func tp_muzzle_pos(fallback: Vector3) -> Vector3:
+	return _tp_muzzle.global_position if is_instance_valid(_tp_muzzle) else fallback
 
 
 ## Body transparency (Hider / Phantom / spawn protection), applied to every part
@@ -823,7 +834,8 @@ func _physics_process(delta: float) -> void:
 		_slide_pending_boost = false
 		_slide_boost_cd = SLIDE_BOOST_CD
 		var fall := _recent_fall if _recent_fall_t > 0.0 else 0.0
-		hvel = slide_dir * minf(hvel.length() + SLIDE_BOOST * _speed_mult() + _landing_bonus(fall), MAX_SLIDE_SPEED * _speed_mult())
+		# The boost tops out at MAX_SLIDE_SPEED, but never takes speed away from a faster entry.
+		hvel = slide_dir * maxf(hvel.length(), minf(hvel.length() + SLIDE_BOOST * _speed_mult() + _landing_bonus(fall), MAX_SLIDE_SPEED * _speed_mult()))
 		_recent_fall_t = 0.0
 		landed_fall = 0.0  # already used
 
@@ -870,7 +882,10 @@ func _physics_process(delta: float) -> void:
 		# A slide keeps going the way you were moving; steering only bends it a little.
 		if wish != Vector3.ZERO:
 			slide_dir = (slide_dir + wish * delta * 1.0).normalized()
-		hvel = slide_dir * clampf(spd, 0.0, MAX_SLIDE_SPEED * _speed_mult())
+		# Slopes and landings can't take a slide past MAX_SLIDE_SPEED, but a faster
+		# slide (from a fall, a grapple, a wall kick) isn't cut down to it either:
+		# friction slows it just like a slower one.
+		hvel = slide_dir * clampf(spd, 0.0, maxf(MAX_SLIDE_SPEED * _speed_mult(), speed_now))
 		# Midair slides carry on until you land; on the ground they run until momentum is gone.
 		var end_slide: bool = (on_floor and spd < SLIDE_END) or (not bool(Settings.g("toggle_crouch")) and not want_crouch)
 		if end_slide:
@@ -890,8 +905,9 @@ func _physics_process(delta: float) -> void:
 		base *= _speed_mult()
 		var target := wish * base
 		if on_floor:
-			if _land_grace > 0.0 and speed_now > base:
-				# Just landed faster than you run: no friction yet, so a hop now keeps it all.
+			if _land_grace > 0.0 and speed_now > base and wish != Vector3.ZERO:
+				# Just landed faster than you run: no friction yet, so a hop now keeps it
+				# all. Only while you hold a movement key: with none you stop (below).
 				hvel = _air_strafe(hvel, wish, base, delta)
 			elif wish == Vector3.ZERO:
 				# No movement keys: stop as quickly as from a walk, whatever your speed
@@ -1017,7 +1033,9 @@ func _physics_process(delta: float) -> void:
 	if can_input and not frozen:
 		if Input.is_action_just_pressed("reload"):
 			_start_reload()
-		if Input.is_action_pressed("fire"):
+		if _fresh_click and not Input.is_action_pressed("fire"):
+			_fresh_click = false
+		if Input.is_action_pressed("fire") and not _fresh_click:
 			_try_fire()
 		if Input.is_action_just_pressed("addon"):
 			_use_addon(PRI)
@@ -1407,15 +1425,18 @@ func _local_visuals(delta: float) -> void:
 	var hspeed := Vector2(velocity.x, velocity.z).length()
 	if is_on_floor() and not sliding:
 		bob += delta * hspeed * 1.6
-	var bob_amt := (1.0 - ads_t) * clampf(hspeed / SPRINT, 0.0, 1.0)
+	# Just fired: the gun stays up as if standing still (no sprint pose, no bob).
+	_shot_pose = maxf(0.0, _shot_pose - delta)
+	var held_up := _shot_pose > 0.0
+	var bob_amt := 0.0 if held_up else (1.0 - ads_t) * clampf(hspeed / SPRINT, 0.0, 1.0)
 	var pos := VM_HIP.lerp(_vm_ads, ads_t)
 	pos += Vector3(sin(bob) * 0.014, absf(cos(bob)) * 0.014, 0.0) * bob_amt
 	pos.z += recoil * 0.035
-	if sprinting:
+	if sprinting and not held_up:
 		pos += Vector3(-0.04, -0.03, 0.02)
 	viewmodel.position = viewmodel.position.lerp(pos, clampf(delta * 20.0, 0.0, 1.0))
 	var rot := Vector3.ZERO
-	if sprinting:
+	if sprinting and not held_up:
 		rot = Vector3(deg_to_rad(-10.0), deg_to_rad(25.0), 0.0)
 	if reloading > 0.0:
 		rot.x += deg_to_rad(-30.0)
@@ -1474,6 +1495,8 @@ func _try_fire() -> void:
 		_start_reload()
 		return
 	fire_cd = shot_interval()
+	if weapon != "bat":
+		_shot_pose = SHOT_POSE_TIME
 	_on_moved()
 	if invisible:
 		_end_invis()  # Firing breaks Hider invisibility.
@@ -1704,9 +1727,7 @@ func net_teleport(pos: Vector3, move_self: bool) -> void:
 		swap_t = 0.0
 		Sfx.play("warp", -2.0, 0.8)
 		return
-	# Everyone hears it: where they vanished and where they reappear.
-	Sfx.play_at("warp", global_position + Vector3(0, 1.2, 0), -2.0, 50.0)
-	Sfx.play_at("warp", pos + Vector3(0, 1.2, 0), -2.0, 50.0, 0.8)
+	Sfx.play_at("warp", pos + Vector3(0, 1.2, 0), -2.0, 50.0)  # once, where they reappear
 	global_position = pos
 	net_pos = pos
 	_anchor_t = -1.0
@@ -1714,8 +1735,10 @@ func net_teleport(pos: Vector3, move_self: bool) -> void:
 	_net_free_until = Time.get_ticks_msec() / 1000.0 + TELEPORT_GRACE
 
 
-## Reload on Kill: a kill refills the magazine and chambers a round. A kill we
-## already predicted (see _predict_kill) was refilled for then.
+## Reload on Kill: a kill tops off the magazine (a reload in progress is done at
+## once). The shotgun and sniper are also re-chambered, so they can fire again
+## straight away, but only on a new click: holding fire doesn't waste the shot.
+## A kill we already predicted (see _predict_kill) was refilled for then.
 func on_kill(victim := 0) -> void:
 	if _predicted_kills.has(victim):
 		_predicted_kills.erase(victim)
@@ -1724,7 +1747,9 @@ func on_kill(victim := 0) -> void:
 		return
 	ammo = int(Weapons.DATA[weapon].mag)
 	reloading = 0.0
-	fire_cd = 0.0
+	if weapon in Addons.RECHAMBER_WEAPONS:
+		fire_cd = 0.0
+		_fresh_click = Input.is_action_pressed("fire")
 	Sfx.play("reload", -4.0, 1.4)
 
 

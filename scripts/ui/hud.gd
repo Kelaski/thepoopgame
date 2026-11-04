@@ -347,9 +347,8 @@ func _process(delta: float) -> void:
 				detail += "  -  NO-SCOPE"
 			if _killer_head:
 				detail += "  -  HEADSHOT"
-			# Their health now (it updates while you watch), while they're still alive.
-			if Game.is_alive(_killer_id):
-				detail += "  -  they have %d HP left" % int(ceil(float(Game.hp.get(_killer_id, _killer_hp))))
+			if _killer_hp >= 0.0:
+				detail += "  -  they have %d health left" % int(ceil(_killer_hp))  # when they got you
 			_death_detail.text = detail
 		else:
 			_death_title.text = ""
