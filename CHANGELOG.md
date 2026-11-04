@@ -7,6 +7,11 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.18.1
+
+### Changed
+- **Air strafing with W held:** holding forward while you strafe no longer stops you gaining speed. Only the sideways part of your input counts, so W + A/D works like A/D on its own.
+
 ## 0.18.0
 
 **All settings and keybinds are reset to the defaults once with this update.**

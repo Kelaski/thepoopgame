@@ -949,7 +949,8 @@ func _landing_bonus(fall: float) -> float:
 ## Air movement. Below your run speed you speed up and steer freely; above it,
 ## it works like Titanfall / Source air strafing: strafing while you turn adds a
 ## little speed (up to AIR_SPEED_LIMIT), pushing straight on adds nothing, and
-## holding back brakes.
+## holding back brakes. Holding forward while you strafe doesn't get in the way:
+## only the sideways part of your input counts.
 func _air_strafe(hvel: Vector3, wish: Vector3, base: float, delta: float) -> Vector3:
 	if wish == Vector3.ZERO:
 		return hvel
@@ -959,7 +960,14 @@ func _air_strafe(hvel: Vector3, wish: Vector3, base: float, delta: float) -> Vec
 		if hvel.length() > base:
 			hvel = hvel.normalized() * base
 		return hvel
-	var wd := wish.normalized()
+	var wd := wish
+	var heading := hvel / speed
+	var ahead := wd.dot(heading)
+	if ahead > 0.0:
+		wd -= heading * ahead  # drop the "keep going forward" part, keep the strafe
+	if wd.length() < 0.05:
+		return hvel  # just holding forward: keep your speed
+	wd = wd.normalized()
 	var add := AIR_WISH_CAP - hvel.dot(wd)
 	if add <= 0.0:
 		return hvel
