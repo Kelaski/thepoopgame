@@ -50,6 +50,7 @@ const CHAT_BURST := 5        # messages allowed...
 const CHAT_WINDOW := 4.0     # ...per this many seconds
 const SPRAY_UPLOAD_INTERVAL := 3.0  # seconds between spray uploads per player
 var online := false
+var _code_salt := 0  # scrambles this lobby's join code (new each time you host)
 
 
 func _ready() -> void:
@@ -132,6 +133,7 @@ func host(port: int) -> String:
 		return "Could not host on port %d (error %d). Is it already in use?" % [port, err]
 	multiplayer.multiplayer_peer = peer
 	online = true
+	_code_salt = JoinCode.new_salt()  # a different join code for every lobby
 	# Only the host takes incoming connections, so only hosting asks Windows
 	# for the firewall rule (players who just join never see the prompt).
 	if not firewall_allowed():
@@ -232,7 +234,7 @@ func _refresh_status() -> void:
 	var addr := public_ip
 	if addr == "" and _upnp_ip != "" and not is_private_ip(_upnp_ip):
 		addr = _upnp_ip
-	online_code = JoinCode.encode(addr, _host_port) if addr != "" else ""
+	online_code = JoinCode.encode(addr, _host_port, _code_salt) if addr != "" else ""
 	var lines := []
 	if not _ip_lookup_done and addr == "":
 		lines.append("Looking up your public address...")
@@ -477,13 +479,15 @@ func request_loadout(weapon: String, addon: String) -> void:
 	var id := sender()
 	if not players.has(id):
 		return
-	# Loadouts may only change in the lobby or while dead.
-	if Game.in_match and Game.is_alive(id):
+	# Loadouts may only change in the lobby, in the pre-round countdown, or while dead.
+	if Game.in_match and Game.is_alive(id) and Game.phase != Game.Phase.PREROUND:
 		return
 	if Weapons.DATA.has(weapon):
 		players[id].weapon = weapon
 	if Addons.DATA.has(addon):
 		players[id].addon = addon
+	if Game.in_match and Game.is_alive(id):
+		Game.hp[id] = Game.max_hp_of(id)  # swapped in the countdown: full health for the new weapon (the bat has 150)
 	_broadcast()
 
 

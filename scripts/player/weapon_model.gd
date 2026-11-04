@@ -14,6 +14,10 @@ extends Node3D
 @export var viewmodel_rotation := Vector3.ZERO
 ## Rotation (degrees) while held by other players (the bat rests on the shoulder).
 @export var held_rotation := Vector3.ZERO
+## Nudge (metres) and size of the first-person viewmodel (the bat sits lower and
+## a little smaller, so less of its handle fills the screen).
+@export var viewmodel_offset := Vector3.ZERO
+@export var viewmodel_scale := 1.0
 
 
 ## Turns this copy into the third-person (held) model.
@@ -28,6 +32,8 @@ func make_third_person() -> void:
 func make_first_person() -> void:
 	_no_shadows(self)
 	rotation_degrees = viewmodel_rotation
+	position += viewmodel_offset
+	scale = Vector3.ONE * viewmodel_scale
 
 
 func muzzle() -> Node3D:

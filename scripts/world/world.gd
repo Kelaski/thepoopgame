@@ -10,6 +10,7 @@ const TRAIL_WIDTH := 0.34      # half-width in metres
 
 const PLAYER_SCENE := preload("res://assets/models/player.tscn")
 const TAG_SCENE := preload("res://assets/models/tag.tscn")
+const TAG_HIGHLIGHT := preload("res://assets/materials/tag_highlight.tres")
 const SPRAY_SCENE := preload("res://assets/models/spray_decal.tscn")
 const PING_SCENE := preload("res://assets/models/ping_marker.tscn")
 ## Ping kinds: [title shown on the marker, lifetime in seconds]
@@ -68,6 +69,7 @@ var _tod_t := 1.0     # 0..1 through the blend
 var tag_node: Node3D
 var tag_beam: MeshInstance3D
 var tag_gem: MeshInstance3D
+var _tag_highlit := false  # the countdown's see-through-walls highlight is on
 
 var _fx_mesh: ImmediateMesh
 var _fx_inst: MeshInstance3D
@@ -308,8 +310,8 @@ func sync_players() -> void:
 			p.set_alive(Game.is_alive(id))
 		else:
 			var p: Player = players[id]
-			if not p.alive:
-				p.refresh_loadout()
+			if not p.alive or Game.phase == Game.Phase.PREROUND:
+				p.refresh_loadout()  # a loadout picked in the countdown applies at once
 	for id in players.keys():
 		if not Net.players.has(id):
 			players[id].queue_free()
@@ -577,6 +579,16 @@ func _update_stalker_scan() -> void:
 
 func _update_tag_visual(delta: float) -> void:
 	update_tag()
+	# During the countdown the Tag shows through walls, so everyone sees where to go.
+	var hl: bool = Game.phase == Game.Phase.PREROUND
+	if hl != _tag_highlit:
+		_tag_highlit = hl
+		var mat: Material = null
+		if hl:
+			mat = TAG_HIGHLIGHT.duplicate()
+			(mat as StandardMaterial3D).albedo_color = Color(Mats.TAG_COLOR, 0.8)
+		tag_gem.material_overlay = mat
+		tag_beam.material_overlay = mat
 	if tag_node.visible:
 		tag_gem.rotation.y += delta * 2.0
 		tag_gem.position.y = 1.0 + sin(Time.get_ticks_msec() * 0.003) * 0.15

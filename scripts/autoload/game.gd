@@ -29,7 +29,7 @@ const ROUND_TIME := 120.0
 const ROUNDS_TO_WIN := 3
 const RESPAWN_TIME := 6.0
 const HOLDER_RESPAWN_PENALTY := 1.0  # extra respawn time for the team carrying the Tag
-const PREROUND_TIME := 5.0
+const PREROUND_TIME := 3.0  # the 3, 2, 1 countdown
 const ROUND_END_TIME := 6.0
 const MATCH_END_TIME := 10.0
 const REGEN_DELAY := 8.0
@@ -224,6 +224,10 @@ func _physics_process(delta: float) -> void:
 			timer = maxf(0.0, timer - delta)
 		if phase in [Phase.PREROUND, Phase.ROUND_END, Phase.MATCH_END]:
 			phase_time = maxf(0.0, phase_time - delta)
+		# The countdown runs out at the same moment for everyone: start moving
+		# straight away rather than waiting for the server's next update.
+		if phase == Phase.PREROUND and phase_time <= 0.0:
+			phase = Phase.RUSH
 		for id in respawn_left.keys():
 			respawn_left[id] = maxf(0.0, respawn_left[id] - delta)
 		return
@@ -237,7 +241,6 @@ func _server_tick(delta: float) -> void:
 			if phase_time <= 0.0:
 				phase = Phase.RUSH
 				_push_state()
-				_announce.rpc("GO! Grab the Tag!", Color.WHITE)
 		Phase.RUSH:
 			_check_pickups()  # the clock only starts at the first pickup
 		Phase.DROPPED:
@@ -648,8 +651,6 @@ func _begin_round(rnd: int, obj: int, _team_dots: Array, spawns: Dictionary, sc:
 				p.respawn(spawns[id], false)
 			else:
 				p.set_alive(false)
-	Sfx.play("round", -4.0)
-	announce.emit("Round %d - Get to the %s!" % [rnd, world.builder.objectives[obj].name if world else "Tag"], Color.WHITE)
 	state_changed.emit()
 
 

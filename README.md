@@ -1,461 +1,135 @@
 # Tag Rush
 
-A team-based, first-person objective shooter built in **Godot 4.7 (GDScript only, no extra plugins)**.
-Two teams of up to 8 race to a randomly chosen objective, grab **the Tag**, and the team holding it
-has to keep its **Runner** alive for 2 minutes. Best of 5 (first to 3 round wins).
+**Grab the Tag. Protect your Runner. Outrun everyone.**
 
-Models are being moved from code into Godot scenes you can open and edit in the editor:
-- **Done:** the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), all 82 map props and furniture items plus 30 interior decor pieces (`assets/props/`, `assets/furniture/`), the 16 modular building pieces (`assets/building/`), and every menu and the HUD (`assets/ui/`). See **Editing models**, **Editing props**, **Editing buildings** and **Editing the UI** below.
-- **Still built in code:** the ground, roads, road markings and boundary fence, which are generated from the layout. The UI also builds lists that depend on game data, such as rosters, keybinds and the playlist, at runtime.
-- **Always in code:** sounds and music are synthesized.
+Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two teams race across a city to a single objective, the **Tag**. Whoever grabs it becomes the **Runner**, and their team has to keep them alive while the clock runs down. Everyone else hunts them. Slide, wall-run, grapple and bunny-hop your way across rooftops, through windows and over traffic to get there first.
 
-There are no binary assets: every model, sound and image is made from scenes, code and synthesis.
+**[Download the latest release](https://github.com/Kelaski/thepoopgame/releases)** for Windows or Linux. Patch notes are in the [CHANGELOG](CHANGELOG.md).
 
-## Running it
+## Features
 
-1. Install [Godot 4.7 or newer](https://godotengine.org/download) (standard build, not .NET). The project file is saved with 4.7; older 4.x editors warn when opening it.
-2. Open Godot, choose **Import**, and select this folder's `project.godot`.
-3. Press **F5** (Run Project).
+- **One objective, constant action.** Every round is a race to the same spot, then a fight over it. The Tag can change hands many times before the clock runs out.
+- **Momentum movement.** Slides that keep your speed, slide-hops, bunny hops, air strafing, wall runs, wall kicks and mantling, all chaining into each other. Easy to pick up, with a lot of room to master.
+- **Five weapons, six addons.** Mix an Assault Rifle, SMG, Shotgun, Sniper or Spiked Bat with abilities like invisibility, phasing through walls, a grappling hook or seeing enemies through walls.
+- **A new city every match.** Random cities with offices, a mall, a casino, a school, apartments, a park and more, in three sizes. Every building can be explored, from the ground floor to the roof.
+- **Changing time of day.** Matches start in the morning, afternoon, evening or at night, and the sky shifts between rounds.
+- **Make it yours.** Recolour the menus, teams and sky, design your crosshair and holo sight, upload a spray, set your own skybox and bring your own music.
+- **Play with friends, no accounts.** One player hosts and shares a short join code.
 
-The main menu has **Host Game**, **Play Game**, **Settings**, **Customization** and **Quit**. In a match, **Esc** opens the pause menu: **Resume**, **Settings**, **Customization**, **End Match** (host only) and **Quit**, which leaves to the main menu (the host's button is **Close Server**). A music player sits in its bottom-right corner. Your player name is set in Customization. The game version is shown in the bottom-left corner of every screen (patch notes are in [CHANGELOG.md](CHANGELOG.md)).
+## How a round works
 
-### Hosting / joining
+1. **Countdown.** Both teams start at opposite ends of the map, frozen for a quick **3, 2, 1, GO!** The Tag shows through walls so you can see where to go, and you can press **B** to change your loadout before GO.
+2. **The rush.** Everyone races to the Tag. The first player to touch it becomes the **Runner** and the 2:00 clock starts.
+3. **Defend or hunt.** The Runner's team protects them. Everyone sees the Runner on the minimap, and hunters nearby hear a heartbeat. Each kill the Runner gets takes 5 s off their team's clock.
+4. **Drops.** If the Runner dies, the Tag drops where they fell and the clock keeps running. An enemy who grabs it adds 10 s for their team; a teammate who grabs it adds 15 s.
+5. **Winning.** When the clock hits 0, the team holding the Tag wins the round. If it's lying on the ground, it's **overtime**: whoever grabs it first wins. First to 3 rounds wins the match.
 
-- The game is online only.
-- **Host:** click **Host Game**. The lobby shows your **join code** with a **Copy Code** button, and explains anything that still stands in the way of players connecting:
-  - It looks up your public address (from `api.ipify.org`) to build the code.
-  - It asks your router to open the port automatically with UPnP. If that isn't possible, forward the UDP port to your PC in your router's settings.
-  - It warns you if your internet provider shares your address with other customers (CGNAT). Then nobody can reach you no matter what you forward, so someone else should host.
-- **Port:** UDP **27015** (the `host_port` value in the settings file). The lobby only shows the join code, plus a note if something blocks players from reaching you.
-- **Firewall:** on Windows the game checks for its firewall rule when you host a game (joining never needs it). If the rule is missing, it asks for permission through a Windows administrator (UAC) prompt. Saying yes removes any old rule Windows made for the game (a dismissed "allow access" prompt leaves a *block* rule behind, which overrides allow rules) and allows incoming connections on every network type. If you said no, the lobby has an **Allow Through Firewall** button.
-- **Join:** click **Play Game**, type the code and press **Join**. A plain IP address (or `IP:PORT`) also works in the code box.
-- You can't join your own code from the PC or network that's hosting, because most home routers don't loop the connection back. Test with a friend on another network.
-- A code is just the host's address written in a short form, not a password, so only share it with people you want to play with.
-- Only players on the same version can play together. A player on a different version is told the host's version and sent back to the menu. This also covers builds from before 0.2.0, which can't report a version: the host drops anyone who hasn't registered within 5 s, and a client whose host never accepts it gives up after about 6 s.
-- The host chooses teams (or shuffles them) and clicks **START MATCH**. Players who join mid-match spawn in after the respawn timer.
+**Staying in the fight:**
+- **Respawn:** 6 s after you're eliminated (7 s if your team has the Tag), near your team. You get 3 s of spawn protection, which ends early if you move or shoot.
+- **Health:** 100 HP (150 with the Spiked Bat). It regenerates quickly after 8 s without taking damage, and every kill gives you 30 HP back.
+- **No friendly fire.** Bullets pass through teammates.
+- **Damage direction:** a red arc around your crosshair points at whoever is shooting you.
 
-To test two copies on one machine, run two instances and enter `127.0.0.1` as the code.
-Optional command-line flags (after `--`):
+## Weapons
 
-```
---host  --join=CODE (or IP[:PORT])  --name=NAME  --port=PORT  --autostart=N
-```
+| Weapon | Best at | Details |
+|---|---|---|
+| **Assault Rifle** | Mid range | 33 dmg (45 headshot), 9.5 rounds/s, 30-round magazine, 1.5x holo sight |
+| **SMG** | Close range | 22 dmg (30 headshot), 14 rounds/s, tight hip fire, 40-round magazine |
+| **Shotgun** | Point blank | 13 pellets of 15 dmg up close, 1 shot/s, 6 shells |
+| **Sniper** | Long range | 100 dmg, headshots always kill, pierces a wall and every player in line, 5 rounds. Its scope glints when it's aimed at you |
+| **Spiked Bat** | Speed | 35 dmg, more the faster you're moving (up to 300). 150 HP and +10% speed while held. A killing swing launches your victim's gun |
 
-## Controls (all rebindable in Settings > Keybinds)
+## Addons
+
+| Addon | What it does |
+|---|---|
+| **Hider** | 15 s of invisibility. Fully hidden while still or crouch-walking, faint while moving. Firing ends it. |
+| **Trackstar** | Always 15% faster with quicker reloads. Ability: +35% speed for 6 s. |
+| **Skywalker** | A double jump that keeps your momentum. |
+| **Stalker** | See red trails behind every enemy. Ability: see every player through walls for 4 s. |
+| **Phantom** | Phase through walls and doors for 2 s, and double-tap crouch to drop through a floor. |
+| **Grapple** | Hold to throw a grappling hook (27 m), reel in and swing. Hooking an enemy pulls them to you. |
+
+## Movement
+
+Tag Rush plays fast. Moving forward is always a sprint, and every move keeps your momentum:
+
+- **Slide** while sprinting for a burst of speed. Slides follow the way you're moving, speed up downhill and slow down uphill. The boost comes back every 2 s.
+- **Slide-hop and bunny hop:** jump out of a slide and keep all your speed. Time your next jump as you land to keep it going.
+- **Air strafe:** hold A or D and turn with the mouse to steer and pick up speed in the air.
+- **Wall run** along walls to speed up, then **kick off** to chain into the next wall, a slide or a hop.
+- **Mantle** onto ledges by jumping at them.
+- **Bounce pads:** jump into or onto an umbrella or kiosk awning and it launches you twice as high as a jump.
+- **Doors** fly open when you sprint or slide into them.
+- Top speed is capped at 30 m/s, so even the fastest chains stay readable.
+
+## The city
+
+- **Three sizes:** Small, Medium and Large, chosen by the host in the lobby.
+- **Random or classic:** a freshly generated city every match, or the hand-made Classic city.
+- **Every building can be explored**, with stairs up to an open roof. Shops, offices, a bank vault, a casino floor, a cinema, a school, apartments, a motel, a warehouse and more, each furnished like the real thing.
+- **Busy streets:** stopped traffic you can slide between, bus stops, kiosks and street lamps that light up at night.
+- **A park** with a fountain, a basketball court, a pond, a playground and picnic umbrellas to bounce off.
+- **Rooftop routes:** tower cranes hang bridges between rooftops.
+- **Windows** are open gaps you can shoot, jump and grapple through.
+
+## Make it yours
+
+Open **Customization** from the main menu, the lobby or the pause menu:
+
+- **Player:** your name.
+- **Music:** play the Tag Rush Theme, your own playlist, or both. Add songs from your computer (OGG, MP3 and WAV work out of the box; more formats with [ffmpeg](https://ffmpeg.org) installed).
+- **Colours:** recolour the menus, the teams, the Tag and the sky, or pick a preset (Default, Midnight, Neon, Pastel, Desert). Your colours only change your own screen.
+- **Crosshair:** a full crosshair editor with a live preview and share codes, custom crosshair and sniper scope images, and holo sight reticle options for the AR and SMG.
+- **Spray:** pick an image and press **T** in a match to spray it on a wall.
+- **Skybox:** use any 360° panorama as your sky.
+
+## Playing with friends
+
+- **Host:** click **Host Game**. The lobby shows a **join code** with a **Copy Code** button. Pick the teams and the map, then press **START MATCH**.
+- **Join:** click **Join Game**, type the code and press **Join**.
+- **Firewall:** on Windows, hosting asks once for permission to let players connect. Players who only join are never asked.
+- **Router:** the game opens its port (UDP 27015) automatically when your router allows it. The lobby tells you if something is still in the way, such as a router that needs the port forwarding by hand, or an internet provider that shares your address with other customers.
+- Everyone needs the same version of the game.
+- You can't join your own code from the same network that's hosting. Test with a friend on another network.
+- Each lobby gets a new code. A code is your address in short form, so only share it with people you want to play with.
+
+## Controls
+
+All controls can be rebound in **Settings > Keybinds**.
 
 | Action | Default |
 |---|---|
 | Move | W A S D |
-| Jump / double jump (Skywalker) | Space |
-| Crouch / slide (crouch while sprinting) | Ctrl |
-| Crouch (only ever crouches) | C |
-| Ping | Middle mouse (double tap: danger) |
+| Jump (double jump with Skywalker) | Space |
+| Crouch / slide | Ctrl |
+| Crouch only | C |
 | Addon ability | Left Shift |
-| Interact (doors) | E |
-| Fire / Aim | Mouse 1 / Mouse 2 |
+| Fire / aim | Left / right mouse |
 | Reload | R |
-| Scoreboard | Tab |
-| Loadout (while dead) | B |
+| Interact (doors) | E |
+| Ping (double tap: danger) | Middle mouse |
+| Change loadout (countdown or while dead) | B |
 | Spray | T |
+| Scoreboard | Tab |
 | Chat (all / team) | Enter / Right Shift + Enter |
-| Pause / settings | Esc |
+| Pause | Esc |
 
-There is no sprint key: moving forward is always a sprint. Aiming or crouching slows you to a walk.
-Updating to 0.18.0 resets every setting and keybind to the defaults once (leaning was removed and Interact moved back to E).
+**Pings** mark a spot for you and your team, with a beam of light and a minimap marker. Aim at an enemy to mark them, or double-tap for a red danger ping.
 
-**Changing the default controls:** the defaults are the game's actions in **Project Settings → Input Map** in the Godot editor (`move_forward`, `jump`, `addon`, `chat` and so on).
-- **Changing a default:** change an action's key there and every player who hasn't rebound it gets the new key.
-- **Adding inputs:** you can give an action more than one input, such as a second key or a gamepad button. They all keep working until a player rebinds that action in game.
-- **Player rebinds:** a rebind in Settings → Keybinds replaces the action's inputs with the player's key or button. It's saved in their settings file, and **Reset Keybinds** brings the Input Map's inputs back.
-- **Labels and order:** the names and order shown in the Keybinds tab are in `Settings.ACTIONS` (`scripts/autoload/settings.gd`).
-- **Left Shift:** the ability key is set to *Left* Shift in the Input Map, because Right Shift + Enter is team chat.
+**Chat commands:** `/help` lists them. `/kill` eliminates yourself. The host can use `/map <small|medium|large>` to change the map and `/time <morning|afternoon|evening|night>` to change the time of day.
 
-The **Tag Rush Theme**, a fast 160 BPM loop, plays during matches. It's synthesized in code on a background thread when the game starts and has its own volume slider.
+## Settings
 
-### Custom music & playlist (Customization → Music & Playlist, from the main menu, lobby or pause menu)
+Mouse and aim sensitivity, invert Y, hold or toggle aim and crouch, field of view (90–120), brightness, fullscreen, V-Sync, an FPS cap, render scale, anti-aliasing, shadows and shadow distance, interior lights, bloom, view distance, volume for effects, UI and music, a hitmarker sound, and HUD options: minimap size and labels, an FPS counter and a speedometer.
 
-- **Add Songs...** opens your system file picker. You can pick several songs at once.
-- Imported songs are copied into the game's own music folder (`user://music`), so the playlist keeps working even if you move or delete the originals. **Open Music Folder** shows that folder.
-- Importing runs in the background, so the game keeps running (important when you're the host) and you can close the menu while it works.
-- **Formats:** OGG, MP3 and WAV (8/16/24/32-bit integer or 32/64-bit float PCM) work out of the box; other WAV encodings fall back to ffmpeg. FLAC, M4A/AAC, Opus, WMA, AIFF, WebM/MKA, ALAC and more are converted on import, which needs [ffmpeg](https://ffmpeg.org) installed and on your PATH.
-- In the playlist you can turn songs on and off, reorder them, preview them and remove them.
-- **Play during matches** chooses between the Tag Rush Theme, your playlist, or both. With both, the theme takes a one-minute turn in the playlist. There's also a shuffle option. The pause menu has a music player in the bottom-right corner (previous, play/pause, next and volume), and a "Now playing" toast shows each new song. Editing the playlist mid-match keeps the current song playing unless you disable or remove it.
+**Running slowly?** Lower **Render scale**, turn **Shadows** down or off, set **Interior lights** to Low, and shorten **View distance**.
 
-### Colour customization (Customization → Colours, from the main menu, lobby or pause menu)
+## Download
 
-You can recolour:
-- The menus: accent, panels, buttons, text and backdrop.
-- Team and Tag colours.
-- The sky: top colour and horizon / fog colour. For a picture skybox, use Customize → Skybox.
+Get the latest build from the **[Releases page](https://github.com/Kelaski/thepoopgame/releases)**:
+- **Windows (64-bit):** download the `.zip`, extract it and run the `.exe` inside.
+- **Linux (x86_64):** download the `.x86_64` file, make it executable and run it.
 
-The map itself (ground, roads, grass and buildings) always uses its built-in colours.
-
-Presets are Default, Midnight, Neon, Pastel and Desert, and every colour has its own Reset. Menu and sky colours change instantly. Team colours apply when the next match loads. Colours are personal and don't affect other players.
-
-Settings also cover mouse and ADS sensitivity, invert Y, hold/toggle aim and crouch,
-FOV (90–120, horizontal), brightness, fullscreen, V-Sync, an FPS cap slider (30–500), render scale, MSAA, shadows, shadow quality (Low 70 m / Medium 130 m / High 220 m / Ultra 320 m), interior lights (off / low / high), bloom,
-view distance (120–800 m), master/effects/UI volume, hitmarker sound, minimap size (0.6x–2x) and location names, an FPS counter, and a speedometer (on by default).
-
-## Rules
-
-- **Spawning:** at round start each team spawns at a random purple-dot spawn zone (the two zones are at least 70 m apart).
-  The objective is the red-dot location whose distance to the two teams is most even, with some randomness.
-  Players are frozen for a 5 s countdown, then everyone rushes.
-- **The Tag:** the first player to touch it becomes the **Runner**. Their team defends and the timer starts at 2:00.
-- **Dropping:** when the Runner dies, the Tag drops where they died and **the timer keeps running**. The clock only waits at the start of a round: it doesn't run until the Tag is picked up for the first time.
-  - An enemy picks it up: their team becomes the defenders, and the timer resumes from the value at the drop **+10 s**.
-  - A teammate picks it up: the timer resumes **+15 s**.
-  - The timer is capped at 2:00.
-- **Winning a round:** the timer reaches 0 and the team holding the Tag wins. If the Tag is on the ground when it hits 0, it's **overtime**: whoever picks it up first wins the round for their team. First to 3 wins the match.
-- **HUD:** your health is in the bottom-left corner (marked off every 25 HP), with a small speedometer above it showing your speed across the ground in m/s (turn it off in Settings > HUD). Your weapon, ammo and addon are in the bottom-right.
-- **Runner self-defence:** every kill the Runner gets takes 5 s off their team's timer.
-- **Runner visibility:** everyone sees the Runner on the minimap at all times. Hunters within 25 m hear a heartbeat that speeds up as they get closer.
-- **Health:** 100 HP (150 HP with the Spiked Bat). After 8 s without taking damage, health regenerates quickly (50 HP/s). Every kill gives you back 30 HP (up to your max).
-- **Minimap:** roads (with curbs and centre lines), car parks, buildings with their outside doors, and the park's paths, court, sandpit, fountain and pond. It shows location names on the buildings and park, each shrunk to fit inside its building so names never overlap. Its size is adjustable in Settings > HUD.
-- **Damage direction:** when you're shot, a red arc around the crosshair points at the shooter (up = in front of you, down = behind). It follows them as they move and fades after about 2 s.
-- **Respawn:** after a 6 s timer (7 s if your team is holding the Tag, the Runner included), you respawn automatically. If you open the loadout screen (**B**) while dead, you stay down until you close it, then respawn straight away (if the timer is done). Runners' teammates spawn near the Runner. Hunters spawn near the hunter closest to the Runner.
-  A spawn point is rejected if any living enemy has line of sight to it (or is within 12 m).
-  You get 3 s of spawn protection from the moment you spawn. Moving or shooting ends it early.
-- **Loadouts** (weapon and addon) can be changed in the lobby, or while dead (press **B**). Changes apply on respawn.
-- Friendly fire is off. Bullets pass through teammates.
-
-### Weapons (all hitscan)
-
-| Weapon | Damage | Rate | Sight | Notes |
-|---|---|---|---|---|
-| Assault Rifle | 33 body / 45 head, 22 / 30 beyond 25 m | 9.5 rps | 1.5x holo | 30-round magazine |
-| SMG | 22 / 30, 13 / 18 beyond 15 m | 14 rps, tight hip fire (beats the AR up close, loses at range) | 1.2x holo | 40-round magazine |
-| Shotgun | 13 pellets × 15 (≤10 m) / 10.5 (≤15 m) / 6 | 1 rps | 1.15x irons | 12° cone, 6 shells |
-| Sniper | 100 body, 90 lower body, headshots always kill | 0.4 rps | 2.5x | Pierces 1 wall and every player in line, 5 rounds. A ring around the crosshair shows when the next shot is ready. Its shot is 60% louder than before. The AR, SMG and Shotgun are 35% louder |
-| Spiked Bat | 35 per swing, ×1.1 for every m/s you're moving above your own sprint speed (compounding: +1 m/s 38.5, +2 42, +3 47, +5 56, +10 91, +14 133; capped at 300). Measured from your horizontal speed when you swing | 2.25 swings/s | none | 7 m reach, +10% move speed and 150 HP while equipped. A killing swing launches the victim's gun where you look (70 dmg) |
-
-Every player holds a visible model of their weapon (the same model as your own first-person view), aimed up and down with where they're looking. When someone scopes in with the Sniper, their scope **glints**. The glint is brightest when they're aiming straight at you, shows only when they're looking within about 53° of you, and walls hide it.
-
-### Addons
-
-| Addon | Effect |
-|---|---|
-| Hider | Shift: 15 s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Taking damage does not end it; firing does. 12 s cooldown after it ends. |
-| Trackstar | Passive +15% speed, and reloads are 35% faster (every weapon but the bat; 30% with the sniper). The shotgun (35%) and sniper (30%) also re-chamber between shots faster. Shift: +35% for 6 s. 24 s cooldown from activation. |
-| Skywalker | Double jump with extra height that keeps your current momentum (no added speed). Recharges when you land. |
-| Stalker | Passive: see wide red ground trails behind every enemy. Each part of a trail lingers for 6 s, fading as it ages. Walls and floors hide the trails. The trails are identical, so you can't tell which one is the Runner. Shift: for 4 s, see a red outline of every player through walls (only on your screen). 14 s cooldown from activation. |
-| Phantom | Shift: 2 s of phasing. Run through walls and doors. Double-tap crouch to drop through a floor. 23 s cooldown. |
-| Grapple | Hold Shift: throw a grappling hook up to 27 m (it flies out over about 0.3 s). It latches onto whatever it hits (walls, floors, doors, props or players) and reels you in while you keep steering, up to 20 m/s for at most 2.5 s. The grapple never gives you more than 20 m/s, including the pop at the end. The rope only ever shortens, so hooking something above you swings you underneath it. Reaching the hook pops you upwards so you can climb onto ledges. The grapple only lasts while you hold Shift: releasing it (or pressing Jump) lets go with your momentum, and releasing while the hook is still flying reels it back in (counts as a miss). The rope also snaps if something gets in the way. Hooking an enemy yanks them towards you. 6.5 s cooldown after a hit; a miss only costs 1 s. Everyone sees the hook and rope. |
-
-### Movement
-
-Pilot-style movement in the spirit of Titanfall 2: everything keeps your momentum and chains together. Snappy ground acceleration, sprinting by default (7.4 m/s forward; 5 m/s strafing or backwards; 2.8 m/s crouched).
-
-- **Slides:** Crouch / Slide while sprinting (or moving fast, or in the air: the slide starts when you land). Your speed carries straight in, plus a 3.6 m/s boost, scaled by speed bonuses, up to 20 m/s. The boost comes back 2 s after it's used, so spamming slides doesn't stack speed. Slides keep going the way you were moving, slow down on flat ground and uphill, and speed up downhill (more on steeper slopes, and the longer you stay on the slope). Landing in a slide after a big fall turns part of the fall into speed: 45% of anything over 7 m/s.
-- **Slide-hopping and bunny hopping:** jumping keeps all your speed. When you land faster than you run there's no ground friction for 0.12 s, and a jump pressed up to 0.1 s before landing fires the moment you touch down, so well-timed hops keep your speed going. Stop hopping and the extra speed bleeds off quickly on the ground.
-- **Air strafing:** below your run speed you speed up and steer freely in the air. Above it, it works like Titanfall: strafing while turning adds speed (up to 17 m/s), and you can keep holding forward while you do (only the sideways part of your input counts). Holding back brakes.
-- **Mantling:** jump at a ledge (or fall past one) while pushing into it and you climb straight up onto it (ledges from about foot height up to 1.9 m above your feet, with room to stand on top), then carry on over.
-**Wall running:** jump at or alongside a wall while holding forward to run along it for up to 1.75 s. A run starts at least at 7 m/s and speeds you up towards 10.5 m/s (never slowing you if you came in faster). It catches your fall with a small lift, stays roughly level, then slowly sinks as wall gravity builds. You can't run straight back onto the wall you just left (another wall or the floor resets that).
-Press Jump to kick off the wall: out, up and along it, keeping your speed and adding a little, so you can chain it into another wall run, a slide or a slide-hop. Crouch drops you off. Jumping has 0.12 s and wall jumps 0.1 s of coyote time, so you can still jump just after running off a ledge or a wall.
-**Wall-jump fatigue:** your first 3 wall jumps before touching the floor are free. From the 4th on, each kick keeps only 75% of your speed (then 56%, 42%...) and adds less height, and wall runs stop holding you at running speed, so long chains run out of momentum. Each of those jumps also adds +50% gravity (150%, 200%, 250%...), up to 600%, which applies in the air and makes wall runs sink faster. Touching the floor resets all of it.
-**Pings** (middle mouse) work like Fortnite's. Ping where you're aiming to put a small marker there for you and your team, with a dim beam of light rising from it. A single ping is yellow, and enemy and danger pings are red. It shows through walls and on the minimap, with a sound. It fades only while you look straight at it, so it never covers a fight.
-- **Aim at an enemy** to mark them (red **ENEMY** ping). **Aim at the Tag** to mark it.
-- **Double tap** for a red **DANGER** ping.
-- Pings last 4.5–6 s. Each player can have 3 at once, and older ones disappear. The server limits pings to 5 every 3 s.
-Doors fill their doorways exactly and swing open, away from you and at full speed, when you sprint or slide into them. **E** opens and closes them normally.
-
-## Map sizes
-
-The host picks **Small**, **Medium** or **Large** in the lobby (the last choice is remembered), or with the chat command `/map <small|medium|large>`. Using `/map` during a match restarts the match on the new map. The choice is shared with everyone, including players who join later. `/map` with no size shows the current one.
-
-| Size | Area | Buildings | Spawn zones | Tag spots | Rooftop bridges |
-|---|---|---|---|---|---|
-| Small | ~81 × 102 m | Bank, Meridian Tower + park | 3 | 3 (Park, Bank, Tower) | none |
-| Medium | ~130 × 136 m | School, Bank, Diner, Arcade, Meridian Tower, Casino + park | 5 | 4 (Park, Bank, Tower, Casino) | Tower–Casino |
-| Large | 200 × 170 m | the whole city (all 18) + park | 10 | 8 | all 6 |
-
-The lobby also chooses the city:
-- **Random city** (the default): a new city is generated for every match, at the chosen size. The host picks the seed and every player builds the same city from it (`scripts/map/city_gen.gd`).
-  - Roads form a grid of uneven blocks, and each block is split into lots with alleys between them.
-  - A lot holds a building (16 types with random names, height and footprint), a plaza or a car park. Buildings of 4 storeys or more are capped at 30 × 25 m.
-  - One block near the middle becomes the park.
-  - Spawn zones are spread out over the junctions and plazas, and Tag spots over the park, open-plan buildings and plazas, away from the spawns.
-  - Cranes bridge the roofs of buildings facing each other across a road.
-  - Large maps get about 15–25 buildings, Medium 8–13 and Small 3–4.
-- **Classic city:** the hand-made city described below. Smaller sizes are cut-outs of it: buildings that fit fully inside are kept, the fence moves in, and empty lots where a building was cut become car parks.
-
-The minimap zooms to fit either way. Sizes are defined in `MapData.SIZES` (`scripts/map/map_data.gd`).
-
-## The map
-
-The map is laid out from the design sketch at a scale of 1 px = 0.1 m, so the city is 200 m × 170 m.
-A fence surrounds it, with invisible walls flush against it so you can't stand on top of it. The walls rise to a **sky barrier** 35 m above the tallest building or crane. The sky barrier stops players, but grapples, shots, sprays and pings go straight through it.
-Every object has collision (furniture, props, tree trunks, lamps and so on) except anything leafy. Cranes block you and your shots only where there's a bar: you can shoot through the gaps in the mast's lattice. Tree crowns, potted plants and bushes are visual only: you can walk and shoot through them, but they block sight. Flat floor markings and the bleacher steps (a smooth ramp covers them) have no collision either.
-Teammates' names float above their heads (`NAMEPLATE_SCALE` in `scripts/player/player.gd`). A name fades out while you aim near it, so it never covers a fight (`NAMEPLATE_FADE_NEAR` / `NAMEPLATE_FADE_FAR`).
-
-| # | Building | Floors |
-|---|---|---|
-| 1 | Warehouse (racks, crates, forklifts, mezzanine offices) | 2 × 6 m |
-| 2 | Swiftcurrent K-12 School (classrooms, desks, lockers, chalkboards) | 3 |
-| 3 | Rapids Arena, home of the Swiftcurrent Rapids (court, hoops, bleachers, scoreboard) | 1 × 11 m |
-| 4 | Movie Theater (seat rows, concessions) | 2 |
-| 5 | Bank (teller counters, desks, vault) | 2 |
-| 6–9 | Entertainment strip: Diner, Arcade, Nightclub, Bar | 1–2 |
-| 10 | Riverside Apartments (nice: beds, sofas, kitchens) | 5 |
-| 11 | Mall (shelving, clothes racks, kiosks) | 3 |
-| 12 | Motel 6 (rooms with beds, TVs) | 2 |
-| 13 | Eastside Tenements (run-down, gang A) | 4 |
-| 14 | Southside Tenements (run-down, rival gang) | 3 |
-| 15 | Meridian Tower (office cubicles) | 5 |
-| 16 | Golden Rapids Casino (slots, card tables, bars) | 5 |
-| 17 | Water Treatment Center (tanks, pipes, pumps) | 1 × 7 m |
-| 18 | Public Library (bookshelves, reading tables) | 2 |
-| 19 | Park (paths, fountain plaza, basketball court, pond, playground, picnic tables, trees) | outdoor |
-
-Buildings are at most 5 storeys. The three 5-storey buildings (Riverside Apartments, Meridian Tower, Golden Rapids Casino) are 75% of their sketch width and length, centred on the sketch footprint, so their height does the work. Each building has a two-lane stairwell of ramps from the ground floor to an accessible roof, and longer buildings have a second one at the far end. Each lane is 2.85 m wide, with a 2.6 m landing at each end of every flight, so the way onto the stairs is roomy (`STAIR_W` and `STAIR_LANDING` in `scripts/map/map_builder.gd`). Between the two lanes runs a sloped wall that follows each flight, 1.3 m above the steps (`STAIR_GUARD_H`). It covers your body but not your head, so you can see and shoot across the stairwell.
-
-**Time of day:** each match starts at a random Morning, Afternoon, Evening or Night. After each round, the host picks a different one, and everyone's sun, sky, fog and ambient light blend into it over 10 seconds. The presets are the `TIMES` table in `scripts/world/world.gd`. Street lamps light up in the evening and at night.
-Buildings are built from modular pieces on a 2 m grid (see **Editing buildings**):
-- **Grid:** every building's footprint snaps to the grid around its centre, moving each wall by at most 0.5 m.
-- **Walls:** each storey's walls are a row of 2 m modules. A module is solid, has the building's window style (small, wide or tall), or is a door on the ground floor.
-- **Windows:** evenly spaced in the same columns on every storey, singly or in pairs. Each side has about the same number per floor as before. They're never at the ends of a wall or next to a door, which leaves solid stretches for wall running. Windows are framed open gaps you can shoot and jump through.
-- **Doors and signs:** most buildings have one street door, some have two, always on the sides facing a street. Each door has an awning, and the building's name is centred on every wall that has a door.
-- **Rooftops:** A/C units and vents (cover to fight around), and water towers on tall buildings.
-- **Windows** never sit where an inside wall meets the outside wall.
-- **Rooms:** residential and school floors have a corridor with 6 m rooms behind doors.
-- **Decor:** every storey has ceiling lights, and the walls get decor that fits the building: posters and clocks in the school, neon signs and a jukebox in the diner and bar, bottle shelves and a dartboard in the bar, picture frames and rugs in the bank, apartments, motel and library, pipes and safety signs in the warehouse and water treatment centre, and so on. Exit signs hang over the street doors. The lamps cast real light, and bulbs, screens and neon glow.
-- **Layouts:** each building type is furnished like the real thing, with walkways kept open:
-  - **Store (mall):** aisles of shelves and clothes rails with cross aisles, checkouts and a display table by the door.
-  - **Motel:** every room has a bed against the back wall, a bedside table, a TV dresser and a rug. There's a reception desk in the lobby.
-  - **Apartments:** a lobby with reception and sofas, then bedrooms, living rooms (sofa, TV, rug) and kitchens with dining tables.
-  - **School:** classrooms with a board, the teacher's desk and rows of desks facing them. Lockers line the corridor.
-  - **Office:** cubicle blocks with aisles, copiers, a meeting table and a reception desk.
-  - **Bank:** teller counters across the hall, the vault behind them, bankers' desks and a waiting bench.
-  - **Diner:** a counter with stools, booths along the windows and a few tables.
-  - **Bar:** the bar with stools, pool tables and tables.
-  - **Nightclub:** a dance floor, the bar and lounge sofas.
-  - **Arcade:** cabinets along the walls and back to back down the middle.
-  - **Casino:** rows of slot machines, card and craps tables, and the cashier.
-  - **Library:** book stacks at the back, reading tables in front and a front desk.
-  - **Cinema:** a screen on a stage, rows of seats with a centre aisle, and the concession stand.
-  - **Warehouse:** rack rows with forklift aisles, with offices upstairs.
-  - **Tenements:** sparse and messy.
-
-**Streets** look like a busy city:
-- **Traffic:** both lanes of every road hold stopped traffic (cars, yellow taxis, vans and buses), with about half the spots taken. Every vehicle, on the road or in a car park, is at least 1.4 m from every other one (front, back and side to side), so you can always slide between two cars. The two lanes are staggered rather than side by side.
-- **Junctions:** kept clear, with zebra crossings and no centre lines.
-- **Sidewalks:** along every curb, a lamp post and street trees alternate every 6 m. In between there are benches, bins, fire hydrants with newspaper boxes, mailboxes and the odd bus shelter.
-- **Open squares:** a few big tree planters, bench pairs, kiosks and dumpsters.
-- **Kept clear:** nothing is placed in front of a building door, on a spawn zone or on a Tag spot.
-
-**The park** is laid out like a real one: two paved paths crossing at a fountain plaza with flower beds, benches, bins and lamp posts along the paths, a row of trees round the edge, the basketball court (marked like a real one, with the benches beside it facing the game), a playground on a sandpit, the pond, and picnic tables with umbrellas on the lawns.
-
-**Bounce pads:** landing on a picnic umbrella or a kiosk awning throws you up twice as high as a jump. Umbrella tops tilt 15° on their poles, so the low edge is about 1.7 m up (the high edge about 2.4 m). Landing anywhere on the top counts, rim included. Only landing on top bounces you: if you get caught under the low edge you slide out from under it.
-
-Six tower cranes hang planks or sheet metal between rooftops as bridges: Warehouse–School, Apartments–Meridian Tower, Meridian Tower–Casino, the two Tenements, Theater–Bank, and Water Treatment–Library. Crates on each roof help you climb onto them.
-The **purple dots** in the sketch are the 10 spawn zones. The **red dots** are the 8 possible Tag locations (`scripts/map/map_data.gd`).
-
-## Performance notes
-
-- All static geometry for a building is drawn with a few `MultiMeshInstance3D`s (one draw call each) and one shared toon material.
-- Furniture and small details are in a separate MultiMesh with a 140 m visibility range.
-- Collision uses shape owners on one `StaticBody3D` per layer per building instead of thousands of nodes. Box shapes are shared by size.
-- There are no textures and no imported assets. Sounds are synthesized at startup.
-- The renderer is kept simple: toon shading, one directional light with 4-split shadows reaching up to 320 m (**Shadow quality** sets the reach and shadow map size), no SSAO/SSR/GI.
-- **Interior lights:** lamps are real `OmniLight3D`s without shadows that fade out beyond about 60 m (30 m on Low), so only nearby ones are drawn. A large map has about 450 to 650. The **Interior lights** setting (Off / Low / High) thins them.
-- **Glowing parts:** these are drawn unshaded and over-bright in their own MultiMeshes, so the **Bloom** setting only picks them up, not sunlit walls.
-- The **Render scale**, **Shadows**, **MSAA** and **View distance** settings are the main performance controls.
-
-## Networking model
-
-ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015. The host opens the port with UPnP when it can.
-A joining player sends their version number, and the host turns away anyone on a different version, or anyone who doesn't register within 5 s (older builds).
-Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
-Shooting is resolved on the shooter's client, and the server validates every hit before applying damage:
-- The shooter is alive, the victim is an enemy, and the victim isn't spawn-protected.
-- The weapon is the one the shooter actually holds. A thrown gun only counts for a few seconds after a bat kill, for 2 hits at most.
-- The victim is within the weapon's range (plus slack for lag).
-- Hits can't arrive faster than the weapon fires (with slack for lag and multi-hit shots).
-- Damage is clamped to the weapon's maximum. The bat's momentum damage uses the speed the server actually saw the attacker move at.
-
-Every peer also checks what other players send:
-- Doors only move for a living player standing near them.
-- Shot effects must be a real weapon, fired from where the shooter is, with at most 16 tracers.
-- A thrown gun can only be launched by its thrower.
-- Movement updates with broken numbers are dropped, and look angles are clamped.
-- A player can't register twice, and pings are rate-limited.
-Round state, the timer, respawns, the Tag and health regeneration all run on the server.
-
-## Editing models
-
-Open these in the Godot editor. Changes show up in game the next time a match loads.
-- **`assets/models/player.tscn`:** the player.
-  - Parts in the `team_color` group get the team colour, and parts in `team_color_dark` a darker shade. Add your own parts to these groups to colour them too.
-  - `BodyShape` and `HeadHitbox` are the hitboxes, and `BodyRoot/TpPivot/TpGun` is where the held weapon goes.
-  - Keep the node names: the code finds them by name.
-- **`assets/models/weapons/*.tscn`:** one scene per weapon, used for both your first-person view and the gun other players see you holding.
-  - `Muzzle` marks where shots and the muzzle flash come from. On the sniper, `GlintPoint` marks where the scope glint shows.
-  - Nodes in the `first_person_only` group (the holo-sight reticles) only appear in first person.
-  - The root's **Ads Offset** setting is where the gun sits while aiming. **Viewmodel Rotation** and **Held Rotation** tilt it in first person and in other players' hands (the bat uses both).
-- **`assets/models/muzzle_flash.tscn` and `glint.tscn`:** the muzzle flash and the sniper glint, whose material is `assets/materials/sniper_glint.tres`.
-- **`assets/models/door.tscn`:** the door, with the hinge at the origin, built for a 1.7 × 2.45 m doorway.
-  - In game, `Panel` is stretched to each doorway, the collision `Shape` is resized, and other parts under `Body` (the `Knob`) move to match.
-  - The panel takes each building's door colour.
-- **`assets/models/tag.tscn`:** the Tag: `Gem`, `PickupRing` and `Beam`. They're tinted with the Tag colour from Customization.
-  - The ring shows the pickup radius (1.7 m, `Game.PICKUP_RADIUS`), so change both together.
-- **`assets/models/spray_decal.tscn`:** the spray decal. Its material is `assets/materials/spray_decal.tres`, and each player's image and aspect ratio are filled in at runtime.
-- **Thrown gun:** the gun a killing bat swing launches is now the victim's actual weapon model.
-- **Effect materials:** bullet tracers and impacts use `assets/materials/fx_tracers.tres`, and the Stalker trails use `fx_trails.tres`.
-
-## Editing props
-
-Every prop and piece of furniture on the map is a template scene:
-- `assets/props/vehicles/`: car, taxi, van, bus.
-- `assets/props/street/`: lamp, trees, benches, bins, hydrant, mailbox, bus shelter, kiosk, dumpster.
-- `assets/props/nature/`: tree crown, trunk, bush.
-- `assets/props/park/`, `arena/`, `water/`: the basketball court, playground, bleachers, scoreboard, tanks and pumps, plus the park's fountain, flower beds, picnic umbrellas and ground pieces:
-  - `lawn`: a 1 m square stretched to the park.
-  - `path`: 1 m long, stretched to each path.
-  - `plaza`, `sandpit` and `pond`: the pond is scaled with the park.
-- `assets/props/crane/`: footing, mast, braces, the crane top, hook and loads, and `beam`, the stretched piece used for cables, jibs and bridge decks.
-- `assets/furniture/`: 43 items, from desks and beds to slot machines, including the store checkout, reception desk and cinema screen.
-- `assets/furniture/decor/`: 30 interior decor pieces: ceiling lights, wall decor, floor pieces, a rug and the exit sign.
-Edit them in the Godot editor. The next match uses your changes.
-
-**How they're used:** the map places thousands of these, so they aren't added as nodes. When a map loads, each scene is read once and stamped into the same batched meshes and collision as before, so performance doesn't change (`scripts/map/prefabs.gd`). That puts some limits on what a template can contain:
-- **Meshes:** `BoxMesh`, `CylinderMesh` and `SphereMesh` parts. A part's colour is its material's albedo colour.
-- **Collision:** `CollisionShape3D` boxes and cylinders inside a `StaticBody3D`. The body's collision layer decides how a shape collides:
-  - `Collision` (layer 2): walls and furniture. Phantom can pass through, and the sniper can pierce one.
-  - `FloorCollision` (layer 1): floors.
-  - `SolidCollision` (layer 16): solid ground.
-  - `BounceCollision` (layer 32): a bounce pad, like the umbrella and awning tops.
-  - A part with no shape is decoration you can walk through.
-- **Metadata** (shown in the Inspector under Metadata):
-  - `slot`: a colour filled in by the game, such as `body` on cars, `leaf` on tree crowns, `main` on sofas and tables, or `blanket` on beds. `slot_darken` / `slot_lighten` shade it.
-  - `slot_choices`: a list of colours. One is picked at random for each placement, as with kiosk awnings, arcade cabinets and books.
-  - `batch`: `static` or `detail`. Detail parts are hidden beyond 140 m, like the furniture.
-  - `night_only` (on an `OmniLight3D`): the light only shines in the evening and at night, like the street lamps.
-  - `glow`: true for parts that light up (bulbs, screens, neon, headlights). They're drawn unshaded and bright enough to bloom.
-  - `material`: draw the part with a named material from `assets/materials/` (`<name>.tres`) instead of the plain toon one. The part's colour tints it.
-- **Lights:** an `OmniLight3D` in a template becomes a real light wherever the piece is placed. Its colour, energy and range are used, and shadows stay off. The lamp scenes in `assets/furniture/decor/` have one each.
-- **Placement:**
-  - Props are placed on the ground at their origin.
-  - Street props face their local +Z away from the road.
-  - **Furniture** is placed by each building's layout in `scripts/map/map_builder.gd` (`_lay_*`). Its footprint comes from the scene's meshes, so a bigger model automatically gets more room.
-  - **Decor:** wall pieces have their origin on the wall face at floor level and stick out along +Z into the room. Floor pieces against a wall have their back at Z = 0. Ceiling lights hang down from their origin on the ceiling. The rug is centred on its origin.
-  - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/map_builder.gd`.
-  - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
-- **Code-side randomness:** sizes such as crates, bushes and tree heights are still random in code.
-
-The parts are named `Part0`, `Part1` and so on, in build order. Rename them freely. Only the meshes, shapes, colours and metadata matter.
-
-## Editing buildings
-
-Buildings are put together from the pieces in `assets/building/`. Each piece's colours come from the building's style through colour slots: `wall`, `trim`, or `color` for floors, stairs and interior walls.
-
-**Wall modules:** these are 2 m wide (local X, centred), 4 m tall from their base and 0.3 m thick.
-- `wall_solid`: a plain wall.
-- `wall_window_small`, `wall_window_wide`, `wall_window_tall`: the three window styles. Each building uses one of them.
-- `wall_door`: a 1.7 × 2.45 m gap that a door fills in game.
-- `wall_filler`: 1 m tall, stretched on top of the module for storeys taller than 4 m.
-- `corner_post`, `trim_band`, `parapet`: corners, the band along each storey, and the roof edge.
-
-**Floors and stairs:**
-- `floor_slab` and `floor_finish`: 1 × 1 m pieces, stretched to each floor slab and the ground-floor finish.
-- `stair_segment`: one step of the ramp, rising 0.5 m over 0.8 m and 2.85 m wide (one lane). A storey is its height ÷ 0.5 segments. If you change its width, change `STAIR_W` to match (two lanes plus 0.1 m).
-- `stair_divider` and `rail_section`: the wall between the two stair lanes and the railing round the stair hole.
-
-**Interior walls:** `wall_interior` (a 1 × 1 m piece, stretched) and `wall_interior_door` (the door jambs of a 2 m partition module).
-
-You can reshape the inside of a module freely: move the jambs, change the window shape, or add trim. Keep its outer size, because the pieces are placed edge to edge. The grid size, storey module height and stair step are constants at the top of `scripts/map/map_builder.gd` (`MODULE`, `MODULE_H`, `STAIR_RUN`, `STAIR_RISE`). Building pieces are always drawn, unlike furniture, which fades out beyond 140 m.
-
-## Editing the UI
-
-Every screen is a scene in `assets/ui/`:
-- **Menus:** `main_menu`, `join_menu`, `lobby`, `pause_menu`, `settings_menu`, `customize_hub`, `colors_menu`, `crosshair_editor`, `music_menu`, `spray_menu` and `skybox_menu`.
-- **In-match:** `hud`, `chat_box` and `loadout_panel`.
-- **Smaller pieces:** `crosshair`, `minimap`, `damage_indicator`, `connecting` and `version_label`.
-
-**What's where:**
-- **Layout:** each scene holds the layout. Its script (`scripts/ui/`) holds the behaviour and finds nodes by their unique name (`%Name`), so keep the names the scripts use. You can move, resize, restyle or reorder anything else.
-- **Buttons:** they're wired to the script's methods as saved signal connections (Node → Signals in the editor).
-- **Colours:** labels use the theme type variations from `UiKit.make_theme()`, so the colours in Customize → Colours reach every screen:
-  - `TitleLabel`, `AccentLabel` and `MutedLabel` for menus.
-  - `HudLabel`, `HudAccentLabel` and `HudMutedLabel` for outlined HUD text.
-  - `MenuBackground` for menu backdrops.
-
-**Setting rows:** these are instances of three reusable row scenes in `assets/ui/rows/`: `setting_slider`, `setting_check` and `setting_option`.
-- Set a row's **Setting** (the `Settings` key, such as `fov`), **Label Text** and range or choices in the Inspector. The row then shows that setting and saves changes to it, with no code needed.
-- To add a setting to the settings menu, duplicate a row and change those fields.
-
-**Still built in code:** lists that come from game data, such as the keybinds, colour slots, playlist, team rosters, weapon and addon buttons, kill feed and scoreboard rows.
-
-## Project layout
-
-```
-project.godot
-scenes/main.tscn            # root scene (just runs scripts/main.gd)
-scripts/
-  main.gd                   # screen flow, overlays, mouse capture, cmdline flags
-  autoload/settings.gd      # settings + rebindable input map (user://settings.cfg)
-  autoload/sfx.gd           # procedural sounds
-  autoload/net.gd           # ENet host/join, roster, team/loadout requests
-  autoload/game.gd          # server-authoritative Tag game mode
-  data/weapons.gd           # weapon stats
-  data/addons.gd            # addon stats
-  data/game_version.gd      # version number (major.minor.patch)
-  data/join_code.gd         # join codes <-> IP address and port
-  map/map_data.gd           # classic layout transcribed from the sketch, map sizes
-  map/city_gen.gd           # random city layouts (one per match, from a seed)
-  map/map_builder.gd        # procedural city, interiors, where props and furniture go, spawn points
-  map/prefabs.gd            # reads prop / furniture scenes and batches them into the map
-  world/world.gd            # environment, players, Tag, FX, trails, heartbeat, respawn search
-  world/door.gd             # hinged doors
-  world/mats.gd             # shared materials / team colours
-  player/player.gd          # FPS controller, weapons, addons, netcode
-  player/weapon_model.gd    # weapon scene root: muzzle, glint point, first/third-person setup
-assets/models/              # player, weapon, door, Tag, spray decal, muzzle flash and glint scenes
-assets/materials/           # shared materials (.tres)
-assets/props/, assets/furniture/   # map prop and furniture template scenes
-assets/building/            # modular building pieces
-assets/ui/                  # every menu, the HUD and reusable setting rows (rows/)
-  ui/*.gd                   # behaviour for the screens in assets/ui (menus, lobby, settings, HUD, minimap, crosshair)
-```
-
-## Chat & commands
-
-- Press **Enter** for all chat or **Right Shift + Enter** for team chat. The chat key is rebindable, and team chat is always Right Shift + that key. A Shift bind (the ability key by default) only uses Left Shift, so team chat never fires your addon. Chat works in the lobby and in matches; while you type, gameplay keys are ignored.
-- Typing **/** at the start of a message opens command autocomplete: **Tab** completes, **Up/Down** choose, **Enter** sends, **Esc** cancels.
-- Commands: `/help` lists commands; `/kill` eliminates yourself (the normal respawn timer applies); `/map <size>` (host) changes the map; `/time <morning|afternoon|evening|night|next>` (host) changes the time of day, blending over 10 s. New commands are added in `scripts/data/commands.gd`.
-- **Safety:** the server rate-limits chat (5 messages per 4 s) and caps messages at 200 characters. It strips control, zero-width and bidirectional-override characters, both before sending and when receiving. Player names get the same cleaning. Messages are displayed as plain text in Labels (never BBCode). Commands are matched against a fixed whitelist and run on the server; nothing anyone types is ever evaluated as code.
-
-## Sprays
-
-Customize → **Spray** lets you choose an image (PNG, JPG, WebP, BMP, TGA or SVG). It's resized to fit 128 px and re-saved as a clean PNG. In a match, press **T** to spray it on the surface you're looking at (within 4 m), with a 5 s cooldown. Everyone sees it, and your newest spray replaces your previous one. The server only accepts PNG data under 64 KB, at most one new spray image per player every 3 s, re-checks the cooldown and distance, and every client decodes sprays as PNG only (at most 256×256). A player's spray disappears when they leave.
-
-## Custom skybox
-
-Customize → **Skybox** replaces the sky with your own 360° panorama: an equirectangular image about twice as wide as it is tall, such as the HDRIs from Poly Haven. PNG, JPG, WebP, BMP, TGA, HDR and EXR are supported. The image is resized to fit 4096 px and saved as `user://skybox.png`.
-
-The menu has a preview, a toggle, rotation and brightness. Changes apply instantly, even mid-match. The sky also provides the world's ambient light, so darker skies make the map darker. Your skybox only shows for you.
-
-## Crosshair editor
-
-Customize → **Crosshair Editor** has Counter-Strike-style options:
-- Style: classic, circle, dot, or a custom image.
-- Colour (presets or any colour), opacity, length, thickness, gap.
-- Outline and outline thickness, centre dot and dot size.
-- T-style (no top line) and dynamic spread.
-
-It has a live preview and copy/paste **share codes**. Pasted codes are parsed as data only: unknown keys are ignored and every value is checked and clamped.
-
-The **Holo Sight** section sets the AR and SMG holo reticle: dot, circle and dot, chevron or cross, its colour, size and brightness (it glows, and the preview shows it in the corner).
-
-You can also upload a **custom crosshair image** (with a scale slider) and a **custom sniper scope** image. The scope is fitted to the screen height and the rest is blacked out, so a transparent PNG with a see-through centre works best.
-
-## Assumptions and choices not covered by the spec
-
-- **Sprint is the default pace** (no sprint key). Aiming and crouching drop you to walking speed.
-- **Reloading and magazine sizes** were added (R key), with the values above.
-- **Sniper:** inaccurate unless aimed. **Shotgun and sniper** pellets and rounds deal the same damage to the head (headshots still break Hider invisibility).
-- **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.
-- **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Foliage blocks sight but not bullets.
-- **Dropped-Tag timer:** the timer keeps running while the Tag is on the ground (it only waits for the first pickup of a round). A pickup adds +10 s (enemy) or +15 s (teammate), capped at 2:00. If it runs out while the Tag is down, the round goes to overtime and the next pickup wins it.
-- **Phantom's** 23 s cooldown starts when the phase ends. Trackstar's 30 s cooldown starts at activation, as specified.
-- Skywalker's double jump is passive, so the ability key does nothing for it.
-- **Grapple's** cooldown starts when the hook hits (like Trackstar's, from activation). A miss only costs 1 s so you can try again.
+Want to look under the hood or run it from source? See [DEVELOPMENT.md](DEVELOPMENT.md).

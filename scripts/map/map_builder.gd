@@ -206,6 +206,11 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE, seed := 0) -> void:
 		var p := MapData.px(o[0], o[1])
 		if _usable_point(p, excluded):
 			objectives.append({"pos": Vector3(p.x, 0.0, p.y), "name": o[2]})
+	if objectives.is_empty():
+		# Every Tag spot fell in a removed building's lot: use the middle of the map
+		# so a round can always start.
+		var c := bounds.get_center()
+		objectives.append({"pos": Vector3(c.x, 0.0, c.y), "name": "City Centre"})
 	for r in layout.roads:
 		var clipped := MapData.px_rect(r).intersection(bounds)
 		if clipped.size.x > 1.0 and clipped.size.y > 1.0:

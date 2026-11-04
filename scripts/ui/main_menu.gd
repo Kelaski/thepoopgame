@@ -1,8 +1,8 @@
 class_name MainMenu
 extends Control
-## Title screen (assets/ui/main_menu.tscn): Host Game, Play Game, Settings,
+## Title screen (assets/ui/main_menu.tscn): Host Game, Join Game, Settings,
 ## Customization, Quit. Your player name is set in Customization; joining by code
-## is under Play Game.
+## is under Join Game.
 
 const SCENE := "res://assets/ui/main_menu.tscn"
 

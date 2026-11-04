@@ -22,6 +22,7 @@ var loadout_open := false
 @onready var _score_red: Label = %ScoreRed
 @onready var _score_blue: Label = %ScoreBlue
 @onready var _timer: Label = %Timer
+@onready var _clock_fill: ColorRect = %ClockFill  # the bar under the top HUD that empties with the round clock
 @onready var _phase: Label = %Phase
 @onready var _round: Label = %Round
 @onready var _hp_fill: ColorRect = %HpFill
@@ -52,6 +53,8 @@ var _banner_t := 0.0
 @onready var _death_timer: Label = %DeathTimer
 @onready var _death_hint: Label = %DeathHint
 @onready var _loadout_panel: PanelContainer = %LoadoutHolder
+@onready var _pre_loadout: PanelContainer = %PreLoadout   # loadout picker during the countdown
+@onready var _loadout_hint: Label = %LoadoutHint
 @onready var _scoreboard: PanelContainer = %Scoreboard
 @onready var _sb_cols: Array = [%ScoreboardRed, %ScoreboardBlue]
 var _sb_acc := 0.0
@@ -68,10 +71,19 @@ var _killer_hp := -1.0
 func _ready() -> void:
 	# Team colours on the score boxes and the Tag colour on the runner label.
 	for team in 2:
+		# Team-tinted ends of the top bar, with a team-coloured edge on the outside
+		# (the bottom panels have theirs on the screen-edge side too).
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = Mats.team_color(team)
-		sb.set_corner_radius_all(8)
-		sb.set_content_margin_all(8)
+		sb.bg_color = Color(Mats.team_color(team).darkened(0.45), 0.85)
+		sb.border_color = Mats.team_color(team)
+		if team == 0:
+			sb.border_width_left = 4
+			sb.corner_radius_bottom_left = 3
+		else:
+			sb.border_width_right = 4
+			sb.corner_radius_bottom_right = 3
+		sb.content_margin_left = 12
+		sb.content_margin_right = 12
 		(%ScoreBoxRed if team == 0 else %ScoreBoxBlue).add_theme_stylebox_override("panel", sb)
 	_runner_label.add_theme_color_override("font_color", Mats.TAG_COLOR)
 	_np.modulate.a = 0.0
@@ -93,7 +105,12 @@ func set_loadout_open(o: bool) -> void:
 	if o != loadout_open and Game.in_match:
 		Game.set_respawn_hold.rpc_id(1, o)  # no respawning while you pick a loadout
 	loadout_open = o
-	_loadout_panel.visible = o
+	# Alive in the countdown: the picker sits above the hint; dead: on the death screen.
+	var w = Game.world
+	var lp = w.local_player() if w else null
+	var pre: bool = o and Game.phase == Game.Phase.PREROUND and lp != null and lp.alive
+	_loadout_panel.visible = o and not pre
+	_pre_loadout.visible = pre
 	if main:
 		main._update_mouse()
 
@@ -172,19 +189,22 @@ func _process(delta: float) -> void:
 	# Scores, timer, phase
 	_score_red.text = str(Game.scores[0])
 	_score_blue.text = str(Game.scores[1])
-	_round.text = "ROUND %d   -   FIRST TO %d" % [maxi(Game.round_num, 1), Game.ROUNDS_TO_WIN]
+	_round.text = "ROUND %d  ·  FIRST TO %d" % [maxi(Game.round_num, 1), Game.ROUNDS_TO_WIN]
 	var phase_txt := ""
 	var timer_col := Color.WHITE
 	match Game.phase:
 		Game.Phase.LOBBY:
 			phase_txt = "Waiting for the round to start..."
 		Game.Phase.PREROUND:
-			phase_txt = "Get ready! Round starts in %d" % int(ceil(Game.phase_time))
+			phase_txt = "GET READY"
 		Game.Phase.RUSH:
 			phase_txt = "RUSH TO THE TAG!"
 		Game.Phase.HELD:
 			timer_col = Mats.team_color(Game.holding_team).lightened(0.4)
-			phase_txt = "DEFEND YOUR RUNNER" if Game.holding_team == my_team else "HUNT THE RUNNER"
+			if Game.holder == me:
+				phase_txt = "DEFEND YOURSELF"
+			else:
+				phase_txt = "DEFEND YOUR RUNNER" if Game.holding_team == my_team else "HUNT THE RUNNER"
 		Game.Phase.DROPPED:
 			if Game.is_overtime():
 				timer_col = Mats.TAG_COLOR
@@ -200,8 +220,17 @@ func _process(delta: float) -> void:
 	_phase.text = phase_txt
 	_timer.text = "OVERTIME" if Game.is_overtime() else UiKit.format_time(Game.timer)
 	_timer.add_theme_color_override("font_color", timer_col)
+	# The bar along the bottom of the top HUD is a second clock: it empties as the
+	# round timer runs down (full until the Tag is first picked up).
+	var track := _clock_fill.get_parent() as Control
+	var frac := 1.0
+	if Game.phase in [Game.Phase.HELD, Game.Phase.DROPPED]:
+		frac = clampf(Game.timer / Game.ROUND_TIME, 0.0, 1.0)
+	_clock_fill.size = Vector2(track.size.x * frac, track.size.y)
+	_clock_fill.position.x = (track.size.x - _clock_fill.size.x) * 0.5  # shrinks in from both ends
+	_clock_fill.color = Mats.TAG_COLOR if Game.is_overtime() else (timer_col if Game.phase == Game.Phase.HELD else Color(0.95, 0.95, 0.95, 0.95))
 	if Game.holder != 0:
-		_runner_label.text = "YOU ARE THE RUNNER" if Game.holder == me else "Runner: %s" % Net.name_of(Game.holder)
+		_runner_label.text = "" if Game.holder == me else "Runner: %s" % Net.name_of(Game.holder)
 	else:
 		_runner_label.text = ""
 
@@ -220,6 +249,15 @@ func _process(delta: float) -> void:
 		row.modulate.a = clampf(t, 0.0, 1.0)
 		if t <= 0.0:
 			row.queue_free()
+
+	# Countdown: B opens the loadout picker; it closes by itself when the round starts.
+	var pre_round: bool = Game.phase == Game.Phase.PREROUND and lp != null and lp.alive
+	_loadout_hint.visible = pre_round and not loadout_open
+	_loadout_hint.text = "Press %s to change loadout" % Settings.bind_text("loadout").to_upper()
+	if pre_round and not loadout_open and Input.is_action_just_pressed("loadout") and main and main.overlay == null and not Game.typing:
+		set_loadout_open(true)
+	elif _pre_loadout.visible and not pre_round:
+		set_loadout_open(false)
 
 	_fps.visible = Settings.g("show_fps")
 	_fps.text = "%d FPS" % Engine.get_frames_per_second()

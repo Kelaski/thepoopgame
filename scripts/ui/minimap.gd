@@ -5,10 +5,10 @@ extends Control
 ## objective / dropped Tag, and yourself. Its size follows the "Minimap size"
 ## setting, and location names are drawn on the buildings and park.
 
-const WIDGET := Vector2(240, 204)  # size at 1.0x
+const WIDGET := Vector2(288, 245)  # size at 1.0x (the old 1.2x)
 const MIN_SCALE := 0.6
 const MAX_SCALE := 2.0
-const LABEL_SIZE := 7.5            # font size at 1.0x (shrunk further to fit small buildings)
+const LABEL_SIZE := 9.0            # font size at 1.0x (shrunk further to fit small buildings)
 const LABEL_MIN := 5
 
 var _acc := 0.0
@@ -16,6 +16,7 @@ var _scale := 1.2
 var _ui_scale := 1.0              # the player's minimap size setting
 var _origin := Vector2.ZERO   # map-space point drawn at the widget's top-left
 var _pad := Vector2.ZERO      # centring offset inside the widget
+var _area_px := Rect2()       # the playable area on the widget: everything is clipped to it
 
 
 func _init() -> void:
@@ -41,6 +42,11 @@ func _p(v: Vector3) -> Vector2:
 
 func _r(r: Rect2) -> Rect2:
 	return Rect2((r.position - _origin) * _scale + _pad, r.size * _scale)
+
+
+## A widget-space rect cut to the playable area, so nothing spills past the map's edge.
+func _clip(r: Rect2) -> Rect2:
+	return r.intersection(_area_px)
 
 
 ## Location names centred on each building (and the park). Names wider than their
@@ -87,9 +93,9 @@ func _draw_ground(builder) -> void:
 	var dash := maxf(1.0, 3.0 * _scale)
 	for r: Rect2 in builder.road_rects:
 		var rr := _r(r)
-		draw_rect(rr.grow(maxf(1.0, 1.2 * _scale)), Color(0.3, 0.31, 0.34))  # sidewalk / curb
+		draw_rect(_clip(rr.grow(maxf(1.0, 1.2 * _scale))), Color(0.33, 0.33, 0.35))  # sidewalk / curb
 	for r: Rect2 in builder.road_rects:
-		draw_rect(_r(r), Color(0.22, 0.23, 0.27))
+		draw_rect(_clip(_r(r)), Color(0.2, 0.21, 0.24))
 	for r: Rect2 in builder.road_rects:
 		var rr := _r(r)
 		var c := rr.get_center()
@@ -106,7 +112,7 @@ func _draw_ground(builder) -> void:
 			d += dash * 2.0
 	for m: Array in builder.map_marks:
 		if m[0] == "lot":
-			var lr := _r(m[1])
+			var lr := _clip(_r(m[1]))
 			draw_rect(lr, Color(0.26, 0.27, 0.3))
 			draw_rect(lr, Color(0.55, 0.55, 0.5, 0.4), false, 1.0)
 	if not builder.has_park:
@@ -144,15 +150,15 @@ func _draw_ellipse(r: Rect2, col: Color) -> void:
 
 
 ## Buildings: a soft shadow, the walls in the building's colour (taller ones
-## lighter), a roof inset and their outside doors.
+## lighter) and a roof inset.
 func _draw_buildings(builder) -> void:
 	var tallest := 1
 	for b in builder.buildings:
 		tallest = maxi(tallest, int(b.floors))
 	var sh := maxf(1.0, 0.8 * _scale)
 	for b in builder.buildings:
-		draw_rect(_r(b.rect).grow(0.5), Color(0, 0, 0, 0.3))
-		draw_rect(Rect2(_r(b.rect).position + Vector2(sh, sh), _r(b.rect).size), Color(0, 0, 0, 0.35))
+		draw_rect(_clip(_r(b.rect).grow(0.5)), Color(0, 0, 0, 0.3))
+		draw_rect(_clip(Rect2(_r(b.rect).position + Vector2(sh, sh), _r(b.rect).size)), Color(0, 0, 0, 0.35))
 	for b in builder.buildings:
 		var rr := _r(b.rect)
 		var h := float(b.floors) / tallest
@@ -162,29 +168,21 @@ func _draw_buildings(builder) -> void:
 		if rr.size.x > inset * 4.0 and rr.size.y > inset * 4.0:
 			draw_rect(rr.grow(-inset), base.lightened(0.12))
 		draw_rect(rr, Color(0, 0, 0, 0.55), false, 1.0)
-	# Outside doors: a bright notch on the wall
-	for d in builder.doors:
-		if not is_instance_valid(d):
-			continue
-		var p := Vector2(d.global_position.x, d.global_position.z)
-		for b in builder.buildings:
-			var br: Rect2 = b.rect
-			if not br.grow(0.6).has_point(p) or br.grow(-0.6).has_point(p):
-				continue
-			draw_rect(Rect2(_p(d.global_position) - Vector2(1.5, 1.5), Vector2(3, 3)), Color(0.95, 0.85, 0.55, 0.9))
-			break
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.1, 0.12, 0.14, 0.85))
+	# A dark backing like the HUD panels, with the map fitted inside it.
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.035, 0.05, 0.62))
 	var w = Game.world
 	if w == null or w.builder == null:
 		return
 	var area: Rect2 = w.builder.bounds
-	_scale = minf(size.x / area.size.x, size.y / area.size.y)
+	var inner := Rect2(Vector2(6, 6), size - Vector2(12, 12))
+	_scale = minf(inner.size.x / area.size.x, inner.size.y / area.size.y)
 	_origin = area.position
-	_pad = (size - area.size * _scale) * 0.5
-	draw_rect(_r(area), Color(0.16, 0.18, 0.2, 0.9))
+	_pad = inner.position + (inner.size - area.size * _scale) * 0.5
+	_area_px = _r(area)
+	draw_rect(_area_px, Color(0.17, 0.18, 0.2))
 	_draw_ground(w.builder)
 	_draw_buildings(w.builder)
 	if Settings.g("minimap_labels"):
@@ -234,4 +232,4 @@ func _draw() -> void:
 		draw_colored_polygon(tri, Color.WHITE)
 		tri.append(tri[0])
 		draw_polyline(tri, Color.BLACK, 1.5)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(1, 1, 1, 0.35), false, 2.0)
+	draw_rect(_area_px, Color(0, 0, 0, 0.6), false, 1.0)

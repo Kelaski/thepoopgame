@@ -18,9 +18,10 @@ const DECEL := 45.0
 const AIR_ACCEL := 19.2  # air control below your run speed (was 16, +20%)
 # Air strafing works like Titanfall / Source: above your run speed, strafing while
 # you turn adds speed (up to AIR_SPEED_LIMIT); pushing straight on adds nothing.
-const AIR_STRAFE_ACCEL := 60.0
-const AIR_WISH_CAP := 1.0
+const AIR_STRAFE_ACCEL := 40.0
+const AIR_WISH_CAP := 0.8
 const AIR_SPEED_LIMIT := 17.0
+const SPEED_CAP := 30.0         # global top speed (m/s, horizontal), whatever you're doing
 const JUMP_BUFFER := 0.1        # a jump pressed this long before landing still happens
 const LAND_GRACE := 0.12        # no ground friction for this long after landing, so hops keep speed
 const OVERSPEED_FRICTION := 8.0 # how fast speed above your run speed bleeds off on the ground
@@ -65,10 +66,12 @@ const MAX_GROUND_SPEED := 14.0
 const NET_INTERVAL := 1.0 / 30.0
 const DOOR_SLAM_SPEED := 5.5
 
-const MASK_FULL := 1 | 2 | 8 | 16 | 32 | 64   # 64 = the sky barrier: it stops you...
-const MASK_PHASE := 1 | 16 | 32 | 64
+# Bounce pads (32) aren't in your movement masks: they're one-way, handled by
+# _check_bounce_pad, so you pass up through them and bounce off the top.
+const MASK_FULL := 1 | 2 | 8 | 16 | 64   # 64 = the sky barrier: it stops you...
+const MASK_PHASE := 1 | 16 | 64
 const MASK_PHASE_DOWN := 16 | 64
-const MASK_AIM := MASK_FULL & ~64               # ...but grapples, sprays, pings and shots go through it
+const MASK_AIM := (MASK_FULL | 32) & ~64        # ...but grapples, sprays, pings and shots go through it (and can hit pads)
 const MASK_SHOT := 1 | 2 | 4 | 8 | 16
 
 const F_CROUCH := 1
@@ -200,6 +203,7 @@ var _land_grace := 0.0     # time left without ground friction after landing
 var _slide_boost_cd := 0.0
 var _slide_pending_boost := false  # a slide started in the air gets its boost when it lands
 var _mantle_cd := 0.0
+var _air_side := Vector3.ZERO  # the A / D part of your input this frame (air strafing)
 var _mantle_t := 0.0       # time left in a mantle
 var _mantle_dir := Vector3.ZERO
 var _mantle_top := 0.0     # height of the ledge being climbed
@@ -314,36 +318,45 @@ static func _meshes_under(n: Node, out: Array) -> Array:
 	return out
 
 
-## Landing on a bounce pad (umbrella and awning tops) launches you up. Only a
-## landing counts: you were falling and the pad met the bottom of your capsule, so
-## bumping your head on the underside of a low umbrella edge doesn't fire it.
-func _check_bounce_pad(fall_v: float) -> void:
-	var feet := global_position.y + RADIUS + 0.05
-	for i in get_slide_collision_count():
-		var c := get_slide_collision(i)
-		var body := c.get_collider() as CollisionObject3D
-		if not body or not body.collision_layer & MapBuilder.L_BOUNCE:
-			continue
-		var at := c.get_position()
-		if at.y > feet:
-			# Your head or body is caught in the pad (standing on a bench under an
-			# umbrella's low edge): slide out from under it instead of sticking.
-			var out := Vector3(global_position.x - at.x, 0.0, global_position.z - at.z)
-			if out.length() < 0.01:
-				out = Vector3(global_position.x - body.global_position.x, 0.0, global_position.z - body.global_position.z)
-			global_position += out.normalized() * 0.08
-			continue
-		if fall_v > 0.5 or _bounce_cd > 0.0:
-			continue
-		# Edge landings count too (the round bottom of your capsule meets the rim at an angle).
-		if c.get_normal().y > 0.3:
-			_bounce_cd = 0.2
-			velocity.y = BOUNCE_V
-			coyote = 0.0
-			dj_ready = true
-			Sfx.play("jump", -2.0, 1.25)
-			_on_moved()
-			return
+## Bounce pads (umbrella and awning tops) launch you up whenever you hit one in
+## the air: landing on the top, or jumping into its rim or side. They have no
+## solid collision for you (you pass up through them), so you can never get
+## wedged in one; coming down onto the top always bounces. A head bump while
+## you're standing underneath doesn't count.
+func _check_bounce_pad(delta: float) -> void:
+	if velocity.y > 0.5 or _bounce_cd > 0.0 or is_on_floor():
+		return
+	var space := get_world_3d().direct_space_state
+	var hit := false
+	# Coming down onto the top this frame: the centre of your feet, plus a ring at
+	# your capsule's edge so landing on a rim counts too.
+	var drop := maxf(-velocity.y * delta, 0.0) + 0.06
+	var step := Vector3(velocity.x, 0.0, velocity.z) * delta
+	for off: Vector3 in [Vector3.ZERO, Vector3(RADIUS * 0.7, 0, 0), Vector3(-RADIUS * 0.7, 0, 0), Vector3(0, 0, RADIUS * 0.7), Vector3(0, 0, -RADIUS * 0.7)]:
+		var from := global_position + off + step + Vector3(0, 0.35, 0)
+		var q := PhysicsRayQueryParameters3D.create(from, from - Vector3(0, 0.35 + drop, 0), MapBuilder.L_BOUNCE, [get_rid()])
+		var r := space.intersect_ray(q)
+		if not r.is_empty() and (r.normal as Vector3).y >= 0.5 and (r.position as Vector3).y <= global_position.y + 0.3:
+			global_position.y = maxf(global_position.y, (r.position as Vector3).y)
+			hit = true
+			break
+	if not hit:
+		# Anywhere else on your body touching the pad (its rim or side) counts as
+		# hitting it too, so jumping into an umbrella launches you.
+		var q2 := PhysicsShapeQueryParameters3D.new()
+		q2.shape = capsule
+		q2.transform = global_transform * col_shape.transform
+		q2.collision_mask = MapBuilder.L_BOUNCE
+		q2.exclude = [get_rid()]
+		hit = not space.intersect_shape(q2, 1).is_empty()
+	if not hit:
+		return
+	_bounce_cd = 0.25
+	velocity.y = BOUNCE_V
+	coyote = 0.0
+	dj_ready = true
+	Sfx.play("jump", -2.0, 1.25)
+	_on_moved()
 
 
 ## Fades this teammate's name out while it's near your crosshair.
@@ -446,6 +459,7 @@ func _update_glint() -> void:
 
 func refresh_loadout() -> void:
 	var old_weapon := weapon
+	var old_addon := addon
 	if Net.players.has(peer_id):
 		var info: Dictionary = Net.players[peer_id]
 		team = info.team
@@ -453,6 +467,13 @@ func refresh_loadout() -> void:
 		addon = info.addon
 	if weapon != old_weapon:
 		_rebuild_tp_gun()
+		# A new gun comes loaded (matters when you swap during the countdown).
+		ammo = int(Weapons.DATA[weapon].mag)
+		reloading = 0.0
+		fire_cd = 0.0
+	if addon != old_addon:
+		addon_active = 0.0
+		addon_cd = 0.0
 	if nameplate:
 		_apply_team_look()
 	if is_local:
@@ -608,6 +629,7 @@ func _physics_process(delta: float) -> void:
 	rotation.y = yaw
 	head.rotation.x = pitch
 	var wish := Basis(Vector3.UP, yaw) * Vector3(move_in.x, 0.0, move_in.y)
+	_air_side = Basis(Vector3.UP, yaw) * Vector3(move_in.x, 0.0, 0.0)
 	if wish.length() > 1.0:
 		wish = wish.normalized()
 
@@ -887,6 +909,10 @@ func _physics_process(delta: float) -> void:
 		_tick_hook(delta)
 	if grapple_state == Hook.ATTACHED:
 		hvel = _apply_grapple(delta, hvel, wish, jump_tap, on_floor)
+	# One global speed cap over everything (slides, hops, wall kicks, grapples,
+	# speed bonuses included).
+	if hvel.length() > SPEED_CAP:
+		hvel = hvel.normalized() * SPEED_CAP
 	velocity.x = hvel.x
 	velocity.z = hvel.z
 	if move_in != Vector2.ZERO:
@@ -905,9 +931,8 @@ func _physics_process(delta: float) -> void:
 		collision_mask = MASK_FULL
 
 	_bounce_cd -= delta
-	var fall_v := velocity.y
+	_check_bounce_pad(delta)
 	move_and_slide()
-	_check_bounce_pad(fall_v)
 	if global_position.y < -25.0:
 		global_position = Vector3(global_position.x, 2.0, global_position.z)
 		velocity = Vector3.ZERO
@@ -949,8 +974,7 @@ func _landing_bonus(fall: float) -> float:
 ## Air movement. Below your run speed you speed up and steer freely; above it,
 ## it works like Titanfall / Source air strafing: strafing while you turn adds a
 ## little speed (up to AIR_SPEED_LIMIT), pushing straight on adds nothing, and
-## holding back brakes. Holding forward while you strafe doesn't get in the way:
-## only the sideways part of your input counts.
+## holding back brakes.
 func _air_strafe(hvel: Vector3, wish: Vector3, base: float, delta: float) -> Vector3:
 	if wish == Vector3.ZERO:
 		return hvel
@@ -960,13 +984,11 @@ func _air_strafe(hvel: Vector3, wish: Vector3, base: float, delta: float) -> Vec
 		if hvel.length() > base:
 			hvel = hvel.normalized() * base
 		return hvel
-	var wd := wish
-	var heading := hvel / speed
-	var ahead := wd.dot(heading)
-	if ahead > 0.0:
-		wd -= heading * ahead  # drop the "keep going forward" part, keep the strafe
-	if wd.length() < 0.05:
-		return hvel  # just holding forward: keep your speed
+	# Holding W while you strafe doesn't get in the way: when A or D is held, only
+	# the sideways part of your input counts. (It's your input's sideways part, not
+	# one relative to your velocity, so A / D alone steer you only a little; the
+	# speed comes from turning with the mouse as you strafe.)
+	var wd := _air_side if _air_side.length() > 0.1 else wish
 	wd = wd.normalized()
 	var add := AIR_WISH_CAP - hvel.dot(wd)
 	if add <= 0.0:

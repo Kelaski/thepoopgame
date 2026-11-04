@@ -38,6 +38,8 @@ func _ready() -> void:
 	streams["jump"] = _thud(rng, 0.08, 120.0)
 	streams["round"] = _chirp(300.0, 600.0, 0.6, 0.5)
 	streams["tick"] = _tone(1000.0, 0.03, 0.35)
+	streams["count"] = _beep(196.0, 0.3, 0.55)
+	streams["go"] = _go(rng)
 	streams["ping"] = _bell(1760.0, 0.35, 0.4)
 	streams["ping_danger"] = _chirp(1500.0, 950.0, 0.22, 0.45)
 	streams["hurt"] = _thud(rng, 0.15, 60.0)
@@ -162,6 +164,35 @@ func _tone(hz: float, length: float, vol: float) -> AudioStreamWAV:
 	for i in n:
 		var t := float(i) / RATE
 		s[i] = sin(TAU * hz * t) * vol * (1.0 - float(i) / n)
+	return _wav(s)
+
+
+## Deep countdown beep: a low tone with its octave, a quick attack and a short decay.
+func _beep(hz: float, length: float, vol: float) -> AudioStreamWAV:
+	var n := int(length * RATE)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		var env := minf(t / 0.006, 1.0) * exp(-t * (5.0 / length))
+		s[i] = (sin(TAU * hz * t) * 0.7 + sin(TAU * hz * 2.0 * t) * 0.3) * env * vol
+	return _wav(s)
+
+
+## "GO": a bright two-note stab over a low punch, a little brighter and longer
+## than the countdown beeps.
+func _go(rng: RandomNumberGenerator) -> AudioStreamWAV:
+	var length := 0.55
+	var n := int(length * RATE)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		var env := minf(t / 0.004, 1.0) * exp(-t * 6.0)
+		var stab := sin(TAU * 392.0 * t) * 0.45 + sin(TAU * 587.3 * t) * 0.35 + sin(TAU * 784.0 * t) * 0.2
+		var punch := sin(TAU * 70.0 * t * (1.0 - t)) * exp(-t * 18.0)
+		var air := rng.randf_range(-1.0, 1.0) * exp(-t * 40.0) * 0.25
+		s[i] = tanh((stab * env + punch * 0.9 + air) * 1.4) * 0.8
 	return _wav(s)
 
 

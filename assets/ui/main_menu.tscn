@@ -48,7 +48,7 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 18
-text = "Grab the Tag. Protect your Runner. First to 4 rounds."
+text = "Grab the Tag. Protect your Runner."
 horizontal_alignment = 1
 
 [node name="@HSeparator@54" type="HSeparator" parent="Center/Panel/Content" unique_id=1374449755]
@@ -64,7 +64,7 @@ text = "Host Game"
 unique_name_in_owner = true
 custom_minimum_size = Vector2(240, 44)
 layout_mode = 2
-text = "Play Game"
+text = "Join Game"
 
 [node name="SettingsButton" type="Button" parent="Center/Panel/Content" unique_id=1300115062]
 unique_name_in_owner = true

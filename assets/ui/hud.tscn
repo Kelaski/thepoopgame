@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://assets/ui/loadout_panel.tscn" id="8_k7jnj"]
 [ext_resource type="Script" path="res://scripts/ui/loadout_panel.gd" id="9_neqbl"]
 [ext_resource type="PackedScene" path="res://assets/ui/tag_indicator.tscn" id="10_tagin"]
+[ext_resource type="PackedScene" path="res://assets/ui/countdown.tscn" id="12_count"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vitals"]
 content_margin_left = 16.0
@@ -40,6 +41,25 @@ content_margin_left = 12.0
 content_margin_top = 3.0
 content_margin_right = 12.0
 content_margin_bottom = 4.0
+bg_color = Color(0.03, 0.035, 0.05, 0.5)
+skew = Vector2(0.22, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topbar"]
+bg_color = Color(0.03, 0.035, 0.05, 0.62)
+corner_radius_bottom_left = 3
+corner_radius_bottom_right = 3
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_clock"]
+content_margin_left = 12.0
+content_margin_top = 0.0
+content_margin_right = 12.0
+content_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topchip"]
+content_margin_left = 14.0
+content_margin_top = 2.0
+content_margin_right = 14.0
+content_margin_bottom = 3.0
 bg_color = Color(0.03, 0.035, 0.05, 0.5)
 skew = Vector2(0.22, 0)
 
@@ -100,73 +120,104 @@ layout_mode = 1
 layout_mode = 0
 anchor_left = 0.5
 anchor_right = 0.5
-offset_top = 12.0
-offset_bottom = 12.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="Scores" type="HBoxContainer" parent="TopCentre" unique_id=1016574]
+[node name="TopBar" type="PanelContainer" parent="TopCentre" unique_id=1016575]
 layout_mode = 2
+size_flags_horizontal = 4
 mouse_filter = 2
-theme_override_constants/separation = 14
-alignment = 1
+theme_override_styles/panel = SubResource("StyleBoxFlat_topbar")
 
-[node name="ScoreBoxRed" type="PanelContainer" parent="TopCentre/Scores" unique_id=1534272040]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 0)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="ScoreRed" type="Label" parent="TopCentre/Scores/ScoreBoxRed" unique_id=823958514]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudLabel"
-theme_override_font_sizes/font_size = 34
-text = "0"
-horizontal_alignment = 1
-
-[node name="Clock" type="VBoxContainer" parent="TopCentre/Scores" unique_id=1588381181]
-custom_minimum_size = Vector2(200, 0)
+[node name="Rows" type="VBoxContainer" parent="TopCentre/TopBar" unique_id=1016576]
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 0
 
-[node name="Timer" type="Label" parent="TopCentre/Scores/Clock" unique_id=1475365269]
-unique_name_in_owner = true
+[node name="Scores" type="HBoxContainer" parent="TopCentre/TopBar/Rows" unique_id=1016574]
 layout_mode = 2
-theme_type_variation = &"HudLabel"
-theme_override_font_sizes/font_size = 40
-text = "2:00"
-horizontal_alignment = 1
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
 
-[node name="Round" type="Label" parent="TopCentre/Scores/Clock" unique_id=2053446096]
+[node name="ScoreBoxRed" type="PanelContainer" parent="TopCentre/TopBar/Rows/Scores" unique_id=1534272040]
 unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HudMutedLabel"
-theme_override_font_sizes/font_size = 15
-text = "ROUND 1"
-horizontal_alignment = 1
-
-[node name="ScoreBoxBlue" type="PanelContainer" parent="TopCentre/Scores" unique_id=1919687760]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 0)
+custom_minimum_size = Vector2(72, 0)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="ScoreBlue" type="Label" parent="TopCentre/Scores/ScoreBoxBlue" unique_id=59000397]
+[node name="ScoreRed" type="Label" parent="TopCentre/TopBar/Rows/Scores/ScoreBoxRed" unique_id=823958514]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 24
+text = "0"
+horizontal_alignment = 1
+
+[node name="ClockPanel" type="PanelContainer" parent="TopCentre/TopBar/Rows/Scores" unique_id=1588381182]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_clock")
+
+[node name="Clock" type="VBoxContainer" parent="TopCentre/TopBar/Rows/Scores/ClockPanel" unique_id=1588381181]
+custom_minimum_size = Vector2(124, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = -4
+
+[node name="Timer" type="Label" parent="TopCentre/TopBar/Rows/Scores/ClockPanel/Clock" unique_id=1475365269]
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HudLabel"
-theme_override_font_sizes/font_size = 34
+theme_override_font_sizes/font_size = 28
+text = "2:00"
+horizontal_alignment = 1
+
+[node name="Round" type="Label" parent="TopCentre/TopBar/Rows/Scores/ClockPanel/Clock" unique_id=2053446096]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudMutedLabel"
+theme_override_font_sizes/font_size = 11
+text = "ROUND 1"
+horizontal_alignment = 1
+
+[node name="ScoreBoxBlue" type="PanelContainer" parent="TopCentre/TopBar/Rows/Scores" unique_id=1919687760]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ScoreBlue" type="Label" parent="TopCentre/TopBar/Rows/Scores/ScoreBoxBlue" unique_id=59000397]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 24
 text = "0"
 horizontal_alignment = 1
+
+[node name="ClockTrack" type="ColorRect" parent="TopCentre/TopBar/Rows" unique_id=1016577]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.45)
+
+[node name="ClockFill" type="ColorRect" parent="TopCentre/TopBar/Rows/ClockTrack" unique_id=1016578]
+unique_name_in_owner = true
+layout_mode = 0
+offset_bottom = 3.0
+mouse_filter = 2
+color = Color(0.95, 0.95, 0.95, 0.95)
 
 [node name="Phase" type="Label" parent="TopCentre" unique_id=289778427]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 4
 theme_type_variation = &"HudAccentLabel"
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxFlat_topchip")
 horizontal_alignment = 1
 
 [node name="RunnerLabel" type="Label" parent="TopCentre" unique_id=1191450395]
@@ -217,7 +268,7 @@ theme_override_constants/separation = 10
 
 [node name="Minimap" type="Control" parent="TopRight" unique_id=667029074 instance=ExtResource("6_fyhec")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 204)
+custom_minimum_size = Vector2(288, 245)
 layout_mode = 2
 size_flags_horizontal = 8
 mouse_filter = 2
@@ -440,6 +491,45 @@ grow_vertical = 0
 theme_type_variation = &"HudAccentLabel"
 theme_override_font_sizes/font_size = 15
 horizontal_alignment = 1
+
+[node name="Countdown" parent="." unique_id=1820463200 instance=ExtResource("12_count")]
+layout_mode = 1
+
+[node name="LoadoutHint" type="Label" parent="." unique_id=1820463201]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -150.0
+offset_bottom = -150.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_type_variation = &"HudMutedLabel"
+theme_override_font_sizes/font_size = 18
+text = "Press B to change loadout"
+horizontal_alignment = 1
+
+[node name="PreLoadout" type="PanelContainer" parent="." unique_id=1820463202]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(760, 0)
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -190.0
+offset_bottom = -190.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Loadout" type="VBoxContainer" parent="PreLoadout" unique_id=1820463203 instance=ExtResource("8_k7jnj")]
+layout_mode = 2
+theme_override_constants/separation = 8
+script = ExtResource("9_neqbl")
 
 [node name="Death" type="PanelContainer" parent="." unique_id=1078019297]
 unique_name_in_owner = true

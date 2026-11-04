@@ -121,7 +121,7 @@ func show_lobby() -> void:
 	_set_screen(l)
 
 
-## "Play Game": enter a join code.
+## "Join Game": enter a join code.
 func show_join_menu(message := "") -> void:
 	close_overlay()
 	var j: JoinMenu = JOIN_MENU_SCENE.instantiate()
@@ -339,6 +339,8 @@ func _set_overlay(c: Control) -> void:
 func replace_overlay(old: Control, fresh: Control) -> void:
 	if overlay == old:
 		_set_overlay(fresh)
+	elif overlay is CustomizeHub and overlay.is_ancestor_of(old):
+		overlay.replace_tab(old, fresh)
 	else:
 		old.get_parent().add_child(fresh)
 		old.queue_free()

@@ -7,32 +7,32 @@ const ORDER := ["hider", "trackstar", "skywalker", "stalker", "phantom", "grappl
 const DATA := {
 	"hider": {
 		"name": "Hider",
-		"desc": "Ability key: 15s of invisibility. Fully invisible while still or crouch-walking, 10% visible while moving. Ends early if you fire. 12s cooldown after it ends.",
+		"desc": "15s invisibility (faint while moving). Firing ends it. 12s cooldown.",
 		"active": true,
 	},
 	"trackstar": {
 		"name": "Trackstar",
-		"desc": "Passive +15% move speed, and reloads (and the shotgun re-chambering between shots) are 35% faster; 30% faster with the sniper. Ability key: +35% for 6s. 24s cooldown from activation.",
+		"desc": "+15% speed and faster reloads. Ability: +35% speed for 6s. 24s cooldown.",
 		"active": true,
 	},
 	"skywalker": {
 		"name": "Skywalker",
-		"desc": "Passive double jump: extra height while keeping your current momentum. Recharges when you land.",
+		"desc": "Double jump. Recharges when you land.",
 		"active": false,
 	},
 	"stalker": {
 		"name": "Stalker",
-		"desc": "Passive: see wide red trails behind every enemy that linger for 6s. Walls and floors hide them. Ability key: see the outline of every player through walls for 4s. 14s cooldown from activation.",
+		"desc": "See enemy trails. Ability: see every player through walls for 4s. 14s cooldown.",
 		"active": true,
 	},
 	"phantom": {
 		"name": "Phantom",
-		"desc": "Ability key: phase for 2s. Run through walls and doors; double-tap crouch to drop through floors. 23s cooldown.",
+		"desc": "Phase through walls for 2s (double-tap crouch to drop a floor). 23s cooldown.",
 		"active": true,
 	},
 	"grapple": {
 		"name": "Grapple",
-		"desc": "Hold the ability key: throw a grappling hook (27m range, up to 20 m/s). It latches onto whatever it hits and reels you in while you steer: hook something above you to swing, and get a pop up at the end to climb ledges. Release the key (or jump) to let go with your momentum. Hooking an enemy yanks them towards you. 6.5s cooldown from a hit; a miss only costs 1s.",
+		"desc": "Hold to grapple (27m) and swing. Hooking an enemy pulls them in. 6.5s cooldown.",
 		"active": true,
 	},
 }

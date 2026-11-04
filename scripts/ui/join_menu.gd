@@ -1,6 +1,6 @@
 class_name JoinMenu
 extends Control
-## "Play Game" (assets/ui/join_menu.tscn): type the join code the host gave you.
+## "Join Game" (assets/ui/join_menu.tscn): type the join code the host gave you.
 
 const SCENE := "res://assets/ui/join_menu.tscn"
 

@@ -7,6 +7,32 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.19.0
+
+### Added
+- **Round countdown:** every round starts with a big **3, 2, 1, GO!** in the middle of the screen. Each number shrinks and fades with a deep beep, and GO comes with a punchier sound and a quick screen pulse. During the countdown the Tag shows through walls and nobody can move or shoot; at GO you can, straight away.
+- **Change loadout in the countdown:** press **B** during the countdown to pick a weapon and addon (a hint shows near the bottom of the screen). The picker closes by itself at GO and the new loadout applies at once.
+- **Tabbed Customization menu:** Customization now works like Settings, with a tab each for Player, Music, Colours, Crosshair, Spray and Skybox.
+
+### Changed
+- **Top HUD** matches the bottom and takes up less room: the scores and clock sit flush in one smaller dark bar against the top of the screen, the team scores tinted with a team-coloured outer edge. The white bar along its bottom is a second clock: it shrinks as the round timer runs down (tinted with the holding team's colour, Tag-coloured in overtime).
+- **When you're the Runner** the status line just says **DEFEND YOURSELF**.
+- **Air strafing:** A and D gain speed on their own again while you turn with the mouse, and they no longer steer you so hard (holding D without turning used to swing you round 90° in under a second; now it's about 5°). W can still be held while you strafe.
+- **Spiked Bat** is held upright off to the right in first person, out of the middle of the screen, a little smaller and lower so less of the handle shows, and its spikes no longer clip through the head (short spikes on each face).
+- **Minimap** no longer marks building doors, its streets stay inside the map's edge, and it sits on a dark backing like the HUD panels.
+- **README** is now a player guide (what the game is, how to play, weapons, addons, movement, customizing, hosting). The developer notes moved to DEVELOPMENT.md.
+- **Join codes** are different every time you host (a random salt scrambles the address). Codes are now 9 characters, like `ABCD-EFGHJ`.
+- **Main menu:** "Play Game" is now **Join Game**, and the "First to 4 rounds" line is gone.
+- **Lobby:** the map dimensions (80 x 100 m and so on) are gone.
+- **Shorter weapon and addon descriptions** that only say what matters.
+- **Minimap:** the old 1.20x size is the new 1.00x default.
+- **Global speed cap:** nobody can move faster than 30 m/s horizontally, whatever they chain together (slides, hops, wall kicks, grapples and speed bonuses included).
+
+### Fixed
+- **Video settings dropdowns in the released builds** were empty: their options were lost when the game was exported. They now always show their options.
+- **Umbrellas:** jumping onto one could still leave you stuck in the canopy. Now hitting a bounce pad in the air (landing on top, or jumping into its rim or side) launches you up, and pads no longer have solid collision for you, so you can't get stuck in one.
+- A rare random city with no usable Tag spot could stop the first round from starting; the middle of the map is used instead.
+
 ## 0.18.1
 
 ### Changed

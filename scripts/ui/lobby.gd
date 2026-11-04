@@ -6,11 +6,11 @@ extends Control
 
 const SCENE := "res://assets/ui/lobby.tscn"
 
-## Short map description next to the map size; the full one is the tooltip.
+## What the classic city has at each size (the map pick's tooltip).
 const MAP_INFO := {
-	"small": ["80 x 100 m", "About 80 x 100 m. Classic city: Bank, Meridian Tower and the park."],
-	"medium": ["130 x 135 m", "About 130 x 135 m. Classic city: School, Bank, Diner, Arcade, Meridian Tower, Casino and the park."],
-	"large": ["200 x 170 m", "200 x 170 m. Classic city: all 18 buildings and the park."],
+	"small": "Classic city: Bank, Meridian Tower and the park.",
+	"medium": "Classic city: School, Bank, Diner, Arcade, Meridian Tower, Casino and the park.",
+	"large": "Classic city: all 18 buildings and the park.",
 }
 
 var main
@@ -103,16 +103,16 @@ func _on_map_size_changed(_size: String) -> void:
 
 
 func _update_map_label() -> void:
-	var info: Array = MAP_INFO.get(Game.map_size, ["", ""])
+	var info: String = MAP_INFO.get(Game.map_size, "")
 	var label: Label = %MapLabel
 	# The host sees the size in the dropdown; clients get it in the label.
 	if multiplayer.is_server():
 		%MapPick.selected = maxi(0, MapData.SIZE_ORDER.find(Game.map_size))
-		%MapPick.tooltip_text = info[1]
-		label.text = info[0]
+		%MapPick.tooltip_text = info
+		label.text = ""
 	else:
-		label.text = "%s  (%s)" % [MapData.size_name(Game.map_size), info[0]]
-	label.tooltip_text = info[1]
+		label.text = MapData.size_name(Game.map_size)
+	label.tooltip_text = info
 
 
 func _refresh() -> void:
