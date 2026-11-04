@@ -1,10 +1,15 @@
 extends Node
-## Multiplayer using ENet. The host is also a player (peer id 1).
-## The server owns the roster (names, teams, loadouts, K/D) and broadcasts it.
+## Multiplayer over Steam (GodotSteam, addons/godotsteam). The host is also a player
+## (peer id 1). The server owns the roster (names, teams, loadouts, K/D) and broadcasts it.
 ##
-## Online only: joining is by code (see JoinCode). When you host, the game looks up
-## your public address, asks your router to open the port with UPnP, and tells you
-## in the lobby what (if anything) still stands in the way.
+## Hosting creates a Steam lobby. Players join through an invite, through Steam's
+## friends list ("Join Game"), or by picking the lobby in Join Game. All game traffic
+## goes through Steam's relay (SteamMultiplayerPeer), so nobody needs open ports,
+## UPnP or firewall rules, and nobody's IP address is shown to anyone.
+##
+## Debug builds can also run a local ENet match from the command line
+## (main.gd: --host --port=N / --join=IP:PORT), so two copies can be tested on one
+## PC: Steam only allows one copy per account.
 
 signal roster_changed
 signal joined_ok
@@ -12,32 +17,25 @@ signal join_failed(reason: String)
 signal disconnected(reason: String)
 signal chat_message(from_id: int, text: String, team_only: bool)
 signal spray_updated(id: int)
-signal codes_changed  # online_code / port_status updated (lookups finished)
+signal lobby_list_received(lobbies: Array)  # [{id, name, version, players, max}], see find_lobbies()
+signal invite_accepted(lobby: int)          # accepted a Steam invite / "Join Game" while running
 
-# 27015 is the usual Source / Steam game server port, so many players already have
-# it forwarded; when they don't, UPnP opens it. The host can change it in the lobby.
-const DEFAULT_PORT := 27015
+const APP_ID := 480            # Spacewar, Valve's shared test app, until Tag Rush has its own
+const LOBBY_GAME := "tagrush"  # lobby tag: app 480 is shared by many games, so lobbies are filtered by it
 const MAX_PER_TEAM := 8
 const MAX_PLAYERS := 16
-const UPNP_TIMEOUT_MS := 2000
 const REGISTER_TIMEOUT := 5.0  # seconds a new connection has to register (and show its version)
-const PUBLIC_IP_URL := "https://api.ipify.org"  # replies with your public IPv4 address as plain text
-const FIREWALL_RULE := "Tag Rush"
+const LOCAL_PORT := 27015      # debug-only local matches
 
-var online_code := ""  # host: the join code (public address + port)
-var port_status := ""  # host: what's happening with the router / firewall, shown in the lobby
-var public_ip := ""
-var _ip_lookup_done := false
-var _upnp_state := 0    # 0 = working, 1 = port opened, -1 = failed
-var _upnp_ip := ""      # address the router reports (differs from public_ip behind CGNAT)
-var _upnp_msg := ""
-var _upnp: UPNP = null  # router we opened the port on
-var _mapped_port := 0
-var _host_port := 0
-var _upnp_gen := 0
-var _upnp_thread: Thread = null
-var _close_thread: Thread = null
-var _ip_http: HTTPRequest = null
+## Who can find and join the lobby (the host picks in the lobby).
+enum Privacy { PUBLIC, FRIENDS, INVITE }
+const PRIVACY_NAMES := ["Public", "Friends only", "Invite only"]
+
+var steam_ok := false   # Steam is running and signed in
+var steam_error := ""   # why not, shown on the main menu
+var lobby_id := 0       # the Steam lobby we're in (0 = none / local match)
+var _hosting := false   # waiting for Steam to create our lobby
+var _joining := 0       # lobby we asked Steam to enter
 var _reject_reason := ""
 
 var players := {}  # peer id -> {name, team, weapon, addon, kills, deaths}
@@ -50,7 +48,6 @@ const CHAT_BURST := 5        # messages allowed...
 const CHAT_WINDOW := 4.0     # ...per this many seconds
 const SPRAY_UPLOAD_INTERVAL := 3.0  # seconds between spray uploads per player
 var online := false
-var _code_salt := 0  # scrambles this lobby's join code (new each time you host)
 
 
 func _ready() -> void:
@@ -60,56 +57,209 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	_init_steam()
 
 
 func _exit_tree() -> void:
-	if _upnp_thread:
-		_upnp_thread.wait_to_finish()
-		_upnp_thread = null
-	_release_port()
-	if _close_thread:
-		_close_thread.wait_to_finish()
+	leave()
 
 
-# ------------------------------------------------------------ Windows Firewall
+# ------------------------------------------------------------ Steam
 
-func _firewall_applies() -> bool:
-	return OS.get_name() == "Windows" and DisplayServer.get_name() != "headless"
+func _init_steam() -> void:
+	if not Engine.has_singleton("Steam"):
+		steam_error = "Steam support is missing from this build."
+		return
+	# embed_callbacks: GodotSteam runs Steam's callbacks every frame for us.
+	var r: Dictionary = Steam.steamInitEx(APP_ID, true)
+	if int(r.get("status", -1)) != 0:  # 0 = OK
+		steam_error = "Couldn't connect to Steam. Start Steam and sign in, then restart Tag Rush to play online."
+		push_warning("Steam init failed: %s" % r)
+		return
+	steam_ok = true
+	# New players start with their Steam name (it can still be changed in Customization).
+	if str(Settings.g("player_name")) in ["", "Player"] and Sanitize.player_name(steam_name()) != "":
+		Settings.s("player_name", Sanitize.player_name(steam_name()))
+	Steam.lobby_created.connect(_on_lobby_created)
+	Steam.lobby_joined.connect(_on_lobby_joined)
+	Steam.join_requested.connect(_on_join_requested)
+	Steam.lobby_match_list.connect(_on_lobby_match_list)
 
 
-## True if our inbound allow rule for this exact executable exists (or this isn't
-## Windows). Reading the rules needs no admin rights.
-func firewall_allowed() -> bool:
-	if not _firewall_applies():
-		return true
+## Your Steam name (used as the default player name).
+func steam_name() -> String:
+	return Steam.getPersonaName() if steam_ok else ""
+
+
+## A lobby Steam asked us to join when it launched the game ("+connect_lobby <id>"
+## on the command line, from an invite or the friends list), or 0.
+func launch_lobby() -> int:
+	var args := OS.get_cmdline_args()
+	var i := args.find("+connect_lobby")
+	if i >= 0 and i + 1 < args.size() and args[i + 1].is_valid_int():
+		return int(args[i + 1])
+	return 0
+
+
+static func _lobby_type(p: int) -> int:
+	match p:
+		Privacy.FRIENDS:
+			return Steam.LOBBY_TYPE_FRIENDS_ONLY
+		Privacy.INVITE:
+			return Steam.LOBBY_TYPE_PRIVATE
+	return Steam.LOBBY_TYPE_PUBLIC
+
+
+## Host: changes who can find / join the lobby (saved for next time).
+func set_privacy(p: int) -> void:
+	p = clampi(p, 0, PRIVACY_NAMES.size() - 1)
+	Settings.s("lobby_privacy", p)
+	if is_server() and lobby_id != 0:
+		Steam.setLobbyType(lobby_id, _lobby_type(p))
+
+
+func privacy() -> int:
+	return clampi(int(Settings.g("lobby_privacy")), 0, PRIVACY_NAMES.size() - 1)
+
+
+## Asks Steam for open Tag Rush lobbies; answers with lobby_list_received.
+func find_lobbies() -> void:
+	if not steam_ok:
+		lobby_list_received.emit.call_deferred([])
+		return
+	Steam.addRequestLobbyListStringFilter("game", LOBBY_GAME, Steam.LOBBY_COMPARISON_EQUAL)
+	Steam.addRequestLobbyListDistanceFilter(Steam.LOBBY_DISTANCE_FILTER_WORLDWIDE)
+	Steam.addRequestLobbyListResultCountFilter(50)
+	Steam.requestLobbyList()
+
+
+func _on_lobby_match_list(lobbies: Array) -> void:
 	var out := []
-	if OS.execute("netsh", ["advfirewall", "firewall", "show", "rule", "name=" + FIREWALL_RULE, "verbose"], out) != 0:
+	for id in lobbies:
+		# Lobby data is written by whoever made the lobby: treat it as untrusted text.
+		out.append({
+			"id": int(id),
+			"name": Sanitize.player_name(Steam.getLobbyData(id, "name")),
+			"version": Sanitize.text(Steam.getLobbyData(id, "version")).left(16),
+			"players": Steam.getNumLobbyMembers(id),
+			"max": Steam.getLobbyMemberLimit(id),
+		})
+	lobby_list_received.emit(out)
+
+
+## Online Steam friends you can invite: [{id, name, playing}] (playing = in Tag Rush).
+func invitable_friends() -> Array:
+	var out := []
+	if not steam_ok:
+		return out
+	for i in Steam.getFriendCount(Steam.FRIEND_FLAG_IMMEDIATE):
+		var fid: int = Steam.getFriendByIndex(i, Steam.FRIEND_FLAG_IMMEDIATE)
+		if Steam.getFriendPersonaState(fid) == Steam.PERSONA_STATE_OFFLINE:
+			continue
+		var game: Dictionary = Steam.getFriendGamePlayed(fid)
+		var fname: String = Steam.getFriendPersonaName(fid)
+		if fname == "" or fname.is_valid_int():
+			fname = "Steam friend"  # Steam hasn't sent their name yet (it gives the ID meanwhile)
+		out.append({"id": fid, "name": fname, "playing": int(game.get("id", 0)) == APP_ID})
+	out.sort_custom(func(a, b): return a.playing and not b.playing if a.playing != b.playing else a.name.naturalnocasecmp_to(b.name) < 0)
+	return out
+
+
+func invite(friend_id: int) -> bool:
+	return steam_ok and lobby_id != 0 and Steam.inviteUserToLobby(lobby_id, friend_id)
+
+
+## Steam's own invite window (needs the Steam overlay, which isn't always there).
+func open_invite_overlay() -> bool:
+	if not steam_ok or lobby_id == 0 or not Steam.isOverlayEnabled():
 		return false
-	var exe := OS.get_executable_path().replace("/", "\\").to_lower()
-	return "".join(PackedStringArray(out)).to_lower().contains(exe)
+	Steam.activateGameOverlayInviteDialog(lobby_id)
+	return true
 
 
-## Asks Windows (an administrator / UAC prompt) to let the game accept connections:
-## removes any inbound rules Windows made for this program earlier (a dismissed
-## "allow access" prompt leaves a block rule behind, and block rules win), then
-## adds an allow rule for every network type.
-func request_firewall_access() -> void:
-	if not _firewall_applies():
+func _on_join_requested(lobby: int, _friend: int) -> void:
+	invite_accepted.emit(lobby)
+
+
+func _on_lobby_created(result: int, id: int) -> void:
+	if not _hosting:
+		if result == Steam.RESULT_OK:
+			Steam.leaveLobby(id)  # cancelled before Steam answered
 		return
-	# In a .cmd file a % starts a variable, so double any in the path.
-	var exe := OS.get_executable_path().replace("/", "\\").replace("%", "%%")
-	var script := "@echo off\r\n"
-	script += "netsh advfirewall firewall delete rule name=all dir=in program=\"%s\"\r\n" % exe
-	script += "netsh advfirewall firewall add rule name=\"%s\" dir=in action=allow program=\"%s\" enable=yes profile=any\r\n" % [FIREWALL_RULE, exe]
-	var path := ProjectSettings.globalize_path("user://allow_firewall.cmd").replace("/", "\\")
-	var f := FileAccess.open(path, FileAccess.WRITE)
-	if f == null:
+	_hosting = false
+	if result != Steam.RESULT_OK:
+		join_failed.emit("Steam couldn't create a lobby (error %d). Try again." % result)
 		return
-	f.store_string(script)
-	f.close()
-	var ps := "Start-Process -FilePath '%s' -Verb RunAs -WindowStyle Hidden" % path.replace("'", "''")
-	OS.create_process("powershell.exe", ["-NoProfile", "-WindowStyle", "Hidden", "-Command", ps])
+	var peer := SteamMultiplayerPeer.new()
+	var err := peer.create_host(0)
+	if err != OK:
+		Steam.leaveLobby(id)
+		join_failed.emit("Couldn't start hosting (error %d)." % err)
+		return
+	lobby_id = id
+	Steam.setLobbyJoinable(id, true)
+	Steam.setLobbyData(id, "game", LOBBY_GAME)
+	Steam.setLobbyData(id, "version", GameVersion.CURRENT)
+	Steam.setLobbyData(id, "name", Sanitize.player_name(Settings.g("player_name")))
+	_start_server(peer)
 
+
+func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: int) -> void:
+	if lobby != _joining:
+		# Cancelled before Steam answered: don't stay in it as a ghost member.
+		if response == Steam.CHAT_ROOM_ENTER_RESPONSE_SUCCESS and not _hosting and lobby != lobby_id:
+			Steam.leaveLobby(lobby)
+		return
+	_joining = 0
+	if response != Steam.CHAT_ROOM_ENTER_RESPONSE_SUCCESS:
+		join_failed.emit(_enter_error(response))
+		return
+	var fail := ""
+	var version := Sanitize.text(Steam.getLobbyData(lobby, "version")).left(16)
+	if Steam.getLobbyData(lobby, "game") != LOBBY_GAME:
+		fail = "That isn't a Tag Rush lobby."
+	elif version != GameVersion.CURRENT:
+		fail = "Version mismatch: the host is on %s, you're on %s. Update to the same version." % [version, GameVersion.CURRENT]
+	var owner: int = Steam.getLobbyOwner(lobby)
+	if fail == "" and owner == Steam.getSteamID():
+		fail = "That's your own lobby."
+	var peer := SteamMultiplayerPeer.new()
+	if fail == "" and peer.create_client(owner, 0) != OK:
+		fail = "Couldn't connect to the host."
+	if fail != "":
+		Steam.leaveLobby(lobby)
+		join_failed.emit(fail)
+		return
+	lobby_id = lobby
+	multiplayer.multiplayer_peer = peer
+	online = true
+	players.clear()
+	_reject_reason = ""
+	# connected_to_server (-> _on_connected) or connection_failed follows.
+
+
+static func _enter_error(response: int) -> String:
+	match response:
+		2:
+			return "That lobby doesn't exist any more."
+		3:
+			return "You're not allowed into that lobby (it may be friends or invite only)."
+		4:
+			return "The lobby is full."
+		6:
+			return "You're banned from that lobby."
+	return "Couldn't join the lobby (Steam error %d)." % response
+
+
+## True if steam_id is in our lobby (server: only lobby members may play).
+func _in_lobby(steam_id: int) -> bool:
+	for i in Steam.getNumLobbyMembers(lobby_id):
+		if Steam.getLobbyMemberByIndex(lobby_id, i) == steam_id:
+			return true
+	return false
+
+
+# ------------------------------------------------------------ hosting / joining
 
 func my_id() -> int:
 	return multiplayer.get_unique_id()
@@ -125,45 +275,46 @@ func sender() -> int:
 	return s if s != 0 else multiplayer.get_unique_id()
 
 
-func host(port: int) -> String:
+## Starts hosting: asks Steam for a lobby. Finishes in _on_lobby_created, which
+## emits joined_ok (or join_failed). Returns an error message, or "".
+func host() -> String:
 	leave()
+	if not steam_ok:
+		return steam_error
+	_hosting = true
+	Steam.createLobby(_lobby_type(privacy()), MAX_PLAYERS)
+	return ""
+
+
+## Joins a Steam lobby (from Join Game or an invite). Finishes in _on_lobby_joined.
+func join_lobby(id: int) -> String:
+	leave()
+	if not steam_ok:
+		return steam_error
+	if id <= 0:
+		return "That lobby doesn't exist any more."
+	_joining = id
+	Steam.joinLobby(id)
+	return ""
+
+
+## Debug builds only: a local ENet match for testing two copies on one PC.
+func host_local(port: int) -> String:
+	leave()
+	if not OS.is_debug_build():
+		return "Local matches are only for testing."
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(port, MAX_PLAYERS - 1)
 	if err != OK:
 		return "Could not host on port %d (error %d). Is it already in use?" % [port, err]
-	multiplayer.multiplayer_peer = peer
-	online = true
-	_code_salt = JoinCode.new_salt()  # a different join code for every lobby
-	# Only the host takes incoming connections, so only hosting asks Windows
-	# for the firewall rule (players who just join never see the prompt).
-	if not firewall_allowed():
-		request_firewall_access()
-	players.clear()
-	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
-	Game._set_map_size_local(str(Settings.g("map_size")))
-	roster_changed.emit()
-	upload_my_spray()
-	_host_port = port
-	_upnp_state = 0
-	_upnp_ip = ""
-	_upnp_msg = ""
-	_ip_lookup_done = false
-	_refresh_status()
-	_lookup_public_ip()
-	if _upnp_thread:
-		_upnp_thread.wait_to_finish()  # a previous lookup is still finishing (rare)
-	_upnp_gen += 1
-	_upnp_thread = Thread.new()
-	_upnp_thread.start(_upnp_open.bind(port, _upnp_gen))
+	_start_server(peer)
 	return ""
 
 
-func hosted_port() -> int:
-	return _host_port
-
-
-func join(ip: String, port: int) -> String:
+func join_local(ip: String, port: int) -> String:
 	leave()
+	if not OS.is_debug_build():
+		return "Local matches are only for testing."
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_client(ip, port)
 	if err != OK:
@@ -175,13 +326,23 @@ func join(ip: String, port: int) -> String:
 	return ""
 
 
+func _start_server(peer: MultiplayerPeer) -> void:
+	multiplayer.multiplayer_peer = peer
+	online = true
+	players.clear()
+	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"))
+	Game._set_map_size_local(str(Settings.g("map_size")))
+	roster_changed.emit()
+	upload_my_spray()
+	joined_ok.emit()
+
+
 func leave() -> void:
-	_release_port()
-	if _ip_http:
-		_ip_http.cancel_request()
-	online_code = ""
-	port_status = ""
-	_host_port = 0
+	_hosting = false
+	_joining = 0
+	if lobby_id != 0 and steam_ok:
+		Steam.leaveLobby(lobby_id)
+	lobby_id = 0
 	sprays.clear()
 	_spray_tex.clear()
 	_chat_times.clear()
@@ -191,129 +352,6 @@ func leave() -> void:
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	online = false
 	players.clear()
-
-
-# ------------------------------------------------------------ public address
-
-func _lookup_public_ip() -> void:
-	if _ip_http == null:
-		_ip_http = HTTPRequest.new()
-		_ip_http.timeout = 8.0
-		add_child(_ip_http)
-		_ip_http.request_completed.connect(_on_ip_reply)
-	else:
-		_ip_http.cancel_request()
-	if _ip_http.request(PUBLIC_IP_URL) != OK:
-		_ip_lookup_done = true
-		_refresh_status()
-
-
-func _on_ip_reply(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	var ip := body.get_string_from_utf8().strip_edges()
-	if result == HTTPRequest.RESULT_SUCCESS and code == 200 and JoinCode.encode(ip, DEFAULT_PORT) != "":
-		public_ip = ip
-	_ip_lookup_done = true
-	_refresh_status()
-
-
-## Private / shared ranges: an address like this from the router means there's
-## another router (or the internet provider's CGNAT) in front of it.
-static func is_private_ip(ip: String) -> bool:
-	var p := ip.split(".")
-	if p.size() != 4:
-		return true
-	var a := int(p[0])
-	var b := int(p[1])
-	return a == 10 or a == 127 or (a == 172 and b >= 16 and b <= 31) or (a == 192 and b == 168) or (a == 100 and b >= 64 and b <= 127) or (a == 169 and b == 254)
-
-
-## Builds the join code and the lobby's explanation from the two lookups.
-func _refresh_status() -> void:
-	if not is_server():
-		return
-	var addr := public_ip
-	if addr == "" and _upnp_ip != "" and not is_private_ip(_upnp_ip):
-		addr = _upnp_ip
-	online_code = JoinCode.encode(addr, _host_port, _code_salt) if addr != "" else ""
-	var lines := []
-	if not _ip_lookup_done and addr == "":
-		lines.append("Looking up your public address...")
-	elif addr == "":
-		lines.append("Couldn't look up your public address. Check your internet connection.")
-	match _upnp_state:
-		1:
-			if _upnp_ip != "" and public_ip != "" and _upnp_ip != public_ip:
-				lines.append("Your internet provider shares your address with other customers (CGNAT), so players probably can't reach you. Ask your provider for a public IP, or let someone else host.")
-		-1:
-			lines.append("%s Forward UDP port %d to this PC in your router's settings." % [_upnp_msg, _host_port])
-	if not firewall_allowed():
-		lines.append("Windows Firewall may block players: accept the prompt, or press Allow Through Firewall.")
-	port_status = " ".join(PackedStringArray(lines))
-	codes_changed.emit()
-
-
-# ------------------------------------------------------------ UPnP (router port)
-
-## Runs on a thread: finds the router, opens the port and asks for the address it
-## has on the internet. Discovery can take a couple of seconds.
-func _upnp_open(port: int, gen: int) -> void:
-	var u := UPNP.new()
-	var res := {"ok": false, "ip": "", "msg": ""}
-	var err := u.discover(UPNP_TIMEOUT_MS, 2, "InternetGatewayDevice")
-	if err != UPNP.UPNP_RESULT_SUCCESS or u.get_gateway() == null or not u.get_gateway().is_valid_gateway():
-		res.msg = "Couldn't open the port automatically (UPnP is off or unsupported on your router)."
-	elif u.add_port_mapping(port, port, "Tag Rush", "UDP", 0) != UPNP.UPNP_RESULT_SUCCESS:
-		res.msg = "Your router refused to open port %d automatically." % port
-	else:
-		res.ok = true
-		res.ip = u.query_external_address()
-	_upnp_done.call_deferred(u, port, res, gen)
-
-
-func _upnp_done(u: UPNP, port: int, res: Dictionary, gen: int) -> void:
-	if gen != _upnp_gen:
-		# A newer host() replaced this lookup (and already waited for its thread).
-		if res.ok:
-			_close_port_async(u, port)
-		return
-	_upnp_thread.wait_to_finish()
-	_upnp_thread = null
-	var still_hosting := is_server() and port == _host_port
-	if res.ok and not still_hosting:
-		_close_port_async(u, port)  # left before the router answered
-		return
-	if not still_hosting:
-		return
-	if res.ok:
-		_upnp = u
-		_mapped_port = port
-		_upnp_state = 1
-		_upnp_ip = str(res.ip)
-	else:
-		_upnp_state = -1
-		_upnp_msg = str(res.msg)
-	_refresh_status()
-
-
-func _release_port() -> void:
-	if _upnp == null:
-		return
-	_close_port_async(_upnp, _mapped_port)
-	_upnp = null
-	_mapped_port = 0
-
-
-func _close_port_async(u: UPNP, port: int) -> void:
-	if _close_thread:
-		_close_thread.wait_to_finish()
-	_close_thread = Thread.new()
-	# The router object is passed as an argument so the thread keeps it alive (a
-	# Callable on its method alone doesn't hold a reference).
-	_close_thread.start(_delete_mapping.bind(u, port))
-
-
-static func _delete_mapping(u: UPNP, port: int) -> void:
-	u.delete_port_mapping(port, "UDP")
 
 
 func team_count(team: int) -> int:
@@ -354,7 +392,7 @@ func _check_accepted(peer: MultiplayerPeer) -> void:
 
 func _on_connection_failed() -> void:
 	leave()
-	join_failed.emit("Could not connect. Check the code, and that the host's port is open.")
+	join_failed.emit("Couldn't connect to the host. Try again, or ask them to invite you.")
 
 
 func _on_server_disconnected() -> void:
@@ -422,6 +460,12 @@ func register(pname: String, weapon: String, addon: String, version: String) -> 
 	if players.size() >= MAX_PLAYERS:
 		_reject(id, "The lobby is full (%d players)." % MAX_PLAYERS)
 		return
+	# Anyone can open a Steam connection to the host, so only members of our lobby
+	# (which follows its Public / Friends / Invite rule) get in.
+	var peer := multiplayer.multiplayer_peer
+	if peer is SteamMultiplayerPeer and not _in_lobby(peer.get_steam_id_for_peer_id(id)):
+		_reject(id, "Join the host's lobby to play.")
+		return
 	_add_player(id, pname, weapon, addon)
 	_broadcast()
 	for sid in sprays:
@@ -434,6 +478,15 @@ func _add_player(id: int, pname: String, weapon: String, addon: String) -> void:
 	pname = Sanitize.player_name(pname)
 	if pname == "":
 		pname = "Player %d" % (players.size() + 1)
+	# Names are unique in a lobby, so nobody can pass themselves off as someone else.
+	var taken := []
+	for pid in players:
+		taken.append(str(players[pid].name).to_lower())
+	var base := pname.left(Sanitize.MAX_NAME - 4)
+	var n := 2
+	while pname.to_lower() in taken:
+		pname = "%s (%d)" % [base, n]
+		n += 1
 	var team := 0 if team_count(0) <= team_count(1) else 1
 	if not Weapons.DATA.has(weapon):
 		weapon = "ar"

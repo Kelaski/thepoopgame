@@ -37,8 +37,7 @@ const ACTIONS := [
 
 const DEFAULTS := {
 	"player_name": "Player",
-	"last_code": "",  # last join code you used
-	"host_port": 27015,  # UDP port you host on (no longer changeable in the lobby; edit settings to change)
+	"lobby_privacy": 0,  # who can join lobbies you host: Net.Privacy (public / friends / invite only)
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
 	"map_random": true,   # host: a new random city every match (false = the classic city)
@@ -356,7 +355,10 @@ func apply_all() -> void:
 		if _last_fullscreen != fs:
 			_last_fullscreen = fs
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fs else DisplayServer.WINDOW_MODE_WINDOWED)
-		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if g("vsync") else DisplayServer.VSYNC_DISABLED)
+		# Only when it changes: setting it rebuilds the swap chain (a hitch on every slider step).
+		var vs := DisplayServer.VSYNC_ENABLED if g("vsync") else DisplayServer.VSYNC_DISABLED
+		if DisplayServer.window_get_vsync_mode() != vs:
+			DisplayServer.window_set_vsync_mode(vs)
 	# 30-500 (Settings > Video slider). Old saves with 0 (unlimited) get 500.
 	var fps := int(g("max_fps"))
 	Engine.max_fps = clampi(fps if fps > 0 else 500, 30, 500)

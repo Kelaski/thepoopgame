@@ -8,6 +8,7 @@ extends Control
 ## aspect ratio, so elements stay centred / in their corners at any size.
 
 const FEED_MAX := 6
+const KILL_ROW := preload("res://assets/ui/kill_feed_row.tscn")
 const HP_FILL_W := 258.0     # inner width of the health bar
 const ADDON_FILL_W := 218.0  # inner width of the addon bar
 const HP_SEGMENT := 25.0     # the health bar is marked off every 25 HP
@@ -135,32 +136,23 @@ func _on_kill(killer: int, victim: int, weapon: String, head: bool) -> void:
 		_killer_weapon = weapon
 		_killer_head = head
 		_killer_hp = Game.hp.get(killer, -1.0)
-	var involved := killer == me or victim == me
-	var pc := PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.05, 0.05, 0.07, 0.72)
-	if involved:
-		sb.border_color = UiKit.ACCENT
-		sb.set_border_width_all(2)
-	sb.set_corner_radius_all(6)
-	sb.content_margin_left = 10
-	sb.content_margin_right = 10
-	sb.content_margin_top = 4
-	sb.content_margin_bottom = 4
-	pc.add_theme_stylebox_override("panel", sb)
-	pc.size_flags_horizontal = Control.SIZE_SHRINK_END
-	var row := UiKit.hbox(8)
-	pc.add_child(row)
-	var kc := Mats.team_color(Net.team_of(killer)).lightened(0.35)
-	var vc := Mats.team_color(Net.team_of(victim)).lightened(0.35)
-	if killer != victim and Net.players.has(killer):
-		row.add_child(UiKit.outlined(Net.name_of(killer), 16, kc))
-	var wtxt := "[%s%s]" % [Weapons.display_name(weapon), " HEADSHOT" if head else ""]
-	row.add_child(UiKit.outlined(wtxt, 14, Color.WHITE))
-	row.add_child(UiKit.outlined(Net.name_of(victim), 16, vc))
-	if victim == Game.holder:
-		row.add_child(UiKit.outlined("(Runner)", 14, Mats.TAG_COLOR))
-	_ignore_mouse(pc)
+	# One row per kill, laid out in assets/ui/kill_feed_row.tscn.
+	var pc: PanelContainer = KILL_ROW.instantiate()
+	if killer == me or victim == me:
+		var mine: StyleBoxFlat = (pc.get_meta("mine_style") as StyleBoxFlat).duplicate()
+		mine.border_color = UiKit.ACCENT  # follows the menu accent colour
+		pc.add_theme_stylebox_override("panel", mine)
+	var killer_l: Label = pc.get_node("Row/Killer")
+	killer_l.visible = killer != victim and Net.players.has(killer)
+	killer_l.text = Net.name_of(killer)
+	killer_l.add_theme_color_override("font_color", Mats.team_color(Net.team_of(killer)).lightened(0.35))
+	(pc.get_node("Row/Weapon") as Label).text = "[%s%s]" % [Weapons.display_name(weapon), " HEADSHOT" if head else ""]
+	var victim_l: Label = pc.get_node("Row/Victim")
+	victim_l.text = Net.name_of(victim)
+	victim_l.add_theme_color_override("font_color", Mats.team_color(Net.team_of(victim)).lightened(0.35))
+	var runner_l: Label = pc.get_node("Row/Runner")
+	runner_l.visible = victim == Game.holder
+	runner_l.add_theme_color_override("font_color", Mats.TAG_COLOR)
 	pc.set_meta("t", FEED_TIME)
 	_feed.add_child(pc)
 	while _feed.get_child_count() > FEED_MAX:

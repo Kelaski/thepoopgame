@@ -3,8 +3,6 @@ extends VBoxContainer
 ## Weapon + addon picker (assets/ui/loadout_panel.tscn). Used in the lobby and on
 ## the death screen. The buttons are listed from Weapons.ORDER / Addons.ORDER.
 
-const SCENE := "res://assets/ui/loadout_panel.tscn"
-
 var _weapon_btns := {}
 var _addon_btns := {}
 @onready var _wdesc: Label = %WeaponDesc

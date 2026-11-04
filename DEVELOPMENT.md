@@ -2,7 +2,7 @@
 
 How the game is built and how to work on it. For what the game is and how to play, see the [README](README.md); patch notes are in [CHANGELOG.md](CHANGELOG.md).
 
-Tag Rush is built in **Godot 4.7 (GDScript only, no extra plugins)**. Almost everything is a Godot scene you can open and edit: the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), every map prop, furniture item and decor piece (`assets/props/`, `assets/furniture/`), the modular building pieces (`assets/building/`), and every menu and the HUD (`assets/ui/`). The ground, roads, road markings and boundary fence are generated from the layout, and the UI builds lists that depend on game data (rosters, keybinds, the playlist) at runtime. Sounds and music are synthesized in code, so there are no binary assets.
+Tag Rush is built in **Godot 4.7** with GDScript. Its one plugin is [GodotSteam](https://godotsteam.com) (GDExtension, in `addons/godotsteam/`, Windows and Linux x86_64 only), used for online play. Almost everything is a Godot scene you can open and edit: the player, the five weapons, doors, the Tag and the spray decal (`assets/models/`), every map prop, furniture item and decor piece (`assets/props/`, `assets/furniture/`), the modular building pieces (`assets/building/`), and every menu and the HUD (`assets/ui/`). The ground, roads, road markings and boundary fence are generated from the layout, and the UI builds lists that depend on game data (rosters, keybinds, the playlist) at runtime. Sounds and music are synthesized in code, so there are no binary assets.
 
 ## Running from source
 
@@ -10,11 +10,30 @@ Tag Rush is built in **Godot 4.7 (GDScript only, no extra plugins)**. Almost eve
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** (Run Project).
 
-To test two copies on one machine, run two instances and enter `127.0.0.1` as the code.
+Online play needs the Steam client running and signed in. The game uses App ID **480** (Valve's shared "Spacewar" test app) until Tag Rush has its own; `Net.APP_ID` in `scripts/autoload/net.gd` sets it. With 480, Steam shows you as playing Spacewar.
+
+Steam only allows one copy of a game per account, so two copies on one PC can't both use Steam. For testing, **debug builds** (the editor, or a debug export) can run a local match over ENet from the command line. Release builds ignore `--port` and `--join`.
+
 Optional command-line flags (after `--`):
 
 ```
---host  --join=CODE (or IP[:PORT])  --name=NAME  --port=PORT  --autostart=N
+--host                    host a Steam lobby
+--host --port=PORT        debug only: host a local match on PORT
+--join=IP[:PORT]          debug only: join a local match (default port 27015)
+--name=NAME  --autostart=N (the host starts the match once N players are in)
+```
+
+When Steam starts the game from an invite, it passes `+connect_lobby <id>`, and the game joins that lobby.
+
+**Safety checks** (`tests/checks.tscn`) cover the hit rate limit, the movement speed filter and the spray size check, with no network needed: `godot --headless --path . res://tests/checks.tscn` (exits 0 on a pass).
+
+**Rounds test** (`tests/rounds.tscn`) plays 10 rounds and checks that no team starts where it did last round, the Tag spot moves, and spawn zones stay apart: `godot --headless --path . res://tests/rounds.tscn -- --host --port=27203 --autostart=1 --size=small` (add `--classic` for the Classic city).
+
+**Two-player test** (`tests/two_player.tscn`) checks joining, unique names and movement sync. Start both copies at once; the host exits with code 0 on a pass and 1 on a failure:
+
+```
+godot --headless --path . res://tests/two_player.tscn -- --host --port=27199 --name=Same
+godot --headless --path . res://tests/two_player.tscn -- --join=127.0.0.1:27199 --name=Same
 ```
 
 ## Default controls
@@ -44,8 +63,17 @@ Optional command-line flags (after `--`):
 
 ## Networking model
 
-ENet with the host as the authoritative server (peer 1, also a player), on UDP port 27015. The host opens the port with UPnP when it can.
-A joining player sends their version number, and the host turns away anyone on a different version, or anyone who doesn't register within 5 s (older builds).
+**Connecting:**
+- Steam lobbies with GodotSteam's `SteamMultiplayerPeer`, relayed through Steam's network. No ports, UPnP or firewall rules are needed.
+- The host creates the lobby and tags it with `game=tagrush`, its version and the host's name, since app 480 is shared by many games.
+- Clients find lobbies with a lobby-list search filtered on that tag. They enter the lobby, then connect a peer to the lobby owner.
+
+**Roles:** the host is the authoritative server (peer 1, also a player).
+
+**Who gets in:**
+- A joining player sends their version number. The host turns away anyone on a different version, and anyone who doesn't register within 5 s (older builds).
+- The host also turns away any Steam connection whose account isn't a member of its lobby, so the lobby's Public / Friends only / Invite only rule holds.
+- Lobby data (names, versions) comes from other players, so it's cleaned like chat before it's shown.
 Each client simulates its own movement and streams its position at 30 Hz. Remote players are interpolated.
 Shooting is resolved on the shooter's client, and the server validates every hit before applying damage:
 - The shooter is alive, the victim is an enemy, and the victim isn't spawn-protected.
@@ -175,12 +203,11 @@ scripts/
   main.gd                   # screen flow, overlays, mouse capture, cmdline flags
   autoload/settings.gd      # settings + rebindable input map (user://settings.cfg)
   autoload/sfx.gd           # procedural sounds
-  autoload/net.gd           # ENet host/join, roster, team/loadout requests
+  autoload/net.gd           # Steam lobbies (host/join/invites), roster, team/loadout requests
   autoload/game.gd          # server-authoritative Tag game mode
   data/weapons.gd           # weapon stats
   data/addons.gd            # addon stats
   data/game_version.gd      # version number (major.minor.patch)
-  data/join_code.gd         # join codes <-> IP address and port
   map/map_data.gd           # classic layout transcribed from the sketch, map sizes
   map/city_gen.gd           # random city layouts (one per match, from a seed)
   map/map_builder.gd        # procedural city, interiors, where props and furniture go, spawn points

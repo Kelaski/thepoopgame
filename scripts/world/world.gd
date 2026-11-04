@@ -495,6 +495,12 @@ func door_rpc(idx: int, target: float, fast: bool) -> void:
 		var p := _remote_sender()
 		if p == null or not p.alive or p.global_position.distance_to(d.global_position) > DOOR_REACH:
 			return
+		# Per-sender limit: door spam would take over every sound voice.
+		var now := Time.get_ticks_msec() / 1000.0
+		var key := Vector2i(p.peer_id, idx)  # per door too: a slam can open a double door at once
+		if now - float(_door_at.get(key, -100.0)) < DOOR_MIN_GAP:
+			return
+		_door_at[key] = now
 	d.set_target(clampf(target, -Door.OPEN_ANGLE, Door.OPEN_ANGLE), fast)
 	Sfx.play_at("door", d.global_position + Vector3(0, 1.2, 0), -2.0 if fast else -8.0, 40.0, 0.8 if fast else 1.0)
 
@@ -507,6 +513,12 @@ func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
 	var p := _remote_sender()
 	if p == null or not p.alive or p.global_position.distance_to(origin) > 6.0:
 		return
+	# No more shot effects than the fastest gun fires (with slack), per shooter.
+	var sid := multiplayer.get_remote_sender_id()
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - float(_fx_shot_at.get(sid, -100.0)) < FX_SHOT_MIN_GAP:
+		return
+	_fx_shot_at[sid] = now
 	for e in ends:
 		if not e.is_finite() or e.distance_to(origin) > 450.0:
 			return
@@ -539,6 +551,9 @@ func _fx_projectile(owner_id: int, start: Vector3, vel: Vector3, victim: int) ->
 		return
 	if not (start.is_finite() and vel.is_finite()) or vel.length() > 60.0 or _projectiles.size() >= MAX_PROJECTILES:
 		return
+	var thrower := _remote_sender()
+	if _is_remote_call() and (thrower == null or not thrower.alive or thrower.global_position.distance_to(start) > 8.0):
+		return  # only from a live thrower, near where they are
 	# The victim's actual gun (its held, third-person model) tumbles through the air.
 	var w: String = Net.players[victim].weapon if Net.players.has(victim) else "ar"
 	if not Player.WEAPON_SCENES.has(w) or w == "bat":
@@ -766,6 +781,10 @@ func _update_heartbeat(delta: float) -> void:
 # ================================================================ sprays
 
 const SPRAY_SIZE := 1.3
+const FX_SHOT_MIN_GAP := 1.0 / 40.0  # fastest gun is 14 rounds/s; slack so jittery packets aren't dropped
+var _fx_shot_at := {}    # shooter id -> time of their last shot effect
+const DOOR_MIN_GAP := 0.1
+var _door_at := {}       # (peer id, door) -> time of the last update
 var _spray_nodes := {}   # peer id -> MeshInstance3D (one spray per player)
 var _spray_last := {}    # server: peer id -> time of last spray
 

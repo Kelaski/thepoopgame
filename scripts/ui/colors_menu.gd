@@ -4,7 +4,6 @@ extends Control
 ## sky. The preset buttons and colour rows are listed from Palette.
 ## Menu and sky colours update live; team colours apply when the next match loads.
 
-const SCENE := "res://assets/ui/colors_menu.tscn"
 const TABS := {"Menus": "%MenusList", "Teams & Tag": "%TeamsList", "Sky": "%SkyList"}
 
 var on_back: Callable

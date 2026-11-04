@@ -86,14 +86,18 @@ static func spray_bytes() -> PackedByteArray:
 	return FileAccess.get_file_as_bytes(SPRAY)
 
 
-## True if the bytes look like a PNG within the spray size limit.
+## True if the bytes look like a PNG within the spray size limits. The size in the
+## header is checked first, so a small file claiming a huge image is never decoded.
 static func valid_spray_bytes(b: PackedByteArray) -> bool:
-	if b.size() < 16 or b.size() > SPRAY_MAX_BYTES:
+	if b.size() < 24 or b.size() > SPRAY_MAX_BYTES:
 		return false
 	for i in PNG_MAGIC.size():
 		if b[i] != PNG_MAGIC[i]:
 			return false
-	return true
+	# IHDR width / height: big-endian u32 at bytes 16 and 20.
+	var w := (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19]
+	var h := (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23]
+	return w > 0 and h > 0 and w <= 256 and h <= 256
 
 
 ## Decodes received spray bytes safely (PNG only, at most 256x256).

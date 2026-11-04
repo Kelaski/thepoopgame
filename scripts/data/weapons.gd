@@ -40,7 +40,6 @@ const DATA := {
 const MAX_DAMAGE := {
 	"ar": 45.0, "smg": 30.0, "shotgun": 195.0, "sniper": 150.0, "bat": 300.0, "thrown": 70.0,
 }
-
 # Spiked Bat momentum damage: 35 at or below your sprint speed, multiplied by 1.1
 # for every m/s above it (compounding), capped at BAT_MAX_DAMAGE.
 const BAT_SPEED_FACTOR := 1.1

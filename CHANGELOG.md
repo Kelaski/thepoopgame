@@ -7,6 +7,30 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.20.0
+
+### Changed
+- **Online play now runs through Steam.** Steam must be running and signed in. The game uses App ID 480 (Valve's Spacewar test app) for now, so Steam shows you as playing Spacewar.
+  - **Host Game** creates a Steam lobby. In the lobby, choose **Public**, **Friends only** or **Invite only**, and use **Invite Friends** to invite people.
+  - **Join Game** lists public lobbies. You can also accept a Steam invite, or join a friend from your Steam friends list, which starts the game for you if it isn't running.
+  - Join codes, UPnP, the firewall prompt and the hosting port are gone. Nothing needs forwarding, and nobody's IP address is shared.
+  - New players start with their Steam name.
+- **Every round moves:** neither team starts where it did last round, and the Tag appears in a different spot. Within a match, spawn zones and Tag spots that haven't been used yet come first.
+- **More spawn zones** in random cities: Small has 6 (was 3) and Medium 8 (was 5), so rounds have more places to rotate through.
+- **Kill feed** rows are now a scene (`assets/ui/kill_feed_row.tscn`).
+
+### Fixed
+- **Cheating and abuse:** the host now checks more of what other players send.
+  - Grapple yanks only count from players using the Grapple, and at most once every 2 s.
+  - Grapple rope positions must be valid and within reach.
+  - Movement that jumps further than anyone can move is ignored, and so is running faster along the ground than the 30 m/s speed cap allows (speed hacks).
+  - Hits through walls are refused (the Sniper still pierces one wall).
+  - Door updates, thrown guns and sprays are limited, so nobody can flood other players' screens or sound.
+  - Shot effects are rate-limited per player.
+  - Only members of the host's Steam lobby can join the match.
+- **Dragging a settings slider** no longer stutters the game (vsync was being set again on every step).
+- **Names are unique in a lobby:** a second "Alex" becomes "Alex (2)", so nobody can pass as someone else in chat or the kill feed.
+
 ## 0.19.0
 
 ### Added

@@ -1,10 +1,11 @@
 class_name Lobby
 extends Control
-## Lobby (assets/ui/lobby.tscn). The host sees the join code, map size and
-## city choice and can start the match; everyone picks a team and a loadout.
-## The team rosters are filled in from the network roster.
+## Lobby (assets/ui/lobby.tscn). The host picks who can join (Public / Friends
+## only / Invite only), the map size and city, and starts the match; everyone can
+## invite Steam friends and picks a team and a loadout. The team rosters are filled
+## in from the network roster.
 
-const SCENE := "res://assets/ui/lobby.tscn"
+const FRIEND_ROW := preload("res://assets/ui/friend_row.tscn")
 
 ## What the classic city has at each size (the map pick's tooltip).
 const MAP_INFO := {
@@ -18,10 +19,16 @@ var main
 
 func _ready() -> void:
 	var host := multiplayer.is_server()
-	for n: Control in [%Codes, %CopyButton, %MapPick, %CityPick, %PortStatus, %StartButton, %ShuffleButton]:
+	for n: Control in [%PrivacyTitle, %PrivacyPick, %MapPick, %CityPick, %StartButton, %ShuffleButton]:
 		n.visible = host
 	%Waiting.visible = not host
-	%FirewallButton.visible = host and not Net.firewall_allowed()
+	# Invites need a Steam lobby (not a local test match).
+	%InviteButton.visible = Net.lobby_id != 0
+	var privacy: OptionButton = %PrivacyPick
+	privacy.clear()
+	for n in Net.PRIVACY_NAMES:
+		privacy.add_item(n)
+	privacy.selected = Net.privacy()
 	var pick: OptionButton = %MapPick
 	pick.clear()
 	for sz in MapData.SIZE_ORDER:
@@ -39,27 +46,37 @@ func _ready() -> void:
 		get_node("%%Join%dButton" % team).text = "Join %s" % Mats.team_name(team)
 	Game.map_size_changed.connect(_on_map_size_changed)
 	_update_map_label()
-	if host:
-		Net.codes_changed.connect(_update_codes)
-		_update_codes()
 	Net.roster_changed.connect(_refresh)
 	_refresh()
 
 
-func _update_codes() -> void:
-	%Codes.text = "Join code:  %s" % (Net.online_code if Net.online_code != "" else "...")
-	%PortStatus.text = Net.port_status
+func _on_privacy_selected(i: int) -> void:
+	Net.set_privacy(i)
 
 
-func _on_copy_pressed() -> void:
-	if Net.online_code != "":
-		DisplayServer.clipboard_set(Net.online_code)
-		%PortStatus.text = "Copied %s. %s" % [Net.online_code, Net.port_status]
+## Invite Friends: Steam's own invite window when the overlay is there, otherwise
+## an in-game list of online friends.
+func _on_invite_pressed() -> void:
+	if Net.open_invite_overlay():
+		return
+	for c in %Friends.get_children():
+		if c != %NoFriends:
+			c.queue_free()
+	var friends := Net.invitable_friends()
+	%NoFriends.visible = friends.is_empty()
+	for f: Dictionary in friends:
+		var row: Control = FRIEND_ROW.instantiate()
+		(row.get_node("Name") as Label).text = Sanitize.player_name(f.name)
+		row.get_node("Playing").visible = f.playing
+		var b: Button = row.get_node("InviteButton")
+		b.pressed.connect(_invite.bind(f.id, b))
+		%Friends.add_child(row)
+	%InvitePopup.popup_centered()
 
 
-func _on_firewall_pressed() -> void:
-	Net.request_firewall_access()
-	%PortStatus.text = "Accept the Windows prompt to let players connect. %s" % Net.port_status
+func _invite(friend_id: int, b: Button) -> void:
+	b.disabled = true
+	b.text = "Invited" if Net.invite(friend_id) else "Failed"
 
 
 func _on_map_selected(i: int) -> void:

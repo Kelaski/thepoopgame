@@ -4,8 +4,6 @@ extends Control
 ## End Match (host) and Quit (Close Server for the host) in the middle, and a small
 ## music player in the bottom-right corner.
 
-const SCENE := "res://assets/ui/pause_menu.tscn"
-
 var main
 
 

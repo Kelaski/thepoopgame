@@ -51,8 +51,8 @@ const PARK_NAMES := ["Swiftcurrent Park", "Maple Green", "Union Square Park", "R
 # Types whose ground floor is open (no rooms), so a Tag spot can sit inside.
 const TAG_TYPES := ["warehouse", "bank", "mall", "office", "casino", "library", "theater", "diner", "arcade", "club", "water"]
 const COUNTS := {
-	"small": {"spawns": 3, "tags": 3, "bridges": 1},
-	"medium": {"spawns": 5, "tags": 4, "bridges": 3},
+	"small": {"spawns": 6, "tags": 3, "bridges": 1},   # enough spawn zones that rounds can rotate
+	"medium": {"spawns": 8, "tags": 4, "bridges": 3},
 	"large": {"spawns": 10, "tags": 8, "bridges": 6},
 }
 

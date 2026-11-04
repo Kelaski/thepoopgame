@@ -4,8 +4,6 @@ extends Control
 ## panorama to replace the sky. Changes apply instantly (also mid-match). Only you
 ## see your skybox.
 
-const SCENE := "res://assets/ui/skybox_menu.tscn"
-
 var on_back: Callable
 
 

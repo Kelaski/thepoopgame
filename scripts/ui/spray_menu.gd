@@ -2,8 +2,6 @@ class_name SprayMenu
 extends Control
 ## Upload the image you spray on walls with the Spray key (assets/ui/spray_menu.tscn).
 
-const SCENE := "res://assets/ui/spray_menu.tscn"
-
 var on_back: Callable
 
 

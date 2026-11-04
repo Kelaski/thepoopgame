@@ -15,8 +15,6 @@ var typing := false
 var team_only := false
 var _rshift := false  # Right Shift held (Godot can't tell the two Shifts apart from the Enter event)
 
-const SCENE := "res://assets/ui/chat_box.tscn"
-
 # Layout is in assets/ui/chat_box.tscn; message and suggestion rows are added in code.
 @onready var _log: VBoxContainer = %Log
 @onready var _suggest_panel: PanelContainer = %SuggestPanel

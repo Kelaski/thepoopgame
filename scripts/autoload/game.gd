@@ -127,6 +127,9 @@ func server_start_match() -> void:
 		Net.players[id].kills = 0
 		Net.players[id].deaths = 0
 	Net.broadcast_roster()
+	_used_dots.clear()
+	_used_objs.clear()
+	_last_team_dots.clear()
 	map_seed = randi_range(1, 2000000000) if Settings.g("map_random") else 0
 	time_of_day = randi() % TIMES_OF_DAY.size()
 	_start_match.rpc(map_size, map_seed, time_of_day)
@@ -163,6 +166,11 @@ func on_player_left(id: int) -> void:
 	_push_state()
 
 
+var _used_dots := []  # server: spawn zones used this match
+var _used_objs := []  # server: Tag spots used this match
+var _last_team_dots := []  # server: last round's [team 0 zone, team 1 zone]
+
+
 func _server_begin_round() -> void:
 	if not multiplayer.is_server() or not in_match or world == null:
 		return
@@ -172,27 +180,39 @@ func _server_begin_round() -> void:
 	timer = ROUND_TIME
 	match_winner = -1
 	# Pick two spawn zones that are well apart, then the most "between" objective.
+	# Rounds move around: a team never starts where it did last round if any other
+	# pair works, and zones (and Tag spots) this match hasn't used yet come first.
 	var dots: Array = world.builder.spawn_dots
-	var a := randi() % dots.size()
-	var b := a
-	var tries := 0
 	var min_dist: float = world.builder.min_spawn_dist
-	while (b == a or dots[a].distance_to(dots[b]) < min_dist) and tries < 50:
-		b = randi() % dots.size()
-		tries += 1
-	if b == a:
-		b = (a + 1) % dots.size()
-	var team_dots := [a, b]
-	if randf() < 0.5:
-		team_dots = [b, a]
+	if _used_dots.size() >= dots.size():
+		_used_dots = _used_dots.slice(-2)  # all used: start over
+	var team_dots := [0, 1 % dots.size()]
+	var best := INF
+	for i in dots.size():  # i = team 0's zone, j = team 1's
+		for j in dots.size():
+			if i == j or dots[i].distance_to(dots[j]) < min_dist:
+				continue
+			var score := float(i in _used_dots) + float(j in _used_dots) + randf() * 0.5
+			if _last_team_dots.size() == 2 and (i == _last_team_dots[0] or j == _last_team_dots[1]):
+				score += 4.0
+			if score < best:
+				best = score
+				team_dots = [i, j]
+	_used_dots.append_array(team_dots)
+	_last_team_dots = team_dots
 	var objs: Array = world.builder.objectives
+	if _used_objs.size() >= objs.size():
+		_used_objs = _used_objs.slice(-1) if objs.size() > 1 else []  # start over, but not on last round's spot
 	var ranked := []
 	for i in objs.size():
+		if i in _used_objs:
+			continue
 		var da: float = objs[i].pos.distance_to(dots[team_dots[0]])
 		var db: float = objs[i].pos.distance_to(dots[team_dots[1]])
 		ranked.append([absf(da - db) + randf() * 12.0, i])
 	ranked.sort_custom(func(x, y): return x[0] < y[0])
 	objective = ranked[0][1]
+	_used_objs.append(objective)
 	tag_pos = objs[objective].pos
 	# Spawn positions for each team around its dot.
 	var spawns := {}
@@ -578,7 +598,21 @@ func _hit_in_range(shooter: int, victim: int, weapon: String) -> bool:
 		return false
 	var d: Dictionary = Weapons.DATA.get(weapon, {})
 	var reach := float(d.get("range", 300.0)) + (4.0 if weapon == "bat" else HIT_RANGE_SLACK)
-	return world.players[shooter].global_position.distance_to(world.players[victim].global_position) <= reach
+	var sp: Player = world.players[shooter]
+	var vp: Player = world.players[victim]
+	if sp.global_position.distance_to(vp.global_position) > reach:
+		return false
+	if weapon == "sniper":
+		return true  # pierces a wall by design
+	# No hits through walls: at least one of head, chest or knees must be in sight
+	# (three points give slack for players lagging round a corner).
+	var space: PhysicsDirectSpaceState3D = world.get_world_3d().direct_space_state
+	var from := sp.eye_pos()
+	for h in [1.6, 1.1, 0.5]:
+		var q := PhysicsRayQueryParameters3D.create(from, vp.global_position + Vector3(0, h, 0), MapBuilder.L_FLOOR | MapBuilder.L_WALL | MapBuilder.L_SOLID)
+		if space.intersect_ray(q).is_empty():
+			return true
+	return false
 
 
 func _take_thrown_hit(shooter: int) -> bool:

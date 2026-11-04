@@ -2,10 +2,12 @@ extends Node
 ## Root controller: screen flow (menu -> lobby -> match), overlays, mouse capture.
 ##
 ## Optional command-line flags (after "--"):
-##   --host            host immediately          --join=CODE       join immediately
-##   --name=NAME       player name               --port=PORT       port to host on
-##   (--join also takes IP or IP:PORT)
+##   --host            host a Steam lobby immediately
+##   --name=NAME       player name
 ##   --autostart=N     host starts the match once N players are connected
+## Debug builds only, for testing two copies on one PC without Steam:
+##   --host --port=PORT   host a local match     --join=IP[:PORT]   join one
+## Steam adds "+connect_lobby <id>" when it launches the game from an invite.
 
 # Every screen is a scene in assets/ui (its script holds the behaviour).
 const MAIN_MENU_SCENE := preload("res://assets/ui/main_menu.tscn")
@@ -55,6 +57,7 @@ func _ready() -> void:
 	Net.joined_ok.connect(_on_joined)
 	Net.join_failed.connect(_on_join_failed)
 	Net.disconnected.connect(_on_disconnected)
+	Net.invite_accepted.connect(join_lobby)
 	Net.roster_changed.connect(_on_roster_changed)
 	Game.match_started.connect(_on_match_started)
 	Game.match_ended.connect(_on_match_ended)
@@ -74,7 +77,7 @@ func _add_version_label() -> void:
 func _handle_cmdline() -> bool:
 	var host := false
 	var join_addr := ""
-	var port := int(Settings.g("host_port"))
+	var port := 0
 	for a in OS.get_cmdline_user_args():
 		if a == "--host":
 			host = true
@@ -86,13 +89,34 @@ func _handle_cmdline() -> bool:
 			port = int(a.substr(7))
 		elif a.begins_with("--autostart="):
 			_autostart = int(a.substr(12))
-	if host:
-		host_game(port)
+	var lobby := Net.launch_lobby()
+	if lobby != 0:
+		join_lobby(lobby)
 		return true
-	if join_addr != "":
-		join_code(join_addr)
+	if OS.is_debug_build() and (port > 0 or join_addr != ""):
+		return _local_cmdline(host, port, join_addr)
+	if host:
+		host_game()
 		return true
 	return false
+
+
+## Debug builds: local ENet matches (see the flags at the top).
+func _local_cmdline(host: bool, port: int, join_addr: String) -> bool:
+	if port <= 0:
+		port = Net.LOCAL_PORT
+	var err := ""
+	if host:
+		err = Net.host_local(port)
+	elif join_addr != "":
+		var bits := join_addr.split(":")
+		show_connecting()
+		err = Net.join_local(bits[0], int(bits[1]) if bits.size() > 1 else port)
+	else:
+		return false
+	if err != "":
+		show_main_menu(err)
+	return true
 
 
 # ================================================================ screens
@@ -110,7 +134,7 @@ func show_main_menu(message := "") -> void:
 	close_overlay()
 	var m: MainMenu = MAIN_MENU_SCENE.instantiate()
 	m.main = self
-	m.message = message
+	m.message = message if message != "" or Net.steam_ok else Net.steam_error
 	_set_screen(m)
 
 
@@ -121,7 +145,7 @@ func show_lobby() -> void:
 	_set_screen(l)
 
 
-## "Join Game": enter a join code.
+## "Join Game": the lobby browser.
 func show_join_menu(message := "") -> void:
 	close_overlay()
 	var j: JoinMenu = JOIN_MENU_SCENE.instantiate()
@@ -136,32 +160,25 @@ func show_connecting() -> void:
 	_set_screen(c)
 
 
-func host_game(port := 0) -> void:
-	if port <= 0:
-		port = int(Settings.g("host_port"))
-	var err: String = Net.host(port)
+## Host a Steam lobby. Shows "Connecting" until Steam has made the lobby
+## (Net.joined_ok -> lobby, or Net.join_failed -> main menu).
+func host_game() -> void:
+	show_connecting()
+	var err: String = Net.host()
 	if err != "":
 		show_main_menu(err)
-		return
-	show_lobby()
 
 
-## Join with a code (or a plain IP / IP:PORT).
-func join_code(code: String) -> void:
-	var addr := JoinCode.parse(code)
-	if addr.is_empty():
-		show_join_menu("That isn't a valid join code.")
-		return
-	Settings.s("last_code", code.strip_edges().to_upper())
-	join_game(addr.ip, addr.port)
-
-
-func join_game(ip: String, port: int) -> void:
-	var err: String = Net.join(ip, port)
-	if err != "":
-		show_join_menu(err)
-		return
+## Join a Steam lobby: from Join Game, an invite, or Steam's friends list. Leaves
+## whatever we're in first (an invite can arrive mid-match).
+func join_lobby(lobby: int) -> void:
+	_teardown_world()
+	Game.reset_local()
+	close_overlay()
 	show_connecting()
+	var err: String = Net.join_lobby(lobby)
+	if err != "":
+		show_main_menu(err)
 
 
 func leave_to_menu(message := "") -> void:

@@ -6,8 +6,6 @@ extends Control
 ## instance of its own scene, with its own dim backdrop, title and Back button
 ## hidden (this menu's Back closes them all).
 
-const SCENE := "res://assets/ui/customize_hub.tscn"
-
 var main
 var back_to_pause := false
 

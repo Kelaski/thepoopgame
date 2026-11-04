@@ -4,6 +4,22 @@
 [ext_resource type="PackedScene" path="res://assets/ui/loadout_panel.tscn" id="2_e1hpl"]
 [ext_resource type="Script" path="res://scripts/ui/loadout_panel.gd" id="3_vuhpc"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_invite"]
+content_margin_left = 16.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+bg_color = Color(0.08, 0.09, 0.11, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.12)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [node name="Lobby" type="Control" unique_id=1453155783]
 layout_mode = 3
 anchors_preset = 0
@@ -55,23 +71,23 @@ text = "Waiting for the host to start the match."
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Codes" type="Label" parent="Center/Panel/Content/SettingsRow" unique_id=907554511]
+[node name="PrivacyTitle" type="Label" parent="Center/Panel/Content/SettingsRow"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-text = "Join code:  ..."
+theme_override_font_sizes/font_size = 16
+text = "Lobby"
 
-[node name="CopyButton" type="Button" parent="Center/Panel/Content/SettingsRow" unique_id=1427007242]
+[node name="PrivacyPick" type="OptionButton" parent="Center/Panel/Content/SettingsRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(130, 44)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "Copy Code"
+tooltip_text = "Public: listed in Join Game. Friends only: your Steam friends can join from their friends list. Invite only: only players you invite."
 
-[node name="FirewallButton" type="Button" parent="Center/Panel/Content/SettingsRow" unique_id=1570962904]
+[node name="InviteButton" type="Button" parent="Center/Panel/Content/SettingsRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(210, 44)
+custom_minimum_size = Vector2(150, 44)
 layout_mode = 2
-text = "Allow Through Firewall"
+text = "Invite Friends"
 
 [node name="Spacer" type="Control" parent="Center/Panel/Content/SettingsRow" unique_id=1684370822]
 layout_mode = 2
@@ -103,14 +119,6 @@ popup/item_0/text = "Random city"
 popup/item_0/id = 0
 popup/item_1/text = "Classic city"
 popup/item_1/id = 1
-
-[node name="PortStatus" type="Label" parent="Center/Panel/Content" unique_id=1458814223]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(860, 0)
-layout_mode = 2
-theme_type_variation = &"MutedLabel"
-theme_override_font_sizes/font_size = 13
-autowrap_mode = 3
 
 [node name="Teams" type="HBoxContainer" parent="Center/Panel/Content" unique_id=453530917]
 layout_mode = 2
@@ -223,8 +231,54 @@ layout_mode = 2
 theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 15
 
-[connection signal="pressed" from="Center/Panel/Content/SettingsRow/CopyButton" to="." method="_on_copy_pressed"]
-[connection signal="pressed" from="Center/Panel/Content/SettingsRow/FirewallButton" to="." method="_on_firewall_pressed"]
+[node name="InvitePopup" type="PopupPanel" parent="."]
+unique_name_in_owner = true
+title = "Invite Friends"
+size = Vector2i(460, 440)
+theme_override_styles/panel = SubResource("StyleBoxFlat_invite")
+
+[node name="Content" type="VBoxContainer" parent="InvitePopup"]
+offset_left = 16.0
+offset_top = 14.0
+offset_right = 444.0
+offset_bottom = 426.0
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="InvitePopup/Content"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 24
+text = "INVITE FRIENDS"
+horizontal_alignment = 1
+
+[node name="Scroll" type="ScrollContainer" parent="InvitePopup/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Friends" type="VBoxContainer" parent="InvitePopup/Content/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="NoFriends" type="Label" parent="InvitePopup/Content/Scroll/Friends"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 16
+text = "None of your Steam friends are online."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="CloseButton" type="Button" parent="InvitePopup/Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Close"
+
+[connection signal="item_selected" from="Center/Panel/Content/SettingsRow/PrivacyPick" to="." method="_on_privacy_selected"]
+[connection signal="pressed" from="Center/Panel/Content/SettingsRow/InviteButton" to="." method="_on_invite_pressed"]
+[connection signal="pressed" from="InvitePopup/Content/CloseButton" to="InvitePopup" method="hide"]
 [connection signal="item_selected" from="Center/Panel/Content/SettingsRow/MapPick" to="." method="_on_map_selected"]
 [connection signal="item_selected" from="Center/Panel/Content/SettingsRow/CityPick" to="." method="_on_city_selected"]
 [connection signal="pressed" from="Center/Panel/Content/Teams/Team0Panel/Content/Join0Button" to="." method="_on_join_red_pressed"]

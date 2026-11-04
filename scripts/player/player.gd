@@ -64,6 +64,10 @@ const SLIDE_END := 3.6
 const SLIDE_CD := 0.6
 const MAX_GROUND_SPEED := 14.0
 const NET_INTERVAL := 1.0 / 30.0
+const YANK_MIN_GAP := 2.0          # s between grapple yanks from enemies
+const NET_MAX_SPEED := 70.0        # m/s in total (falls are fast): faster movement updates are ignored
+const NET_MAX_HSPEED := SPEED_CAP * 1.25  # m/s along the ground (speed hacks)
+const NET_WINDOW := 1.0            # s: speeds are measured over this long, so per-update slack can't add up
 const DOOR_SLAM_SPEED := 5.5
 
 # Bounce pads (32) aren't in your movement masks: they're one-way, handled by
@@ -223,6 +227,12 @@ var net_yaw := 0.0
 var net_pitch := 0.0
 var net_flags := 0
 var _has_net := false
+var _last_yank := -100.0  # when an enemy grapple last yanked us
+var _anchor_pos := Vector3.ZERO  # accepted position the current speed window started at
+var _anchor_t := -1.0            # ...and when (s); -1 = start a new window
+var _jump_votes := 0     # updates in a row that put this player somewhere it couldn't have moved to
+var _jump_pos := Vector3.ZERO    # where that run of updates started...
+var _jump_t := 0.0               # ...and when
 
 
 func setup(id: int, info: Dictionary) -> void:
@@ -504,6 +514,7 @@ func respawn(pos: Vector3, protect: bool) -> void:
 	refresh_loadout()
 	global_position = pos
 	net_pos = pos
+	_anchor_t = -1.0  # a new speed window from the spawn point
 	_prev_pos = pos
 	_cur_pos = pos
 	velocity = Vector3.ZERO
@@ -1132,6 +1143,24 @@ func _flags() -> int:
 func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int) -> void:
 	if not (pos.is_finite() and vel.is_finite() and is_finite(y) and is_finite(p)):
 		return
+	# Updates further than anyone can move since the window began (teleports, speed
+	# hacks) are ignored. Respawns start a new window, so they never trip this.
+	var now := Time.get_ticks_msec() / 1000.0
+	if _has_net and _anchor_t >= 0.0 and not _reachable(_anchor_pos, _anchor_t, pos, now):
+		# A second of updates moving on from one new spot at legal speed (the
+		# out-of-bounds reset) is accepted, so a player can't get stuck unseen.
+		if _jump_votes == 0 or not _reachable(_jump_pos, _jump_t, pos, now):
+			_jump_votes = 0
+			_jump_pos = pos
+			_jump_t = now
+		_jump_votes += 1
+		if _jump_votes < 30:
+			return
+		_anchor_t = -1.0
+	_jump_votes = 0
+	if _anchor_t < 0.0 or now - _anchor_t >= NET_WINDOW:
+		_anchor_pos = pos
+		_anchor_t = now
 	_observe_speed(pos)
 	net_pos = pos
 	net_yaw = y
@@ -1148,6 +1177,13 @@ func _net_state(pos: Vector3, y: float, p: float, vel: Vector3, f: int) -> void:
 var _obs_pos := Vector3.ZERO
 var _obs_t := -1.0
 var _obs_speed := 0.0
+
+
+## True if a player could get from `from` (at time t0) to `to` (at now) legally.
+static func _reachable(from: Vector3, t0: float, to: Vector3, now: float) -> bool:
+	var dt := maxf(now - t0, NET_INTERVAL)
+	var d := to - from
+	return d.length() <= NET_MAX_SPEED * dt + 3.0 and Vector2(d.x, d.z).length() <= NET_MAX_HSPEED * dt + 3.0
 
 
 func _observe_speed(pos: Vector3) -> void:
@@ -1578,6 +1614,12 @@ func _end_grapple() -> void:
 ## direction (remotes fly the hook themselves); ATTACHED sends the anchor point.
 @rpc("authority", "call_remote", "reliable")
 func _grapple_net(state: int, point: Vector3, dir: Vector3) -> void:
+	if state < Hook.NONE or state > Hook.ATTACHED or not (point.is_finite() and dir.is_finite()):
+		return
+	if state != Hook.NONE and point.distance_to(global_position) > Addons.GRAPPLE_RANGE + 10.0:
+		return
+	if state == Hook.FLYING:
+		dir = dir.normalized()
 	grapple_state = state
 	if state == Hook.FLYING:
 		_hook_pos = point
@@ -1594,11 +1636,17 @@ func _grapple_yank() -> void:
 	if not is_local or not alive or Game.world == null:
 		return
 	var from: Player = Game.world.players.get(multiplayer.get_remote_sender_id())
-	if from == null or not from.alive or from.team == team:
+	if from == null or not from.alive or from.team == team or from.addon != "grapple":
+		return
+	# One yank per hook: a hooked enemy can't be flung again until the grapple could
+	# have come off cooldown (stops a modified client spamming yanks).
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _last_yank < YANK_MIN_GAP:
 		return
 	var to := from.global_position - global_position
 	if to.length() > Addons.GRAPPLE_RANGE + 6.0:
 		return
+	_last_yank = now
 	velocity += to.normalized() * Addons.GRAPPLE_YANK + Vector3.UP * 3.0
 	sliding = false
 

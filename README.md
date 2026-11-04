@@ -14,7 +14,7 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 - **A new city every match.** Random cities with offices, a mall, a casino, a school, apartments, a park and more, in three sizes. Every building can be explored, from the ground floor to the roof.
 - **Changing time of day.** Matches start in the morning, afternoon, evening or at night, and the sky shifts between rounds.
 - **Make it yours.** Recolour the menus, teams and sky, design your crosshair and holo sight, upload a spray, set your own skybox and bring your own music.
-- **Play with friends, no accounts.** One player hosts and shares a short join code.
+- **Play with friends on Steam.** One player hosts a lobby and invites friends, or anyone can join a public lobby. No ports to open.
 
 ## How a round works
 
@@ -87,13 +87,17 @@ Open **Customization** from the main menu, the lobby or the pause menu:
 
 ## Playing with friends
 
-- **Host:** click **Host Game**. The lobby shows a **join code** with a **Copy Code** button. Pick the teams and the map, then press **START MATCH**.
-- **Join:** click **Join Game**, type the code and press **Join**.
-- **Firewall:** on Windows, hosting asks once for permission to let players connect. Players who only join are never asked.
-- **Router:** the game opens its port (UDP 27015) automatically when your router allows it. The lobby tells you if something is still in the way, such as a router that needs the port forwarding by hand, or an internet provider that shares your address with other customers.
-- Everyone needs the same version of the game.
-- You can't join your own code from the same network that's hosting. Test with a friend on another network.
-- Each lobby gets a new code. A code is your address in short form, so only share it with people you want to play with.
+Online play runs through **Steam**, so Steam has to be running and signed in. Your name starts as your Steam name; you can change it in Customization.
+
+- **Host:** click **Host Game**. In the lobby, choose who can join:
+  - **Public:** listed in Join Game for everyone.
+  - **Friends only:** your Steam friends can join.
+  - **Invite only:** only players you invite.
+
+  Press **Invite Friends** to invite people, pick the teams and the map, then press **START MATCH**.
+- **Join:** click **Join Game** and pick a lobby from the list. You can also accept a Steam invite, or right-click a friend in your Steam friends list and choose **Join Game**. That even starts Tag Rush for you if it isn't running.
+- No ports, router settings or firewall prompts. Everything goes through Steam's network, which also keeps your IP address private.
+- Everyone needs the same version of the game. Lobbies on other versions show their version in the list and can't be joined.
 
 ## Controls
 

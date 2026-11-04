@@ -4,8 +4,6 @@ extends Control
 ## Customization, Quit. Your player name is set in Customization; joining by code
 ## is under Join Game.
 
-const SCENE := "res://assets/ui/main_menu.tscn"
-
 var main
 var message := ""
 
