@@ -7,6 +7,51 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.25.0
+
+### Added
+- **Grenade Launcher:** 6 arcing grenades that fly at 10 m/s plus your own speed. They explode on hitting anything solid, or within 0.5 m of an enemy, for 75 damage. They never hurt you or your team, and the 1.5 m blast launches every player it reaches. Walls stop it.
+- **New addon system:** one Active addon (E) and one Passive addon (no key), in the subcategories Mobility, Tactical, Support, Movement and Perks.
+- **New Active addons:** Rocket Jump, Bubble (a 4 s, 75 HP shield that also stops you being pushed), UAV, Magnet and Interlink. Support addons' cooldowns carry on through death and only run while you're alive.
+- **New Passive addons:** Double Jump (turns your speed the way you look), Wallhugger, Aerodynamic, Unstoppable, Cooldown on Kill, Juggernaut, Sharpshooter, Killstreak and Blast Shield.
+- **Every weapon and addon number can now be edited in Godot's Inspector,** in `assets/tuning/`.
+- **A loud sniper:** a new shot sound that fades with distance but can always be heard, wherever you are.
+- **Loading (XXs):** when a match starts, the host tries several random cities and picks the best one (enough buildings, Tag spots and spawn zones, a park, and both kinds of junction). Everyone sees "Loading" with the time left in the bottom left while it does.
+- **Parks are different every match:** a basketball court, a skate park or a football pitch; a playground, a gazebo or an outdoor gym; a fountain or a statue; picnic umbrellas or picnic tables with grills.
+- **A closed gate** on any second road leaving the same side of the map (the first gets the toll plaza).
+- **A distant skyline** all round every map, with the roads running out of the city past lit toll plazas (where the fence used to cross the road).
+- **Crossroads and traffic lights:** streets now often meet in crossroads, with traffic lights on every corner. T-junctions get a stop sign. Random cities had no junctions at all before (so no traffic lights, stop signs or crossings), because the side streets stopped just short of the road they met.
+- **Strip malls:** buildings can stand right next to each other, with no windows on the walls they share.
+- **Traffic cones** round a crane that stands in the road.
+
+### Changed
+- **Shotgun:** reloads one shell every 0.8 s, and firing stops the reload.
+- **Warp** leaves a light-blue afterimage for 1 s.
+- **Hider:** 10% visible moving, 5% still, crouching or sliding, and a Tag you carry fades too.
+- **Phantom:** lasts 3 s, with a 10 s cooldown, and can be ended early. If it ends inside something, the damage starts at 10 per second and doubles every second until you're out.
+- **Moonwalker** and **Trackstar** are passive: Moonwalker keeps its gravity and air control, and Trackstar is now 25% faster with no ability.
+- **Reload on Kill** now lets every weapon fire again straight away.
+- **Junction signals:** one per incoming lane, and at most 2 traffic lights and 2 stop signs per junction. A road with zebra crossings gets traffic lights, one without gets a stop sign, never both. The street name signs are gone.
+- **Benches, news boxes and mailboxes** face the pavement instead of the road.
+- **The toll plaza and the closed gate** stand flush with the boundary fence; the gate matches the fence's height and colours.
+- **New skate park and toll plaza models:** the skate park has proper sloped ramps you can ride up, and the toll plaza's roof posts stand on the fence line, in line with the gate.
+- **Landing while steering:** land holding A or D (or any new direction) and you arc round to it smoothly, instead of sliding on and then lurching sideways.
+- **Bus stops** keep 10 m back from junctions and at least 3 m from traffic lights and signs.
+- **Street props** have more detail, in the style of the new cars: dumpsters (wheels, split lids, lifting sleeves), mailboxes (rounded tops, legs), fire hydrants (nozzles, caps), newspaper boxes (windows, lids) and litter bins.
+- **Wall running** starts only when you hold a movement key towards the wall (A or D, say), not when you just touch it or hold forward.
+- **Mantling** is quicker and keeps your speed (it loses a little), and a slide straight after a mantle gets an extra 4 m/s.
+- **Slides ride over low things** up to the height of the planter under a tree, keeping their speed.
+- **Holo sights** are open frames with just the reticle, without the tinted glass.
+- **Round starts:** both teams start out of each other's sight and within 10 m of the same distance from the Tag. Maps have more spawn zones to choose from.
+- **Cranes** no longer stand in cars, benches or other props.
+- **Vans and buses** have new, simpler models like the cars: flush bodies, glass set in, wheels tucked under the arches.
+
+### Removed
+- The **SMG**, **Stalker** and **Swap**. Skywalker is now Double Jump, and Parry is now Bubble.
+
+### Fixed
+- **Silent shots:** you could die to another player's shot without hearing or seeing it. Shot effects are now sent reliably, aren't thrown away when the shooter is moving fast or a few shots arrive at once, and gunfire carries 220 m (the sniper about 300 m) instead of 90.
+
 ## 0.24.0
 
 ### Added

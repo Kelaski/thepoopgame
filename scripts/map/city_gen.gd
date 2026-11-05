@@ -24,11 +24,13 @@ const SIDEWALK := 30.0   # sidewalk between the road and the buildings (3 m)
 const EDGE := 30.0       # gap between the fence and the outermost blocks
 const BLOCK_MAX := {"small": 400.0, "medium": 480.0, "large": 560.0}  # a block is split again while its long side is longer than this...
 const BLOCK_MIN := 230.0 # ...and no side may end up shorter than this
+const CROSS_CHANCE := 0.6  # a new street lines up with one across the road (a crossroads)
 const MOD := 20.0        # wall module (2 m) in px
 const POST := 6.0        # corner posts (0.3 m each end)
 const LOT_MODS := [6, 15]   # building width along the street, in modules (12.6-30.6 m)
 const DEPTH_MODS := [6, 11] # building depth back from the street (12.6-22.6 m)
-const ALLEYS := [[30.0, 0.75], [45.0, 0.18], [70.0, 0.07]]  # gap between neighbours: [px, chance]
+# Gap between neighbours: [px, chance]. 0 = they touch, like a strip mall or a terrace.
+const ALLEYS := [[0.0, 0.4], [30.0, 0.42], [45.0, 0.12], [70.0, 0.06]]
 const PARK_MIN := Vector2(300, 340)
 const PARK_MAX := Vector2(450, 540)
 const TALL_MAX := Vector2(306, 246)  # footprint cap for 4+ storey buildings
@@ -63,10 +65,74 @@ const PARK_NAMES := ["Swiftcurrent Park", "Maple Green", "Union Square Park", "R
 # Types whose ground floor is open (no rooms), so a Tag spot can sit inside.
 const TAG_TYPES := ["warehouse", "bank", "mall", "office", "casino", "library", "theater", "diner", "arcade", "club", "water"]
 const COUNTS := {
-	"small": {"spawns": 6, "tags": 3, "bridges": 1},   # enough spawn zones that rounds can rotate
-	"medium": {"spawns": 8, "tags": 4, "bridges": 3},
-	"large": {"spawns": 10, "tags": 8, "bridges": 6},
+	# Plenty of spawn zones, so each round can find two the same distance from the
+	# Tag and out of each other's sight (Game._server_begin_round), and rounds rotate.
+	"small": {"spawns": 12, "tags": 3, "bridges": 1},
+	"medium": {"spawns": 14, "tags": 4, "bridges": 3},
+	"large": {"spawns": 18, "tags": 8, "bridges": 6},
 }
+
+
+## Where roads meet: the square shared by a street running along x and one along z,
+## whether they cross or one ends at the other's edge (a T). Each one once.
+## slack: how far apart two road edges may be and still meet (same units as the rects).
+static func junction_rects(roads: Array, slack: float) -> Array:
+	var out := []
+	for a: Rect2 in roads:
+		if a.size.y <= a.size.x:
+			continue  # a: runs along z
+		for b: Rect2 in roads:
+			if b.size.x <= b.size.y:
+				continue  # b: runs along x
+			if not a.grow(slack).intersects(b):
+				continue  # they don't meet
+			var a_through := a.position.y <= b.position.y + slack and a.end.y >= b.end.y - slack
+			var b_through := b.position.x <= a.position.x + slack and b.end.x >= a.end.x - slack
+			if not (a_through or b_through):
+				continue  # two road ends at a corner: not a junction
+			var j := Rect2(a.position.x, b.position.y, a.size.x, b.size.y)
+			var dup := false
+			for o: Rect2 in out:
+				dup = dup or o.get_center().distance_to(j.get_center()) < slack * 2.0
+			if not dup:
+				out.append(j)
+	return out
+
+
+## How good a generated city is, for the host's pick of the best of a few:
+## enough buildings, Tag spots and spawn zones, a park, and junctions of both
+## kinds (T-junctions and crossroads).
+static func score(layout: Dictionary) -> float:
+	var roads := []
+	for rd in layout.roads:
+		roads.append(Rect2(rd[0], rd[1], rd[2] - rd[0], rd[3] - rd[1]))
+	var ts := 0
+	var crosses := 0
+	for j: Rect2 in junction_rects(roads, 1.0):
+		var arms := 0
+		for d: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]:
+			var probe := j.get_center() + Vector2(d.x * (j.size.x * 0.5 + 40.0), d.y * (j.size.y * 0.5 + 40.0))
+			for r: Rect2 in roads:
+				if r.has_point(probe):
+					arms += 1
+					break
+		if arms >= 4:
+			crosses += 1
+		elif arms == 3:
+			ts += 1
+	var s := float(layout.buildings.size())
+	s += 3.0 * layout.objectives.size() + layout.spawn_dots.size()
+	s += 5.0 if not layout.park.is_empty() else 0.0
+	s += 2.0 * mini(ts, 8) + 4.0 * mini(crosses, 5)
+	return s
+
+
+## Distance from p to the nearest of pts (INF if there are none).
+static func _nearest(p: Vector2, pts: Array) -> float:
+	var d := INF
+	for q: Vector2 in pts:
+		d = minf(d, p.distance_to(q))
+	return d
 
 
 static func generate(size: String, seed: int) -> Dictionary:
@@ -79,13 +145,12 @@ static func generate(size: String, seed: int) -> Dictionary:
 	var roads := []
 	var blocks := []
 	_split(rng, inner, area, 0, roads, blocks, float(BLOCK_MAX.get(size, 560.0)))
+	var road_rects := []
+	for rd in roads:
+		road_rects.append(Rect2(rd[0], rd[1], rd[2] - rd[0], rd[3] - rd[1]))
 	var junctions := []
-	for i in roads.size():
-		for k in range(i + 1, roads.size()):
-			var ra := Rect2(roads[i][0], roads[i][1], roads[i][2] - roads[i][0], roads[i][3] - roads[i][1])
-			var rb := Rect2(roads[k][0], roads[k][1], roads[k][2] - roads[k][0], roads[k][3] - roads[k][1])
-			if ra.intersects(rb):
-				junctions.append(ra.intersection(rb).get_center())
+	for j: Rect2 in junction_rects(road_rects, 1.0):
+		junctions.append(j.get_center())
 
 	# The park: the block nearest the middle that's big enough.
 	var park := Rect2()
@@ -209,11 +274,7 @@ static func generate(size: String, seed: int) -> Dictionary:
 	# Keep Tag spots at least 15 m from spawn zones, then spread them out.
 	var far := []
 	for c: Vector2 in tag_cands:
-		var ok := true
-		for s: Vector2 in spawns:
-			if c.distance_to(s) < 150.0:
-				ok = false
-		if ok:
+		if _nearest(c, spawns) >= 150.0:
 			far.append(c)
 	# Not enough places (small maps)? Streets too, away from the junctions.
 	if far.size() < int(counts.tags):
@@ -226,17 +287,20 @@ static func generate(size: String, seed: int) -> Dictionary:
 				var ok := true
 				for j: Vector2 in junctions:
 					ok = ok and c.distance_to(j) >= 120.0
-				for sp: Vector2 in spawns:
-					ok = ok and c.distance_to(sp) >= 150.0
 				if ok:
+					if _nearest(c, spawns) >= 150.0:
+						far.append(c)
 					tag_cands.append(c)
 					tag_names.append("%s %s" % [prefixes[(buildings.size() + plazas.size() + n) % prefixes.size()], "Avenue" if rr.size.x > ROAD + 1.0 and rr.size.y > ROAD + 1.0 else "Street"])
 					tag_floors.append(1)
-					far.append(c)
 					n += 1
+	# Still short (lots of spawn zones on a small map)? The candidates farthest from
+	# any spawn zone make up the rest.
+	if far.size() < int(counts.tags):
+		var rest := tag_cands.filter(func(c): return not c in far)
+		rest.sort_custom(func(a, b): return _nearest(a, spawns) > _nearest(b, spawns))
+		far.append_array(rest.slice(0, int(counts.tags) - far.size()))
 	var picked := _spread(rng, far, int(counts.tags))
-	if picked.size() < 2:
-		picked = _spread(rng, tag_cands, int(counts.tags))
 	# [x, y, name, storey]: a Tag spot in a building sits on any of its floors
 	# (0 = ground), so it can be up on the 3rd floor of a tower.
 	var objectives := []
@@ -272,6 +336,16 @@ static func _split(rng: RandomNumberGenerator, r: Rect2, area: Rect2, depth: int
 	var lo := maxf(0.3 * long, BLOCK_MIN)
 	var hi := minf(0.7 * long, long - BLOCK_MIN - w)
 	var cut := roundf(rng.randf_range(lo, hi))
+	# Often line up with a street the same width across the road: the two meet in a
+	# crossroads (traffic lights) instead of two T-junctions (stop signs).
+	if depth > 0 and rng.randf() < CROSS_CHANCE:
+		for rd in roads:
+			var runs_z: bool = rd[2] - rd[0] < rd[3] - rd[1]
+			var width: float = (rd[2] - rd[0]) if runs_z else (rd[3] - rd[1])
+			var c: float = (rd[0] - r.position.x) if across_x else (rd[1] - r.position.y)
+			if runs_z == across_x and absf(width - w) < 0.5 and c >= lo and c <= hi:
+				cut = c
+				break
 	var a: Rect2
 	var b: Rect2
 	var road: Rect2
@@ -379,7 +453,7 @@ static func _alley(rng: RandomNumberGenerator) -> float:
 		if roll < a[1]:
 			return a[0]
 		roll -= a[1]
-	return ALLEYS[0][0]
+	return ALLEYS[1][0]
 
 
 ## A depth of whole modules, at most `room` px, within [lo, hi] modules.
@@ -393,7 +467,7 @@ static func _mods_fit(rng: RandomNumberGenerator, room: float, mods: Array) -> f
 ## past an alley, as a lot of whole modules; empty if it's too small to build on.
 static func _spare_lot(lot: Rect2, b: Rect2) -> Rect2:
 	var wmin := LOT_MODS[0] * MOD + POST
-	var gap := ALLEYS[0][0]
+	var gap := 30.0  # a spare lot keeps an alley
 	var best := Rect2()
 	# Beside it (along x), then in front of / behind it (along z).
 	var w := lot.size.x - b.size.x - gap

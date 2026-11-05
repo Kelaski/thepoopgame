@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="WeaponStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Spiked Bat"
+dmg = 35.0
+max_damage = 300.0
+rps = 2.25
+max_range = 7.0
+reach = 7.0
+max_hp = 150.0
+speed_mult = 1.1
+speed_factor = 1.1
+speed_slack = 2.5
+thrown_damage = 70.0

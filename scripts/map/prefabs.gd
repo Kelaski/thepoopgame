@@ -5,7 +5,7 @@ class_name Prefabs
 ## scene is read once into a "recipe" and MapBuilder._prefab() stamps it into the
 ## same batched MultiMeshes and per-chunk collision bodies as everything else.
 ## What a template scene can contain:
-##   * MeshInstance3D with a BoxMesh, CylinderMesh or SphereMesh. Its colour is
+##   * MeshInstance3D with a BoxMesh, CylinderMesh, SphereMesh or PrismMesh. Its colour is
 ##     the material_override albedo. Optional metadata:
 ##       slot         colour filled in by the code (e.g. "body" on cars, "leaf"
 ##                    on tree crowns); slot_darken / slot_lighten shade it
@@ -78,8 +78,11 @@ static func _add_part(mi: MeshInstance3D, xf: Transform3D, r: Dictionary) -> voi
 	elif m is SphereMesh:
 		kind = "sphere"
 		s = Vector3(m.radius * 2.0, m.height, m.radius * 2.0)
+	elif m is PrismMesh:
+		kind = "prism:%.2f" % m.left_to_right  # one batch per apex position
+		s = m.size
 	else:
-		push_warning("Prefab mesh %s: only BoxMesh, CylinderMesh and SphereMesh are batched" % mi.name)
+		push_warning("Prefab mesh %s: only BoxMesh, CylinderMesh, SphereMesh and PrismMesh are batched" % mi.name)
 		return
 	var col := Color.WHITE
 	var mat := mi.material_override
@@ -106,8 +109,10 @@ static func _add_shape(shape: Shape3D, xf: Transform3D, layer: int, r: Dictionar
 		r.shapes.append({"kind": "box", "layer": layer, "size": shape.size, "xform": xf})
 	elif shape is CylinderShape3D:
 		r.shapes.append({"kind": "cyl", "layer": layer, "size": Vector3(shape.radius, shape.height, shape.radius), "xform": xf})
+	elif shape is ConvexPolygonShape3D:
+		r.shapes.append({"kind": "convex", "layer": layer, "points": shape.points, "xform": xf})
 	else:
-		push_warning("Prefab shape %s: only box and cylinder shapes are supported" % shape)
+		push_warning("Prefab shape %s: only box, cylinder and convex shapes are supported" % shape)
 
 
 ## The floor area a scene's meshes cover, in its own space (x across, y = its z):

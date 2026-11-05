@@ -5,8 +5,6 @@ extends Node3D
 
 const HEARTBEAT_RANGE := 25.0
 const TRACER_LIFE := 0.07
-const MAX_TRAIL_POINTS := 400  # ~6 s of points even at full slide speed
-const TRAIL_WIDTH := 0.34      # half-width in metres
 
 const PLAYER_SCENE := preload("res://assets/models/player.tscn")
 const TAG_SCENE := preload("res://assets/models/tag.tscn")
@@ -29,7 +27,9 @@ const DOOR_REACH := 9.0         # a remote player must be this close to move a d
 const MAX_SHOT_TRACERS := 16    # shotgun pellets are 13
 const MAX_PROJECTILES := 12
 const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # bullet tracers + impacts
-const FX_TRAILS_MAT := preload("res://assets/materials/fx_trails.tres")    # Stalker trails
+const GRENADE_SCENE := preload("res://assets/models/grenade.tscn")
+const EXPLOSION_SCENE := preload("res://assets/models/explosion.tscn")
+const UAV_RING_SEGMENTS := 48
 ## Times of day (same order as Game.TIMES_OF_DAY). top / horizon tint the sky
 ## colours from Customization; sky scales the sky's brightness; night turns on the
 ## street lamps' lights (0 = off, 1 = full).
@@ -75,10 +75,11 @@ var _fx_mesh: ImmediateMesh
 var _fx_inst: MeshInstance3D
 var _tracers: Array = []   # [from, to, life, color]
 var _impacts: Array = []   # [pos, life]
-var _trail_mesh: ImmediateMesh
-var _trail_inst: MeshInstance3D
-var _trails := {}          # id -> PackedVector3Array
-var _trail_times := {}     # id -> PackedFloat64Array (when each trail point was laid)
+
+var _grenades := {}        # id -> {owner, pos, vel, life, node}
+var _uav_pulses := []      # [{origin, r, last, done}]: pulses from your team, still growing
+var _uav_stills := {}      # enemy id -> {node, pos, until} (until < 0: until the next pulse)
+var _uav_pulse_at := {}    # sender -> when their last pulse came
 var _projectiles: Array = []
 var _hb_timer := 0.0
 
@@ -287,12 +288,6 @@ func _build_fx() -> void:
 	_fx_inst.material_override = FX_TRACERS_MAT
 	_fx_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_fx_inst)
-	_trail_mesh = ImmediateMesh.new()
-	_trail_inst = MeshInstance3D.new()
-	_trail_inst.mesh = _trail_mesh
-	_trail_inst.material_override = FX_TRAILS_MAT  # depth-tested: hidden behind geometry
-	_trail_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(_trail_inst)
 
 
 # ================================================================ players
@@ -313,8 +308,6 @@ func sync_players() -> void:
 		if not Net.players.has(id):
 			players[id].queue_free()
 			players.erase(id)
-			_trails.erase(id)
-			_trail_times.erase(id)
 
 
 func local_player() -> Player:
@@ -324,11 +317,14 @@ func local_player() -> Player:
 func on_round_begin(_obj: int) -> void:
 	for p in pings.duplicate():
 		_remove_ping(p)
-	_trails.clear()
-	_trail_times.clear()
 	for p in _projectiles:
 		p.node.queue_free()
 	_projectiles.clear()
+	for g: Dictionary in _grenades.values():
+		g.node.queue_free()
+	_grenades.clear()
+	_uav_pulses.clear()
+	_clear_uav_stills()
 	update_tag()
 
 
@@ -507,19 +503,28 @@ func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
 	# Only real weapons, a handful of tracers, from where the shooter actually is.
 	if not Weapons.DATA.has(weapon) or ends.size() > MAX_SHOT_TRACERS or not origin.is_finite():
 		return
+	# Near where we see the shooter: their position here lags behind theirs, by a
+	# good few metres at full speed (a tighter check made real shots go silent).
 	var p := _remote_sender()
-	if p == null or not p.alive or p.global_position.distance_to(origin) > 6.0:
+	if p == null or not p.alive or p.global_position.distance_to(origin) > FX_SHOT_REACH:
 		return
-	# No more shot effects than the fastest gun fires (with slack), per shooter.
+	# No more shot effects than the fastest gun fires (with slack), per shooter: a
+	# token bucket, so shots that arrive bunched up after a lag spike all play.
 	var sid := p.peer_id
 	var now := Time.get_ticks_msec() / 1000.0
-	if now - float(_fx_shot_at.get(sid, -100.0)) < FX_SHOT_MIN_GAP:
+	var b: Array = _fx_shot_at.get(sid, [FX_SHOT_BURST, now])
+	var tokens := minf(FX_SHOT_BURST, float(b[0]) + (now - float(b[1])) * FX_SHOT_RATE)
+	if tokens < 1.0:
 		return
-	_fx_shot_at[sid] = now
+	_fx_shot_at[sid] = [tokens - 1.0, now]
 	for e in ends:
 		if not e.is_finite() or e.distance_to(origin) > 450.0:
 			return
-	Sfx.play_at(weapon, origin, 0.0, 140.0 if weapon == "sniper" else 90.0, randf_range(0.95, 1.05))
+	var stats: WeaponStats = Weapons.DATA[weapon]
+	if stats.sound_fade_distance > 0.0:
+		Sfx.play_loud(weapon, origin, stats.sound_near_db, stats.sound_far_db, stats.sound_fade_distance)
+	else:
+		Sfx.play_at(weapon, origin, 0.0, FX_SHOT_HEARING, randf_range(0.95, 1.05))
 	add_tracers(p.tp_muzzle_pos(origin), ends, weapon)  # from their gun, not the middle of their body
 
 
@@ -572,21 +577,162 @@ func _process(delta: float) -> void:
 	_update_time_of_day(delta)
 	_update_tag_visual(delta)
 	_update_projectiles(delta)
+	_update_grenades(delta)
+	_update_uav(delta)
 	_draw_fx(delta)
-	_update_trails()
 	_update_heartbeat(delta)
-	_update_stalker_scan()
 
 
-## Stalker's ability: while it runs, every other player is outlined through walls
-## (only on the Stalker's own screen).
-func _update_stalker_scan() -> void:
+# ---- Grenades. Every machine flies them the same way; only the host sets them off.
+
+func add_grenade(gid: int, shooter: int, start: Vector3, vel: Vector3) -> void:
+	var node: Node3D = GRENADE_SCENE.instantiate()
+	add_child(node)
+	node.global_position = start
+	_grenades[gid] = {"owner": shooter, "pos": start, "vel": vel, "life": Weapons.DATA.gl.max_life, "node": node}
+
+
+func _update_grenades(delta: float) -> void:
+	var host := multiplayer.is_server()
+	var stats: WeaponStats = Weapons.DATA.gl
+	var space := get_world_3d().direct_space_state
+	for gid: int in _grenades.keys():
+		var g: Dictionary = _grenades[gid]
+		g.life -= delta
+		var old: Vector3 = g.pos
+		g.vel += Vector3.DOWN * stats.grenade_gravity * delta
+		var nxt: Vector3 = old + g.vel * delta
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(old, nxt, MapBuilder.MASK_WORLD))
+		if not hit.is_empty():
+			nxt = hit.position + hit.normal * 0.1  # just off the surface, so walls don't block its own blast
+			g.vel = Vector3.ZERO
+		g.pos = nxt
+		g.node.global_position = nxt
+		if host and (not hit.is_empty() or g.life <= 0.0 or _enemy_near_grenade(g.owner, nxt, stats.proximity_radius)):
+			Game.server_blast(gid, g.owner, nxt)
+		elif g.life <= -2.0:  # a client that never heard the blast
+			g.node.queue_free()
+			_grenades.erase(gid)
+
+
+func _enemy_near_grenade(shooter: int, pos: Vector3, radius: float) -> bool:
+	var team := Net.team_of(shooter)
+	for p: Player in players.values():
+		if p.alive and p.team != team:
+			var c: Vector3 = p.global_position + Vector3(0, clampf(pos.y - p.global_position.y, Player.RADIUS, Player.STAND_H - Player.RADIUS), 0)
+			if c.distance_to(pos) - Player.RADIUS <= radius:
+				return true
+	return false
+
+
+## The host says this grenade went off.
+func grenade_blast(gid: int, pos: Vector3) -> void:
+	if _grenades.has(gid):
+		_grenades[gid].node.queue_free()
+		_grenades.erase(gid)
+	Sfx.play_at("explosion", pos, 2.0, 160.0)
+	var fx: Node3D = EXPLOSION_SCENE.instantiate()
+	add_child(fx)
+	fx.global_position = pos
+	var size: float = Weapons.DATA.gl.blast_radius
+	var t := fx.create_tween()
+	t.tween_property(fx, "scale", Vector3.ONE * size, 0.12).from(Vector3.ONE * size * 0.3)
+	t.tween_property(fx, "scale", Vector3.ONE * size * 1.1, 0.2)
+	t.parallel().tween_method(func(a: float) -> void: _fade_fx(fx, a), 0.0, 1.0, 0.2)
+	t.tween_callback(fx.queue_free)
+
+
+func _fade_fx(fx: Node3D, a: float) -> void:
+	for c in fx.get_children():
+		if c is GeometryInstance3D:
+			c.transparency = a
+
+
+# ---- Warp's afterimage: a light-blue copy of the warper fades where they left.
+
+func add_afterimage(p: Player) -> void:
+	var copy := p.body_copy()
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Addons.T.warp_afterimage_color
+	add_child(copy)
+	copy.global_transform = p.body_root.global_transform
+	_style_copy(copy, mat, null)
+	var t := copy.create_tween()
+	t.tween_property(mat, "albedo_color:a", 0.0, Addons.T.warp_afterimage_time)
+	t.tween_callback(copy.queue_free)
+
+
+func _style_copy(n: Node, override_mat: Material, overlay: Material) -> void:
+	for c in n.get_children():
+		if c is GeometryInstance3D:
+			c.transparency = 0.0
+			c.material_override = override_mat if override_mat else c.material_override
+			c.material_overlay = overlay
+		_style_copy(c, override_mat, overlay)
+
+
+# ---- UAV: pulses from your team reveal enemies where the ring reaches them.
+
+## Sent with Net.to_all. Only the UAV player's team takes any notice.
+func uav_pulse(origin: Vector3, last: bool) -> void:
+	var p := _remote_sender() if _is_remote_call() else local_player()
 	var lp := local_player()
-	var scanning := lp != null and lp.alive and lp.addon2 == "stalker" and lp.addon_active[Player.SEC] > 0.0
-	for id in players:
-		var p: Player = players[id]
-		if p != lp:
-			p.set_scan_outline(scanning and p.alive)
+	if p == null or lp == null or p.team != lp.team or p.addon != "uav" or not p.alive or not origin.is_finite():
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - float(_uav_pulse_at.get(p.peer_id, -100.0)) < Addons.T.uav_pulse_interval * 0.5:
+		return  # faster than a real UAV pulses
+	_uav_pulse_at[p.peer_id] = now
+	_clear_uav_stills()  # outlines last until the next pulse is sent
+	_uav_pulses.append({"origin": origin, "r": 0.0, "last": last, "done": {}})
+	Sfx.play_at("addon", origin, -2.0, 60.0, 0.7)
+
+
+func _update_uav(delta: float) -> void:
+	var lp := local_player()
+	var now := Time.get_ticks_msec() / 1000.0
+	for i in range(_uav_pulses.size() - 1, -1, -1):
+		var pulse: Dictionary = _uav_pulses[i]
+		pulse.r += Addons.T.uav_pulse_speed * delta
+		for id: int in players:
+			var e: Player = players[id]
+			if lp == null or e.team == lp.team or not e.alive or pulse.done.has(id):
+				continue
+			var d: Vector3 = e.global_position - pulse.origin
+			if Vector2(d.x, d.z).length() <= pulse.r:
+				pulse.done[id] = true
+				_uav_reveal(e, pulse.last)
+		if pulse.r >= Addons.T.uav_max_radius:
+			_uav_pulses.remove_at(i)
+	for id: int in _uav_stills.keys():
+		var until: float = _uav_stills[id].until
+		if until >= 0.0 and now > until:
+			_uav_stills[id].node.queue_free()
+			_uav_stills.erase(id)
+
+
+func _uav_reveal(e: Player, last: bool) -> void:
+	if _uav_stills.has(e.peer_id):
+		_uav_stills[e.peer_id].node.queue_free()
+	var copy := e.body_copy()
+	add_child(copy)
+	copy.global_transform = e.body_root.global_transform
+	_style_copy(copy, null, Player.SCAN_OUTLINE)
+	var until: float = Time.get_ticks_msec() / 1000.0 + Addons.T.uav_last_linger if last else -1.0
+	_uav_stills[e.peer_id] = {"node": copy, "pos": e.global_position, "until": until}
+
+
+func _clear_uav_stills() -> void:
+	for s: Dictionary in _uav_stills.values():
+		s.node.queue_free()
+	_uav_stills.clear()
+
+
+## Where the UAV last saw enemies (the minimap's red dots).
+func uav_dots() -> Array:
+	return _uav_stills.values().map(func(s: Dictionary) -> Vector3: return s.pos)
 
 
 func _update_tag_visual(delta: float) -> void:
@@ -632,7 +778,7 @@ func _update_projectiles(delta: float) -> void:
 			if r.collider is Player and pr.owner == me:
 				var victim: Player = r.collider
 				if victim.team != Net.team_of(me):
-					Game.report_hit.rpc_id(1, victim.peer_id, Weapons.THROWN_DAMAGE, false, "thrown")
+					Game.report_hit.rpc_id(1, victim.peer_id, Weapons.DATA.bat.thrown_damage, false, "thrown")
 			Sfx.play_at("bat_hit", r.position, 0.0, 40.0)
 		pr["pos"] = nxt
 		var node: Node3D = pr.node
@@ -653,7 +799,7 @@ func _draw_fx(delta: float) -> void:
 		_impacts[i][1] -= delta
 		if _impacts[i][1] <= 0.0:
 			_impacts.remove_at(i)
-	if _tracers.is_empty() and _impacts.is_empty():
+	if _tracers.is_empty() and _impacts.is_empty() and _uav_pulses.is_empty() and Game.links.is_empty():
 		return
 	var cam := get_viewport().get_camera_3d()
 	var cam_pos := cam.global_position if cam else Vector3.ZERO
@@ -664,6 +810,9 @@ func _draw_fx(delta: float) -> void:
 		var p: Vector3 = im[0]
 		var s := 0.12
 		_ribbon(p - Vector3(0, s, 0), p + Vector3(0, s, 0), s, Color(0.95, 0.85, 0.6, im[1] * 3.0), cam_pos)
+	for pulse: Dictionary in _uav_pulses:
+		_uav_ring(pulse, cam_pos)
+	_draw_links(cam_pos)
 	_fx_mesh.surface_end()
 
 
@@ -684,80 +833,30 @@ func _ribbon(a: Vector3, b: Vector3, w: float, col: Color, cam_pos: Vector3) -> 
 	_fx_mesh.surface_add_vertex(b - side)
 
 
-## Stalker addon: wide red ground trails behind every enemy. Each piece of trail
-## lingers for Addons.STALKER_TRAIL_TIME seconds, fading as it ages.
-func _update_trails() -> void:
-	_trail_mesh.clear_surfaces()
+## A UAV pulse's growing ring, fading as it reaches its full size.
+func _uav_ring(pulse: Dictionary, cam_pos: Vector3) -> void:
+	var col := Color(1.0, 0.25, 0.2, 0.7 * (1.0 - pulse.r / Addons.T.uav_max_radius))
+	var c: Vector3 = pulse.origin + Vector3(0, 0.3, 0)
+	for i in UAV_RING_SEGMENTS:
+		var a := TAU * i / UAV_RING_SEGMENTS
+		var b := TAU * (i + 1) / UAV_RING_SEGMENTS
+		_ribbon(c + Vector3(cos(a), 0, sin(a)) * pulse.r, c + Vector3(cos(b), 0, sin(b)) * pulse.r, 0.12, col, cam_pos)
+
+
+## Interlink: a thin line between linked teammates (only their team sees it).
+func _draw_links(cam_pos: Vector3) -> void:
 	var lp := local_player()
 	if lp == null:
 		return
-	var now := Time.get_ticks_msec() / 1000.0
-	for id in players:
-		var p: Player = players[id]
-		if p.team == lp.team or not p.alive:
-			_trails.erase(id)
-			_trail_times.erase(id)
-			continue
-		var pos := p.global_position + Vector3(0, 0.08, 0)
-		var tr: PackedVector3Array = _trails.get(id, PackedVector3Array())
-		var times: PackedFloat64Array = _trail_times.get(id, PackedFloat64Array())
-		if tr.size() > 0 and tr[tr.size() - 1].distance_to(pos) > 6.0:
-			tr = PackedVector3Array()  # teleported (respawn)
-			times = PackedFloat64Array()
-		if tr.is_empty() or tr[tr.size() - 1].distance_to(pos) > 0.35:
-			tr.append(pos)
-			times.append(now)
-		# Drop points older than the linger time (and cap the point count).
-		var keep_from := 0
-		while keep_from < times.size() and now - times[keep_from] > Addons.STALKER_TRAIL_TIME:
-			keep_from += 1
-		keep_from = maxi(keep_from, tr.size() - MAX_TRAIL_POINTS)
-		if keep_from > 0:
-			tr = tr.slice(keep_from)
-			times = times.slice(keep_from)
-		_trails[id] = tr
-		_trail_times[id] = times
-	if lp.addon2 != "stalker" or not lp.alive:
-		return
-	var any := false
-	for id in _trails:
-		if (_trails[id] as PackedVector3Array).size() >= 2:
-			any = true
-	if not any:
-		return
-	_trail_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-	for id in _trails:
-		var tr: PackedVector3Array = _trails[id]
-		var times: PackedFloat64Array = _trail_times[id]
-		var n := tr.size()
-		for i in range(1, n):
-			var a := tr[i - 1]
-			var b := tr[i]
-			var d := b - a
-			d.y = 0.0
-			if d.length() < 0.01:
-				continue
-			var side := Vector3(-d.z, 0.0, d.x).normalized() * TRAIL_WIDTH
-			var alpha_a := clampf(1.0 - (now - times[i - 1]) / Addons.STALKER_TRAIL_TIME, 0.0, 1.0) * 0.85
-			var alpha_b := clampf(1.0 - (now - times[i]) / Addons.STALKER_TRAIL_TIME, 0.0, 1.0) * 0.85
-			var ca := Color(1.0, 0.15, 0.1, alpha_a)
-			var cb := Color(1.0, 0.15, 0.1, alpha_b)
-			_trail_mesh.surface_set_color(ca)
-			_trail_mesh.surface_add_vertex(a - side)
-			_trail_mesh.surface_set_color(ca)
-			_trail_mesh.surface_add_vertex(a + side)
-			_trail_mesh.surface_set_color(cb)
-			_trail_mesh.surface_add_vertex(b + side)
-			_trail_mesh.surface_set_color(ca)
-			_trail_mesh.surface_add_vertex(a - side)
-			_trail_mesh.surface_set_color(cb)
-			_trail_mesh.surface_add_vertex(b + side)
-			_trail_mesh.surface_set_color(cb)
-			_trail_mesh.surface_add_vertex(b - side)
-	_trail_mesh.surface_end()
+	for a: int in Game.links:
+		var b: int = Game.links[a]
+		if a < b and players.has(a) and players.has(b) and players[a].team == lp.team:
+			var chest := Vector3(0, 1.2, 0)
+			var col := Mats.team_color(lp.team).lightened(0.3)
+			col.a = 0.8
+			_ribbon(players[a].global_position + chest, players[b].global_position + chest, 0.025, col, cam_pos)
 
 
-## Hunters near the Runner hear a heartbeat that speeds up as they close in.
 func _update_heartbeat(delta: float) -> void:
 	var lp := local_player()
 	if lp == null or not lp.alive or Game.holder == 0 or not players.has(Game.holder):
@@ -778,8 +877,11 @@ func _update_heartbeat(delta: float) -> void:
 # ================================================================ sprays
 
 const SPRAY_SIZE := 1.3
-const FX_SHOT_MIN_GAP := 1.0 / 40.0  # fastest gun is 14 rounds/s; slack so jittery packets aren't dropped
-var _fx_shot_at := {}    # shooter id -> time of their last shot effect
+const FX_SHOT_RATE := 30.0     # shot effects a second per shooter (the fastest gun fires 14)...
+const FX_SHOT_BURST := 10.0    # ...and how many may arrive at once
+const FX_SHOT_REACH := 20.0    # m between where a shot starts and where we see the shooter
+const FX_SHOT_HEARING := 220.0 # m gunfire carries (the sniper 40% further): you hear what can kill you
+var _fx_shot_at := {}    # shooter id -> [tokens, time] for shot effects
 const DOOR_MIN_GAP := 0.1
 var _door_at := {}       # (peer id, door) -> time of the last update
 var _spray_nodes := {}   # peer id -> MeshInstance3D (one spray per player)

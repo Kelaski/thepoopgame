@@ -9,6 +9,8 @@ var _players: Array[AudioStreamPlayer] = []
 var _players3d: Array[AudioStreamPlayer3D] = []
 var _i2 := 0
 var _i3 := 0
+var _loud: Array[AudioStreamPlayer3D] = []
+var _i_loud := 0
 
 
 func _ready() -> void:
@@ -17,9 +19,10 @@ func _ready() -> void:
 	rng.seed = 99
 	# Drive 2.2: about +4.3 dB of loudness (35% louder to the ear) with no clipping.
 	streams["ar"] = _gunshot(rng, 0.16, 0.55, 140.0, 1.0, GUN_DRIVE)
-	streams["smg"] = _gunshot(rng, 0.10, 0.75, 220.0, 0.85, GUN_DRIVE)
+	streams["gl"] = _gunshot(rng, 0.22, 0.22, 120.0, 0.9)
+	streams["explosion"] = _gunshot(rng, 0.9, 0.2, 55.0, 1.0, GUN_DRIVE)
 	streams["shotgun"] = _gunshot(rng, 0.34, 0.35, 90.0, 1.0, GUN_DRIVE)
-	streams["sniper"] = _gunshot(rng, 0.5, 0.25, 70.0, 1.0)
+	streams["sniper"] = _gunshot(rng, 1.1, 0.4, 62.0, 1.0, GUN_DRIVE)  # a sharp crack and a long tail
 	streams["bat"] = _whoosh(rng, 0.18)
 	streams["bat_hit"] = _thud(rng, 0.12, 180.0)
 	streams["thrown"] = _whoosh(rng, 0.3)
@@ -46,7 +49,6 @@ func _ready() -> void:
 	streams["ping"] = _bell(1760.0, 0.35, 0.4)
 	streams["ping_danger"] = _chirp(1500.0, 950.0, 0.22, 0.45)
 	streams["hurt"] = _thud(rng, 0.15, 60.0)
-	streams["swap_beam"] = _beam(Addons.SWAP_CHARGE)
 	streams["warp"] = _chirp(1600.0, 260.0, 0.22, 0.45)
 	streams["rocket"] = _whoosh(rng, 0.55)
 	streams["parry"] = _bell(2350.0, 0.4, 0.45)
@@ -63,6 +65,12 @@ func _ready() -> void:
 		p3.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 		add_child(p3)
 		_players3d.append(p3)
+	for i in 4:
+		var pl := AudioStreamPlayer3D.new()
+		pl.bus = "SFX"
+		pl.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED
+		add_child(pl)
+		_loud.append(pl)
 	_render_thread = Thread.new()
 	_render_thread.start(_render_all_songs)
 
@@ -73,11 +81,10 @@ func _exit_tree() -> void:
 		_render_thread = null
 
 
-## Per-sound volume boosts, applied everywhere the sound plays (your own shots and
-## other players'). The sniper is 60% louder (x1.6 = +4.08 dB). The other guns get
-## their extra loudness from GUN_DRIVE in the synthesis instead: a playback boost
-## just pushed them past full scale, where it got clipped off and wasn't heard.
-const GAIN_DB := {"sniper": 4.08}
+## Per-sound volume boosts, applied everywhere the sound plays. The guns get their
+## extra loudness from GUN_DRIVE in the synthesis: a playback boost just pushed them
+## past full scale, where it got clipped off and wasn't heard.
+const GAIN_DB := {}
 const GUN_DRIVE := 2.2
 
 
@@ -102,6 +109,22 @@ func play_at(sound: String, pos: Vector3, vol_db := 0.0, max_dist := 120.0, pitc
 	p.volume_db = vol_db + float(GAIN_DB.get(sound, 0.0))
 	p.max_distance = max_dist
 	p.pitch_scale = pitch
+	p.global_position = pos
+	p.play()
+
+
+## A sound heard across the whole map: it fades from near_db to far_db over
+## fade_distance, then stays at far_db however far away you are. Still comes from
+## its direction.
+func play_loud(sound: String, pos: Vector3, near_db: float, far_db: float, fade_distance: float) -> void:
+	if not streams.has(sound):
+		return
+	var cam := get_viewport().get_camera_3d()
+	var dist: float = cam.global_position.distance_to(pos) if cam else 0.0
+	var p := _loud[_i_loud]
+	_i_loud = (_i_loud + 1) % _loud.size()
+	p.stream = streams[sound]
+	p.volume_db = lerpf(near_db, far_db, clampf(dist / fade_distance, 0.0, 1.0))
 	p.global_position = pos
 	p.play()
 
@@ -212,22 +235,6 @@ func _chirp(f0: float, f1: float, length: float, vol: float) -> AudioStreamWAV:
 		var t := float(i) / n
 		phase += TAU * lerpf(f0, f1, t) / RATE
 		s[i] = sin(phase) * vol * sin(PI * t)
-	return _wav(s)
-
-
-## Sci-fi beam (Swap): a warbling tone that climbs as it charges, with a buzzy
-## octave on top, fading in and cutting off at the end.
-func _beam(length: float) -> AudioStreamWAV:
-	var n := int(length * RATE)
-	var s := PackedFloat32Array()
-	s.resize(n)
-	var phase := 0.0
-	for i in n:
-		var t := float(i) / n
-		var hz := lerpf(260.0, 980.0, t * t) * (1.0 + 0.06 * sin(TAU * 14.0 * i / RATE))
-		phase += TAU * hz / RATE
-		var env := minf(1.0, t * 8.0) * minf(1.0, (1.0 - t) * 20.0)
-		s[i] = (sin(phase) * 0.6 + signf(sin(phase * 2.0)) * 0.12) * env * 0.45
 	return _wav(s)
 
 

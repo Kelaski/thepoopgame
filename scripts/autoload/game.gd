@@ -89,10 +89,11 @@ func is_alive(id: int) -> bool:
 	return alive_ids.get(id, false)
 
 
-## Max health depends on the weapon you spawned with (the bat gives 150).
+## Max health depends on the weapon you spawned with (the bat gives more) and Juggernaut.
 func max_hp_of(id: int) -> float:
 	if Net.players.has(id):
-		return Weapons.max_hp(Net.players[id].weapon)
+		var bonus: float = Addons.T.juggernaut_hp if Net.players[id].get("addon2", "") == "juggernaut" else 0.0
+		return Weapons.max_hp(Net.players[id].weapon) + bonus
 	return Weapons.DEFAULT_MAX_HP
 
 
@@ -105,6 +106,7 @@ func my_hp() -> float:
 
 
 func reset_local() -> void:
+	_loading_until = -1.0
 	in_match = false
 	ui_open = false
 	typing = false
@@ -124,7 +126,7 @@ func reset_local() -> void:
 # ===================================================================== server
 
 func server_start_match() -> void:
-	if not multiplayer.is_server() or in_match:
+	if not multiplayer.is_server() or in_match or _picking_city:
 		return
 	for id in Net.players:
 		Net.players[id].kills = 0
@@ -133,10 +135,53 @@ func server_start_match() -> void:
 	_used_dots.clear()
 	_used_objs.clear()
 	_last_team_dots.clear()
-	map_seed = randi_range(1, 2000000000) if Settings.g("map_random") else 0
+	map_seed = 0
+	if Settings.g("map_random"):
+		# The host tries a few cities and picks the best; everyone else waits
+		# (Loading (XXs)) and then builds that one from its seed.
+		_picking_city = true
+		_loading.rpc(LOADING_TIME)
+		map_seed = await _pick_city()
+		_picking_city = false
+		if not multiplayer.is_server() or in_match:
+			return  # left, or the match started some other way, while we were picking
 	time_of_day = randi() % TIMES_OF_DAY.size()
 	_start_match.rpc(map_size, map_seed, time_of_day)
 	get_tree().create_timer(1.0).timeout.connect(_server_begin_round)
+
+
+## Loading: the host picks the city for a new match (CITY_TRIES candidates, at
+## most LOADING_TIME seconds), scored by CityGen.score.
+const LOADING_TIME := 30.0
+const CITY_TRIES := 40
+var _picking_city := false
+var _loading_until := -1.0  # this machine's clock (s) when picking must end; -1 = not loading
+
+
+func _pick_city() -> int:
+	var deadline := Time.get_ticks_msec() / 1000.0 + LOADING_TIME
+	var best_seed := randi_range(1, 2000000000)
+	var best := -INF
+	for i in CITY_TRIES:
+		var seed := best_seed if i == 0 else randi_range(1, 2000000000)
+		var score := CityGen.score(CityGen.generate(map_size, seed))
+		if score > best:
+			best = score
+			best_seed = seed
+		if Time.get_ticks_msec() / 1000.0 > deadline:
+			break
+		await get_tree().process_frame  # one candidate a frame: the game (and the network) keep running
+	return best_seed
+
+
+## Seconds left of the host's city picking, or -1 when nothing is loading.
+func loading_left() -> float:
+	return maxf(0.0, _loading_until - Time.get_ticks_msec() / 1000.0) if _loading_until >= 0.0 else -1.0
+
+
+@rpc("authority", "call_local", "reliable")
+func _loading(secs: float) -> void:
+	_loading_until = Time.get_ticks_msec() / 1000.0 + clampf(secs, 0.0, LOADING_TIME)
 
 
 func server_end_match() -> void:
@@ -170,6 +215,8 @@ func on_player_left(id: int) -> void:
 	_push_state()
 
 
+const TAG_EVEN_DIST := 10.0  # m: in a new round both teams start this close to the same distance from the Tag
+const SPAWN_TRIES := 300     # zone / Tag pairings checked for line of sight each round (the evenest first)
 var _used_dots := []  # server: spawn zones used this match
 var _used_objs := []  # server: Tag spots used this match
 var _last_team_dots := []  # server: last round's [team 0 zone, team 1 zone]
@@ -183,51 +230,54 @@ func _server_begin_round() -> void:
 	holding_team = -1
 	timer = ROUND_TIME
 	match_winner = -1
-	# Pick two spawn zones that are well apart, then the most "between" objective.
-	# Rounds move around: a team never starts where it did last round if any other
-	# pair works, and zones (and Tag spots) this match hasn't used yet come first.
+	# Pick two spawn zones and a Tag spot together: the zones well apart, both
+	# teams within TAG_EVEN_DIST of the same distance to the Tag, and no spawn spot
+	# of one team in sight of the other's. Rounds move around: a team never starts
+	# where it did last round if anything else works, and zones and Tag spots this
+	# match hasn't used yet come first.
 	var dots: Array = world.builder.spawn_dots
 	var min_dist: float = world.builder.min_spawn_dist
+	var objs: Array = world.builder.objectives
 	if _used_dots.size() >= dots.size():
 		_used_dots = _used_dots.slice(-2)  # all used: start over
-	var team_dots := [0, 1 % dots.size()]
-	var best := INF
-	for i in dots.size():  # i = team 0's zone, j = team 1's
+	if _used_objs.size() >= objs.size():
+		_used_objs = _used_objs.slice(-1) if objs.size() > 1 else []  # start over, but not on last round's spot
+	var teams := [[], []]
+	for id in Net.players:
+		teams[Net.players[id].team].append(id)
+	var cands := []  # [score, team 0 zone, team 1 zone, Tag spot]
+	for i in dots.size():
 		for j in dots.size():
 			if i == j or dots[i].distance_to(dots[j]) < min_dist:
 				continue
 			var score := float(i in _used_dots) + float(j in _used_dots) + randf() * 0.5
 			if _last_team_dots.size() == 2 and (i == _last_team_dots[0] or j == _last_team_dots[1]):
 				score += 4.0
-			if score < best:
-				best = score
-				team_dots = [i, j]
+			for o in objs.size():
+				if objs.size() > 1 and o == objective:
+					continue  # the Tag always moves
+				var uneven := absf(objs[o].pos.distance_to(dots[i]) - objs[o].pos.distance_to(dots[j]))
+				# Uneven pairs only as a last resort, the most even first.
+				cands.append([score + (2.0 if o in _used_objs else 0.0) + (100.0 + uneven if uneven > TAG_EVEN_DIST else 0.0), i, j, o])
+	cands.sort_custom(func(a, b): return a[0] < b[0])
+	var pick: Array = cands[0] if not cands.is_empty() else [0.0, 0, 1 % dots.size(), 0]
+	var spawns := {}
+	for c in cands.slice(0, SPAWN_TRIES):
+		# At least 4 spots each, so the area round a zone is out of sight, not just its middle.
+		var spots := [world.find_spawn_cluster(dots[c[1]], maxi(teams[0].size(), 4)), world.find_spawn_cluster(dots[c[2]], maxi(teams[1].size(), 4))]
+		if not _teams_see_each_other(spots[0], spots[1]):
+			pick = c
+			break
+	var team_dots := [pick[1], pick[2]]
+	objective = pick[3]
 	_used_dots.append_array(team_dots)
 	_last_team_dots = team_dots
-	var objs: Array = world.builder.objectives
-	if _used_objs.size() >= objs.size():
-		_used_objs = _used_objs.slice(-1) if objs.size() > 1 else []  # start over, but not on last round's spot
-	var ranked := []
-	for i in objs.size():
-		if i in _used_objs:
-			continue
-		var da: float = objs[i].pos.distance_to(dots[team_dots[0]])
-		var db: float = objs[i].pos.distance_to(dots[team_dots[1]])
-		ranked.append([absf(da - db) + randf() * 12.0, i])
-	ranked.sort_custom(func(x, y): return x[0] < y[0])
-	objective = ranked[0][1]
 	_used_objs.append(objective)
 	tag_pos = objs[objective].pos
-	# Spawn positions for each team around its dot.
-	var spawns := {}
 	for team in 2:
-		var ids := []
-		for id in Net.players:
-			if Net.players[id].team == team:
-				ids.append(id)
-		var spots: Array = world.find_spawn_cluster(dots[team_dots[team]], ids.size())
-		for i in ids.size():
-			spawns[ids[i]] = spots[i]
+		var spots: Array = world.find_spawn_cluster(dots[team_dots[team]], teams[team].size())
+		for k in teams[team].size():
+			spawns[teams[team][k]] = spots[k]
 	alive_ids.clear()
 	_respawn_hold.clear()
 	for id in Net.players:
@@ -236,6 +286,7 @@ func _server_begin_round() -> void:
 		respawn_left.erase(id)
 		_last_hit[id] = -100.0
 		_reset_abilities(id)
+	_streaks.clear()
 	_begin_round.rpc(round_num, objective, team_dots, spawns, scores)
 
 
@@ -304,16 +355,18 @@ func _server_tick(delta: float) -> void:
 				respawn_left.erase(id)
 				_respawn_hold.erase(id)
 				var pos: Vector3 = world.find_respawn(id)
-				_reset_abilities(id)
+				if not Addons.is_support(Net.players[id].addon):
+					_reset_abilities(id)
 				alive_ids[id] = true
 				hp[id] = max_hp_of(id)
 				_last_hit[id] = -100.0
 				_on_respawn.rpc(id, pos)
 	_tick_kill_heals(delta)
+	_tick_phantom_stuck(delta)
 	# Health regeneration
 	for id in hp.keys():
-		if alive_ids.get(id, false) and hp[id] < max_hp_of(id) and _now - _last_hit.get(id, -100.0) >= REGEN_DELAY:
-			hp[id] = minf(max_hp_of(id), hp[id] + REGEN_RATE * delta)
+		if alive_ids.get(id, false) and hp[id] < max_hp_of(id) and _now - _last_hit.get(id, -100.0) >= REGEN_DELAY + _streaks.get(id, 0) * Addons.T.streak_regen_delay:
+			_heal(id, REGEN_RATE * delta)
 	_hp_acc += delta
 	if _hp_acc >= 0.1:
 		_hp_acc = 0.0
@@ -337,7 +390,7 @@ func _tick_kill_heals(delta: float) -> void:
 				left.append(h)
 				continue
 			var amount := minf(float(h[1]), KILL_HEAL / KILL_HEAL_TIME * delta)
-			hp[id] = minf(max_hp_of(id), float(hp.get(id, 0.0)) + amount)
+			_heal(id, amount)
 			if float(h[1]) - amount > 0.001:
 				left.append([h[0], float(h[1]) - amount])
 		if left.is_empty():
@@ -418,6 +471,17 @@ func _round_sound(winner: int, match_over: bool) -> void:
 	Sfx.play("match_win" if mine == winner or mine < 0 else "match_lose", -1.0, 1.0, "UI")
 
 
+## True if any spawn spot of one team can see any of the other team's.
+func _teams_see_each_other(a: Array, b: Array) -> bool:
+	var eyes := []
+	for p: Vector3 in a:
+		eyes.append(p + Vector3(0, 1.6, 0))
+	for p: Vector3 in b:
+		if world._seen_by(p, eyes):
+			return true
+	return false
+
+
 ## Respawn time for a player who just died: the team holding the Tag waits longer
 ## (the Runner included, since their team had it when they died).
 func _respawn_time_for(id: int) -> float:
@@ -426,8 +490,16 @@ func _respawn_time_for(id: int) -> float:
 	return RESPAWN_TIME
 
 
-func _server_kill(victim: int, killer: int, weapon: String, head: bool, noscope := false) -> void:
-	var respawn := _respawn_time_for(victim)
+func _server_kill(victim: int, killer: int, weapon: String, head: bool, noscope := false, shared := false) -> void:
+	# Interlink: a death within range takes the partner too, and both wait longer.
+	var mate := _linked_mate(victim)
+	if links.has(victim):
+		_unlink(victim)
+	var respawn: float = Addons.T.interlink_respawn_time if mate != 0 or shared else _respawn_time_for(victim)
+	_streaks.erase(victim)
+	_bubble.erase(victim)
+	_phantom_until.erase(victim)
+	_phantom_stuck.erase(victim)
 	alive_ids[victim] = false
 	hp[victim] = 0.0
 	respawn_left[victim] = respawn
@@ -438,6 +510,8 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool, noscope 
 		_thrown[killer] = [THROWN_HITS, _now + THROWN_WINDOW]  # the victim's gun goes flying
 	if Net.players.has(killer) and killer != victim:
 		Net.players[killer].kills += 1
+		if Net.players[killer].get("addon2", "") == "killstreak":
+			_streaks[killer] = mini(_streaks.get(killer, 0) + 1, Addons.T.streak_max_stacks)
 		# Kill reward: the killer regenerates KILL_HEAL over KILL_HEAL_TIME (see _tick_kill_heals).
 		if alive_ids.get(killer, false):
 			if not _kill_heals.has(killer):
@@ -453,6 +527,8 @@ func _server_kill(victim: int, killer: int, weapon: String, head: bool, noscope 
 		# Reward the Runner for defending themselves.
 		timer = maxf(0.0, timer - RUNNER_KILL_REWARD)
 		_announce.rpc("Runner kill! -%ds on the timer" % int(RUNNER_KILL_REWARD), Mats.TAG_COLOR)
+	if mate != 0 and alive_ids.get(mate, false):
+		_server_kill(mate, mate if killer == victim else killer, weapon, false, false, true)
 	Net.broadcast_roster()
 	_push_state()
 
@@ -586,13 +662,12 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String, noscope 
 		return
 	if world.players.has(victim) and world.players[victim].is_protected():
 		return
-	if _parry_until.get(victim, -1.0) > _now:
-		return  # parried
 	if weapon != "thrown" and not _hit_in_range(shooter, victim, weapon):
 		return
 	if weapon != "thrown" and not _take_hit_token(shooter, weapon):
 		return
-	damage = clampf(damage, 0.0, Weapons.MAX_DAMAGE.get(weapon, 50.0))
+	var head_mult: float = Addons.T.sharpshooter_mult if head and Net.players[shooter].get("addon2", "") == "sharpshooter" else 1.0
+	damage = clampf(damage, 0.0, Weapons.max_damage(weapon) * head_mult)
 	if weapon == "bat" and world.players.has(shooter):
 		# Momentum damage is checked against the attacker's last known speed (with
 		# some slack for latency). The lowest possible sprint speed is assumed, which
@@ -603,14 +678,40 @@ func report_hit(victim: int, damage: float, head: bool, weapon: String, noscope 
 		if not sp.is_local:
 			# Don't trust a claimed speed the server didn't see them move at.
 			spd = minf(spd, sp.observed_speed())
-		spd += Weapons.BAT_SPEED_SLACK
-		damage = minf(damage, Weapons.bat_damage(spd, Player.SPRINT * Weapons.BAT_SPEED_MULT))
-	hp[victim] = hp.get(victim, 100.0) - damage
-	_last_hit[victim] = _now
-	if hp[victim] <= 0.0:
-		_server_kill(victim, shooter, weapon, head, noscope and weapon == "sniper")
+		spd += Weapons.DATA.bat.speed_slack
+		damage = minf(damage, Weapons.bat_damage(spd, Player.SPRINT * Weapons.DATA.bat.speed_mult) * head_mult)
+	_hurt(victim, shooter, damage, head, weapon, noscope and weapon == "sniper")
+
+
+## All damage ends up here: Interlink shares it, then a Bubble soaks it first.
+func _hurt(victim: int, attacker: int, amount: float, head: bool, weapon: String, noscope := false) -> void:
+	var mate := _linked_mate(victim)
+	if mate != 0:
+		amount *= 0.5
+		_hurt_one(mate, attacker, amount, false, weapon, false)
+		if not alive_ids.get(victim, false):
+			return  # the shared death took us both
+	_hurt_one(victim, attacker, amount, head, weapon, noscope)
+
+
+func _hurt_one(victim: int, attacker: int, amount: float, head: bool, weapon: String, noscope: bool) -> void:
+	var through := _soak(victim, amount)
+	if through > 0.0:
+		hp[victim] = hp.get(victim, 100.0) - through
+		_last_hit[victim] = _now
+	if hp.get(victim, 0.0) <= 0.0:
+		_server_kill(victim, attacker, weapon, head, noscope)
 	else:
-		_on_damage.rpc(victim, shooter, hp[victim], damage, head)
+		_on_damage.rpc(victim, attacker, hp[victim], through, head)
+
+
+## Healing: Interlink shares this too, each up to their own max health.
+func _heal(id: int, amount: float) -> void:
+	var mate := _linked_mate(id)
+	if mate != 0:
+		amount *= 0.5
+		hp[mate] = minf(max_hp_of(mate), float(hp.get(mate, 0.0)) + amount)
+	hp[id] = minf(max_hp_of(id), float(hp.get(id, 0.0)) + amount)
 
 
 # Hit validation (server). Each weapon gets a budget of hits that refills as fast
@@ -625,9 +726,9 @@ var _thrown := {}               # shooter -> [hits left, until]
 
 
 func _take_hit_token(shooter: int, weapon: String) -> bool:
-	var d: Dictionary = Weapons.DATA.get(weapon, {})
+	var d: WeaponStats = Weapons.DATA.get(weapon)
 	var per_shot := 4.0 if weapon in ["shotgun", "sniper"] else (2.0 if weapon == "bat" else 1.0)
-	var rate := float(d.get("rps", 1.0)) * per_shot * HIT_RATE_SLACK
+	var rate := (d.rps if d else 1.0) * per_shot * HIT_RATE_SLACK
 	if Net.players.has(shooter) and Net.players[shooter].get("addon2", "") == "trackstar" and weapon in Addons.RECHAMBER_WEAPONS:
 		rate /= Addons.track_mult(weapon)  # Trackstar re-chambers the pump / bolt guns faster
 	var cap := per_shot * 2.0 + 2.0
@@ -643,8 +744,8 @@ func _take_hit_token(shooter: int, weapon: String) -> bool:
 func _hit_in_range(shooter: int, victim: int, weapon: String) -> bool:
 	if not world.players.has(shooter) or not world.players.has(victim):
 		return false
-	var d: Dictionary = Weapons.DATA.get(weapon, {})
-	var reach := float(d.get("range", 300.0)) + (4.0 if weapon == "bat" else HIT_RANGE_SLACK)
+	var d: WeaponStats = Weapons.DATA.get(weapon)
+	var reach := (d.max_range if d else 300.0) + (4.0 if weapon == "bat" else HIT_RANGE_SLACK)
 	var sp: Player = world.players[shooter]
 	var vp: Player = world.players[victim]
 	if sp.global_position.distance_to(vp.global_position) > reach:
@@ -683,16 +784,24 @@ func _take_thrown_hit(shooter: int) -> bool:
 
 
 # ==================================================================== refereed addons
-# Warp, Swap and Parry change what other players see or can do, so the host
-# checks them (the right addon, alive, mid-round, off cooldown) and tells
-# everyone. Cooldowns get ABILITY_SLACK for latency, and reset on respawn like
-# the players' own do.
+# Addons that change what other players see, or what happens to them, are checked
+# by the host (the right addon, alive, mid-round, off cooldown), which tells
+# everyone. Cooldowns get ABILITY_SLACK for latency. A Support addon's entry
+# survives respawning, like its cooldown does.
 const ABILITY_SLACK := 0.5
-const WARP_POS_SLACK := 8.0  # m the host's view of a warping player can lag behind them
-const PARRY_LATENCY := 0.1   # s added to a parry on the host, for shots already on their way
-const SWAP_RANGE_SLACK := 2.0  # m: the host's view of both players can lag a little
-var _ability_at := {}   # server: id -> {ability: host time last used}
-var _parry_until := {}  # server: id -> host time their parry ends
+const WARP_POS_SLACK := 8.0     # m the host's view of a warping player can lag behind them
+const AIM_RANGE_SLACK := 4.0    # m: the host's view of both players can lag a little
+const BUBBLE_LATENCY := 0.1     # s added to a Bubble on the host, for shots already on their way
+const STUCK_TICK := 0.25        # s between Phantom's stuck-in-a-wall damage hits
+const GRENADE_REACH := 20.0     # m a grenade's start may be from where the host sees the shooter
+var _ability_at := {}     # server: id -> {ability: host time last used}
+var _bubble := {}         # server: id -> [host time it ends, health left]
+var _phantom_until := {}  # server: id -> host time their phase ends
+var _phantom_stuck := {}  # server: id -> [seconds stuck, damage owed]
+var _streaks := {}        # server: id -> Killstreak kills
+var _link_owner := {}     # server: who used Interlink -> their partner
+var links := {}           # id -> partner, both ways (replicated)
+var _grenade_seq := 0     # server
 
 
 func _ability_ok(id: int, slot_key: String, ability: String, cd: float) -> bool:
@@ -708,10 +817,14 @@ func _ability_ok(id: int, slot_key: String, ability: String, cd: float) -> bool:
 	return true
 
 
-## A respawned player's addons are ready again (Player.respawn resets them too).
+## A player's addons are ready again (Player.respawn resets them too).
 func _reset_abilities(id: int) -> void:
 	_ability_at.erase(id)
-	_parry_until.erase(id)
+	_bubble.erase(id)
+	_phantom_until.erase(id)
+	_phantom_stuck.erase(id)
+	if links.has(id):
+		_unlink(id)
 
 
 ## Warp: the warper has already moved; everyone else jumps them to pos.
@@ -720,99 +833,261 @@ func report_warp(pos: Vector3) -> void:
 	if not multiplayer.is_server() or world == null or not pos.is_finite():
 		return
 	var id: int = Net.sender()
-	if not world.players.has(id) or world.players[id].global_position.distance_to(pos) > Addons.WARP_DIST + WARP_POS_SLACK:
+	if not world.players.has(id) or world.players[id].global_position.distance_to(pos) > Addons.T.warp_dist + WARP_POS_SLACK:
 		return
-	if _ability_ok(id, "addon", "warp", Addons.WARP_CD):
-		_teleport.rpc(id, pos, false)
+	if _ability_ok(id, "addon", "warp", Addons.T.warp_cd):
+		_teleport.rpc(id, pos)
 
 
-## Swap: the beam plays for SWAP_CHARGE, then the swapper and the nearest enemy
-## trade places (unless that enemy is parrying).
+@rpc("authority", "call_local", "reliable")
+func _teleport(id: int, pos: Vector3) -> void:
+	if world and world.players.has(id) and pos.is_finite():
+		world.players[id].net_teleport(pos)
+
+
+# ---- Bubble: hits drain the shield before your health, and nothing can push you.
+
 @rpc("any_peer", "call_local", "reliable")
-func request_swap() -> void:
-	if not multiplayer.is_server() or world == null:
-		return
-	var id: int = Net.sender()
-	if not _ability_ok(id, "addon", "swap", Addons.SWAP_CD):
-		return
-	_swap_charge.rpc(id)
-	get_tree().create_timer(Addons.SWAP_CHARGE).timeout.connect(_server_swap.bind(id, round_num))
-
-
-func _server_swap(id: int, rnd: int) -> void:
-	if not in_match or world == null or round_num != rnd or not alive_ids.get(id, false) or not world.players.has(id):
-		return
-	if not (phase in [Phase.RUSH, Phase.HELD, Phase.DROPPED]):
-		return
-	var me: Player = world.players[id]
-	var best: Player = null
-	for oid in world.players:
-		if oid == id or not alive_ids.get(oid, false) or Net.team_of(oid) == Net.team_of(id):
-			continue
-		var p: Player = world.players[oid]
-		var d := p.global_position.distance_to(me.global_position)
-		if d <= Addons.SWAP_RANGE + SWAP_RANGE_SLACK and (best == null or d < best.global_position.distance_to(me.global_position)):
-			best = p
-	if best == null:
-		# Nobody in range by the end of the beam: the swap is refunded.
-		_ability_at.get(id, {}).erase("swap")
-		_ability_msg.rpc_id(id, "No enemy within %dm to swap with" % int(Addons.SWAP_RANGE), true)
-		return
-	if _parry_until.get(best.peer_id, -1.0) > _now:
-		_ability_msg.rpc_id(id, "SWAP PARRIED!", false)
-		return
-	var a := me.global_position
-	var b := best.global_position
-	_teleport.rpc(id, b, true)
-	_teleport.rpc(best.peer_id, a, true)
-
-
-## Parry: for PARRY_TIME the host ignores hits on this player and Swap can't take them.
-@rpc("any_peer", "call_local", "reliable")
-func request_parry() -> void:
+func request_bubble() -> void:
 	if not multiplayer.is_server():
 		return
 	var id: int = Net.sender()
-	if _ability_ok(id, "addon2", "parry", Addons.PARRY_TIME + Addons.PARRY_CD):
-		_parry_until[id] = _now + Addons.PARRY_TIME + PARRY_LATENCY
-		_parry_fx.rpc(id)
+	if _ability_ok(id, "addon", "bubble", Addons.T.bubble_cd):
+		_bubble[id] = [_now + Addons.T.bubble_time + BUBBLE_LATENCY, Addons.T.bubble_health]
+		_bubble_fx.rpc(id)
+
+
+func _bubble_up(id: int) -> bool:
+	return _bubble.has(id) and float(_bubble[id][0]) > _now
+
+
+## What's left of a hit after the victim's Bubble has taken its share.
+func _soak(id: int, amount: float) -> float:
+	if not _bubble_up(id):
+		return amount
+	var taken := minf(float(_bubble[id][1]), amount)
+	var left := float(_bubble[id][1]) - taken
+	_bubble[id][1] = left
+	if left <= 0.0:
+		_bubble.erase(id)
+	_bubble_hit.rpc(id, left / Addons.T.bubble_health)
+	return amount - taken
 
 
 @rpc("authority", "call_local", "reliable")
-func _teleport(id: int, pos: Vector3, move_self: bool) -> void:
-	if world and world.players.has(id) and pos.is_finite():
-		world.players[id].net_teleport(pos, move_self)
-
-
-@rpc("authority", "call_local", "reliable")
-func _swap_charge(id: int) -> void:
+func _bubble_fx(id: int) -> void:
 	if world and world.players.has(id) and not world.players[id].is_local:
-		Sfx.play_at("swap_beam", world.players[id].global_position, -2.0, 60.0)
-
-
-@rpc("authority", "call_local", "reliable")
-func _parry_fx(id: int) -> void:
-	if world and world.players.has(id) and not world.players[id].is_local:
-		world.players[id].show_parry()
+		world.players[id].show_bubble()
 		Sfx.play_at("parry", world.players[id].global_position, -3.0, 40.0)
 
 
-## A swap didn't happen: say why, and with refund the cooldown is given back.
+@rpc("authority", "call_local", "reliable")
+func _bubble_hit(id: int, health_left: float) -> void:
+	if world and world.players.has(id):
+		world.players[id].bubble_damaged(health_left)
+
+
+# ---- Phantom: if the phase ends inside something, the damage doubles every second.
+
+@rpc("any_peer", "call_local", "reliable")
+func request_phantom() -> void:
+	if not multiplayer.is_server():
+		return
+	var id: int = Net.sender()
+	if _ability_ok(id, "addon", "phantom", Addons.T.phantom_cd):
+		_phantom_until[id] = _now + Addons.T.phantom_time + BUBBLE_LATENCY
+		_phantom_stuck.erase(id)
+
+
+## Pressed again: the phase ends early.
+@rpc("any_peer", "call_local", "reliable")
+func end_phantom() -> void:
+	if multiplayer.is_server() and _phantom_until.has(Net.sender()):
+		_phantom_until[Net.sender()] = minf(_phantom_until[Net.sender()], _now)
+
+
+func _tick_phantom_stuck(delta: float) -> void:
+	for id: int in _phantom_until.keys():
+		if _now < float(_phantom_until[id]):
+			continue
+		var p: Player = world.players.get(id)
+		if p == null or not alive_ids.get(id, false) or not p._overlaps(MapBuilder.L_WALL | MapBuilder.L_DOOR, p.probe_shape, Player.STAND_H * 0.5 + 0.1):
+			_phantom_until.erase(id)
+			_phantom_stuck.erase(id)
+			continue
+		var s: Array = _phantom_stuck.get(id, [0.0, 0.0])
+		s[1] = float(s[1]) + Addons.T.phantom_stuck_dps * pow(2.0, floorf(float(s[0]))) * delta
+		s[0] = float(s[0]) + delta
+		_phantom_stuck[id] = s
+		if float(s[1]) >= Addons.T.phantom_stuck_dps * STUCK_TICK:
+			var owed := float(s[1])
+			s[1] = 0.0
+			_hurt(id, id, owed, false, "stuck")
+
+
+# ---- Magnet and Interlink: aimed at a teammate.
+
+func _teammate_ok(id: int, target: int, reach: float) -> bool:
+	if world == null or id == target or not world.players.has(id) or not world.players.has(target):
+		return false
+	if not alive_ids.get(target, false) or Net.team_of(id) != Net.team_of(target):
+		return false
+	var a: Player = world.players[id]
+	var b: Player = world.players[target]
+	if a.global_position.distance_to(b.global_position) > reach + AIM_RANGE_SLACK:
+		return false
+	var space: PhysicsDirectSpaceState3D = world.get_world_3d().direct_space_state
+	return in_sight(space, a.eye_pos(), b.global_position + Vector3(0, 1.1, 0), false)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_magnet(target: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var id: int = Net.sender()
+	if not _teammate_ok(id, target, Addons.T.magnet_range) or _bubble_up(target) or not _ability_ok(id, "addon", "magnet", Addons.T.magnet_cd):
+		_ability_msg.rpc_id(id, "Magnet missed", true)
+		return
+	var me: Vector3 = world.players[id].global_position
+	var to: Vector3 = world.players[target].global_position - me
+	to.y = 0.0
+	var dir := to.normalized() if to.length() > 0.1 else Vector3.FORWARD
+	_magnet.rpc(target, me + dir * Addons.T.magnet_stop_distance)
+
+
+@rpc("authority", "call_local", "reliable")
+func _magnet(target: int, pos: Vector3) -> void:
+	if world and world.players.has(target):
+		world.players[target].magnet_to(pos)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_link(target: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var id: int = Net.sender()
+	if links.has(id) or links.has(target) or not _teammate_ok(id, target, Addons.T.interlink_pick_range) or not _ability_ok(id, "addon", "interlink", Addons.T.interlink_cd):
+		_ability_msg.rpc_id(id, "Can't link with them", false)
+		return
+	links[id] = target
+	links[target] = id
+	_link_owner[id] = target
+	_sync_links.rpc(links)
+
+
+@rpc("any_peer", "call_local", "reliable")
+func request_unlink() -> void:
+	if multiplayer.is_server() and links.has(Net.sender()) and _link_owner.has(Net.sender()):
+		_unlink(Net.sender())
+
+
+func _unlink(id: int) -> void:
+	var mate: int = links.get(id, 0)
+	links.erase(id)
+	links.erase(mate)
+	var user := id if _link_owner.has(id) else mate
+	_link_owner.erase(user)
+	_sync_links.rpc(links)
+	if Net.players.has(user):
+		_link_broken.rpc_id(user)
+
+
+## The partner sharing damage and healing with id right now: 0 if not linked, or too far apart.
+func _linked_mate(id: int) -> int:
+	if not links.has(id) or world == null:
+		return 0
+	var mate: int = links[id]
+	if not alive_ids.get(mate, false) or not world.players.has(id) or not world.players.has(mate):
+		return 0
+	return mate if world.players[id].global_position.distance_to(world.players[mate].global_position) <= Addons.T.interlink_range else 0
+
+
+@rpc("authority", "call_local", "reliable")
+func _sync_links(l: Dictionary) -> void:
+	links = l
+
+
+@rpc("authority", "call_local", "reliable")
+func _link_broken() -> void:
+	var me := multiplayer.get_unique_id()
+	if world and world.players.has(me) and world.players[me].addon == "interlink":
+		world.players[me].addon_cd[Player.PRI] = Addons.T.interlink_cd
+
+
+## An addon didn't work: say why, and with refund the cooldown is given back.
 @rpc("authority", "call_local", "reliable")
 func _ability_msg(text: String, refund: bool) -> void:
 	var me := multiplayer.get_unique_id()
-	if world and world.players.has(me):
-		var p: Player = world.players[me]
-		p.swap_t = 0.0
-		if refund and p.addon == "swap":
-			p.addon_cd[Player.PRI] = 0.0
+	if refund and world and world.players.has(me):
+		world.players[me].addon_cd[Player.PRI] = 0.0
 	announce.emit(text, Color("ff5cc6"))
+
+
+# ---- Grenades: the shooter asks, the host checks it and decides when they blow.
+
+@rpc("any_peer", "call_local", "reliable")
+func request_grenade(start: Vector3, vel: Vector3) -> void:
+	if not multiplayer.is_server() or world == null or not (phase in [Phase.RUSH, Phase.HELD, Phase.DROPPED]):
+		return
+	var id: int = Net.sender()
+	if not alive_ids.get(id, false) or not Net.players.has(id) or Net.players[id].weapon != "gl" or not world.players.has(id):
+		return
+	if not start.is_finite() or not vel.is_finite() or vel.length() > Weapons.grenade_speed(Player.NET_MAX_SPEED):
+		return
+	if world.players[id].global_position.distance_to(start) > GRENADE_REACH or not _take_hit_token(id, "gl"):
+		return
+	_grenade_seq += 1
+	_grenade.rpc(_grenade_seq, id, start, vel)
+
+
+@rpc("authority", "call_local", "reliable")
+func _grenade(gid: int, shooter: int, start: Vector3, vel: Vector3) -> void:
+	if world:
+		world.add_grenade(gid, shooter, start, vel)
+
+
+## The host's grenade went off. Walls stop the blast. Enemies are hurt, and everyone
+## it reaches (the shooter and their team too) is launched, unless a Bubble blocks it.
+func server_blast(gid: int, shooter: int, pos: Vector3) -> void:
+	_blast.rpc(gid, pos)
+	var w: WeaponStats = Weapons.DATA.gl
+	var space: PhysicsDirectSpaceState3D = world.get_world_3d().direct_space_state
+	for id: int in world.players.keys():
+		var p: Player = world.players[id]
+		if not alive_ids.get(id, false) or p.is_protected():
+			continue
+		var c: Vector3 = p.global_position + Vector3(0, clampf(pos.y - p.global_position.y, Player.RADIUS, Player.STAND_H - Player.RADIUS), 0)
+		if c.distance_to(pos) - Player.RADIUS > w.blast_radius:
+			continue
+		if not space.intersect_ray(PhysicsRayQueryParameters3D.create(pos, c, MapBuilder.MASK_WORLD)).is_empty():
+			continue
+		var shielded := _bubble_up(id)
+		if Net.team_of(id) != Net.team_of(shooter):
+			var blast_mult: float = Addons.T.blast_shield_mult if Net.players[id].get("addon2", "") == "blastshield" else 1.0
+			_hurt(id, shooter, w.dmg * blast_mult, false, "gl")
+		if not shielded and alive_ids.get(id, false):
+			var away := (c - pos).normalized() if c.distance_to(pos) > 0.05 else Vector3.UP
+			_push.rpc_id(id, away * w.knockback_speed + Vector3.UP * w.knockback_lift)
+
+
+@rpc("authority", "call_local", "reliable")
+func _blast(gid: int, pos: Vector3) -> void:
+	if world:
+		world.grenade_blast(gid, pos)
+
+
+@rpc("authority", "call_local", "reliable")
+func _push(v: Vector3) -> void:
+	var me := multiplayer.get_unique_id()
+	if world and world.players.has(me):
+		world.players[me].push(v)
 
 
 # ==================================================================== broadcasts
 
 @rpc("authority", "call_local", "reliable")
 func _start_match(size: String, seed: int, tod: int) -> void:
+	_loading_until = -1.0
 	_set_map_size_local(size)
 	map_seed = seed
 	time_of_day = tod
@@ -869,6 +1144,8 @@ func _begin_round(rnd: int, obj: int, _team_dots: Array, spawns: Dictionary, sc:
 			var p = world.players[id]
 			if spawns.has(id):
 				p.respawn(spawns[id], false)
+				p.addon_cd[Player.PRI] = 0.0  # a new round: Support cooldowns too
+				p._streak = 0
 			else:
 				p.set_alive(false)
 	state_changed.emit()

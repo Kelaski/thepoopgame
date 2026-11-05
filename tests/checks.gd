@@ -12,14 +12,14 @@ func _check(ok: bool, what: String) -> void:
 
 
 func _ready() -> void:
-	# Hit rate: 60 SMG hits claimed in one second, it fires 14 rounds/s.
+	# Hit rate: 60 AR hits claimed in one second, it fires 9.5 rounds/s.
 	Game._hit_tokens.clear()
 	var got := 0
 	for i in 60:
 		Game._now = 1000.0 + i / 60.0
-		if Game._take_hit_token(999, "smg"):
+		if Game._take_hit_token(999, "ar"):
 			got += 1
-	_check(got >= 14 and got <= 30, "SMG hit rate limited (%d of 60 accepted)" % got)
+	_check(got >= 9 and got <= 24, "AR hit rate limited (%d of 60 accepted)" % got)
 
 	# Movement: legal top speed passes, a speed hack over one second doesn't.
 	_check(Player._reachable(Vector3.ZERO, 0.0, Vector3(30, 0, 0), 1.0), "30 m/s accepted")
@@ -41,20 +41,34 @@ func _ready() -> void:
 	_check_unzip()
 
 	# Addons: every one is in exactly one slot; an old single-slot save moves over.
-	var both: Array = Addons.PRIMARY + Addons.SECONDARY
-	_check(both.size() == Addons.DATA.size() and both.all(func(id): return Addons.DATA.has(id)), "every addon is primary or secondary")
+	var listed := {}
+	for groups: Dictionary in [Addons.ACTIVE, Addons.PASSIVE]:
+		for sub: String in groups:
+			for id: String in groups[sub]:
+				_check(not listed.has(id) and Addons.NAMES.has(id) and Addons.describe(id) != "", "%s is listed once, named and described" % id)
+				listed[id] = true
+	_check(listed.size() == Addons.NAMES.size(), "every named addon is in a category")
+	for id: String in Weapons.ORDER:
+		_check(Weapons.DATA.has(id) and Weapons.describe(id) != "", "%s has tuning and a description" % id)
 	var saved := Settings.values.duplicate()
-	Settings.values["addon"] = "stalker"
+	for old: Array in [["skywalker", "addon2", "doublejump"], ["parry", "addon", "bubble"], ["moonwalker", "addon2", "moonwalker"], ["hider", "addon", "hider"]]:
+		Settings.values["addon"] = old[0]
+		Settings.values["addon2"] = "swap"
+		Settings._migrate_addons()
+		_check(Settings.values[old[1]] == old[2], "old save: %s becomes %s" % [old[0], old[2]])
+	Settings.values["addon"] = "swap"
+	Settings.values["addon2"] = "stalker"
+	Settings.values["weapon"] = "smg"
 	Settings._migrate_addons()
-	_check(Settings.values.addon == Addons.DEFAULT_PRIMARY and Settings.values.addon2 == "stalker", "old save: secondary addon moves to the secondary slot")
+	_check(Settings.values.addon == Addons.DEFAULT_ACTIVE and Settings.values.addon2 == Addons.DEFAULT_PASSIVE and Settings.values.weapon == "ar", "old save: removed addons and the SMG fall back to the defaults")
 	Settings.values = saved
-	# Moonwalker: the rocket jump reaches 8 m under its lighter gravity, then cools down.
+	# Rocket Jump reaches its height, then cools down.
 	var mw := Player.new()
-	mw.addon = "moonwalker"
+	mw.addon = "rocketjump"
 	mw.rocket_armed = true
 	var v := mw._jump_speed(Player.JUMP_V)
-	var apex := v * v / (2.0 * Player.GRAVITY * Addons.MOON_GRAVITY)
-	_check(absf(apex - Addons.MOON_ROCKET_H) < 0.05 and not mw.rocket_armed and mw.addon_cd[Player.PRI] == Addons.MOON_CD, "rocket jump %.2f m, then cooldown" % apex)
+	var apex := v * v / (2.0 * Player.GRAVITY)
+	_check(absf(apex - Addons.T.rocket_height) < 0.05 and not mw.rocket_armed and mw.addon_cd[Player.PRI] == Addons.T.rocket_cd, "rocket jump %.2f m, then cooldown" % apex)
 	_check(is_equal_approx(mw._jump_speed(Player.JUMP_V), Player.JUMP_V), "next jump is a normal one")
 	mw.free()
 	# Reload on Kill: a sniper that just fired and is empty can shoot again at once.
@@ -72,13 +86,68 @@ func _ready() -> void:
 	rk.on_kill()
 	_check(rk.ammo == 0, "Reload on Kill waits out its 3 s cooldown")
 	rk.addon_cd[Player.SEC] = 0.0
-	# Other guns: the magazine is topped off, the time between shots is left alone.
+	# Any weapon: refilled, and ready to fire right away.
 	rk.weapon = "ar"
 	rk.ammo = 3
 	rk.fire_cd = 0.08
 	rk.on_kill()
-	_check(rk.ammo == int(Weapons.DATA.ar.mag) and is_equal_approx(rk.fire_cd, 0.08), "Reload on Kill tops off the AR")
+	_check(rk.ammo == int(Weapons.DATA.ar.mag) and rk.fire_cd == 0.0, "Reload on Kill tops off the AR and lets it fire")
 	rk.free()
+
+	# Round-by-round reload: one shell per timer, until it's full.
+	var sg := Player.new()
+	sg.addon2 = "juggernaut"
+	sg.weapon = "shotgun"
+	sg.ammo = 4
+	sg._start_reload()
+	_check(is_equal_approx(sg.reloading, Weapons.DATA.shotgun.reload_per_round), "a shell takes %.1f s" % sg.reloading)
+	sg._tick_timers(sg.reloading + 0.01)
+	_check(sg.ammo == 5 and sg.reloading > 0.0, "one shell loaded, the next one started")
+	sg._tick_timers(sg.reloading + 0.01)
+	_check(sg.ammo == 6 and sg.reloading == 0.0, "stops when full")
+	sg.free()
+
+	# Grenade speed: the launch speed plus the shooter's speed.
+	_check(is_equal_approx(Weapons.grenade_speed(0.0), Weapons.DATA.gl.launch_speed), "a standing shot is the base speed")
+	_check(is_equal_approx(Weapons.grenade_speed(12.0), Weapons.DATA.gl.launch_speed + 12.0 * Weapons.DATA.gl.shooter_speed_scale), "a moving shot adds your speed")
+
+	# Passives.
+	var pv := Player.new()
+	pv.addon2 = "unstoppable"
+	_check(is_equal_approx(pv._speed_cap(), Player.SPEED_CAP + Addons.T.unstoppable_cap_bonus), "Unstoppable raises the speed cap")
+	_check(Player._reachable(Vector3.ZERO, 0.0, Vector3(45, 0, 0), 1.0, pv._net_hspeed()), "...and the movement check allows for it")
+	pv.addon2 = "wallhugger"
+	pv.wall_jumps = Player.WALLJUMP_FREE + Addons.T.wallhugger_extra_jumps
+	_check(pv._fatigue_gravity() == 1.0 and pv._wall_fatigue() == 1.0, "Wallhugger: more wall jumps before fatigue")
+	pv.addon2 = "doublejump"
+	pv.yaw = PI * 0.5  # facing -X
+	var redirected := pv._double_jump_redirect(Vector3(0, 0, 13))
+	_check(redirected.distance_to(Vector3(-13, 0, 0)) < 0.01, "Double jump turns all your speed the way you face")
+	pv.addon2 = "sharpshooter"
+	var sh := {}
+	pv._acc(sh, 5, 100.0, true)
+	_check(is_equal_approx(sh[5][0], 100.0 * Addons.T.sharpshooter_mult), "Sharpshooter boosts headshots")
+	pv.addon2 = "cooldownkill"
+	pv.addon_cd[Player.PRI] = 8.0
+	pv.on_kill()
+	_check(is_equal_approx(pv.addon_cd[Player.PRI], 8.0 - Addons.T.cooldown_per_kill), "Cooldown on Kill")
+	pv.addon2 = "killstreak"
+	pv.on_kill()
+	pv.on_kill()
+	_check(pv._streak == 2 and pv._speed_mult() > 1.0, "Killstreak stacks speed")
+	pv.addon = "magnet"
+	pv.addon2 = "trackstar"
+	pv.addon_cd[Player.PRI] = 5.0
+	pv.alive = false
+	pv._tick_timers(1.0)
+	_check(pv.addon_cd[Player.PRI] == 5.0, "a Support cooldown stands still while dead")
+	pv.alive = true
+	pv._tick_timers(1.0)
+	_check(is_equal_approx(pv.addon_cd[Player.PRI], 4.0), "...and runs while alive")
+	pv.free()
+	Net.players[777] = {"name": "x", "team": 0, "weapon": "ar", "addon": "grapple", "addon2": "juggernaut", "kills": 0, "deaths": 0}
+	_check(Game.max_hp_of(777) == Weapons.DATA.ar.max_hp + Addons.T.juggernaut_hp, "Juggernaut adds max health")
+	Net.players.erase(777)
 
 	# Kill reward: nothing for 0.3 s, then 30 health over 2.5 s.
 	var saved_alive: Dictionary = Game.alive_ids

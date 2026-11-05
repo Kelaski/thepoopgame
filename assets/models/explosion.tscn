@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Flash"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(1, 0.72, 0.3, 0.8)
+
+[sub_resource type="SphereMesh" id="Ball"]
+radius = 1.0
+height = 2.0
+radial_segments = 18
+rings = 9
+
+[node name="Explosion" type="Node3D"]
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+material_override = SubResource("Flash")
+mesh = SubResource("Ball")

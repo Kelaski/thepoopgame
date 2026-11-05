@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://qw20ym7j4jpm"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cevd4"]
 diffuse_mode = 3
@@ -286,7 +286,7 @@ material_override = SubResource("StandardMaterial3D_xuj0a")
 mesh = SubResource("SphereMesh_cedpg")
 
 [node name="Detail6" type="MeshInstance3D" parent="." unique_id=653548661]
-transform = Transform3D(0.90630776, 0.42261827, 0, -0.42261827, 0.90630776, 0, 0, 0, 1, 0.12, 2.48, 0)
+transform = Transform3D(0.99999994, 0, 0, 0, 0.99999994, 0, 0, 0, 1, 0, 2.512823, 0)
 material_override = SubResource("StandardMaterial3D_xuj0a")
 mesh = SubResource("BoxMesh_2pce3")
 

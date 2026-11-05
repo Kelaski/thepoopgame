@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Shotgun"
+max_damage = 195.0
+pellets = 13
+cone = 12.0
+pellet_near = 15.0
+pellet_mid = 10.5
+pellet_far = 6.0
+pellet_near_dist = 10.0
+pellet_mid_dist = 15.0
+rps = 1.0
+zoom = 1.15
+max_range = 120.0
+kick = 2.5
+mag = 6
+reload_per_round = 0.8

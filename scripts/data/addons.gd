@@ -1,124 +1,106 @@
 class_name Addons
-## Addon definitions. Every player picks one primary and one secondary addon
-## (swappable while dead). Each slot has its own ability key: Use Primary
-## (E by default) and Use Secondary (Q).
+## Addon definitions. Every player picks one Active addon (used with the Use Addon
+## key, E by default) and one Passive addon (no key). Swappable while dead.
+## All the numbers live in assets/tuning/addons.tres (edit them in the Inspector).
 
-const PRIMARY := ["grapple", "hider", "warp", "swap", "moonwalker"]
-const SECONDARY := ["trackstar", "stalker", "skywalker", "phantom", "reloader", "parry"]
-const DEFAULT_PRIMARY := "grapple"
-const DEFAULT_SECONDARY := "trackstar"
+const T: AddonTuning = preload("res://assets/tuning/addons.tres")
 
-const DATA := {
-	# Primary
-	"hider": {
-		"name": "Hider",
-		"desc": "15s invisibility (faint while moving). Firing ends it. 12s cooldown.",
-		"active": true,
-	},
-	"grapple": {
-		"name": "Grapple",
-		"desc": "Hold to grapple (27m) and swing. Hooking an enemy pulls them in. 6.5s cooldown.",
-		"active": true,
-	},
-	"warp": {
-		"name": "Warp",
-		"desc": "Blink 15m the way you're looking (stops at walls), keeping all your speed in that direction. 8s cooldown.",
-		"active": true,
-	},
-	"swap": {
-		"name": "Swap",
-		"desc": "After a 0.8s beam, swap places with the nearest enemy within 20m. 18s cooldown.",
-		"active": true,
-	},
-	"moonwalker": {
-		"name": "Moonwalker",
-		"desc": "20% less gravity and 15% better air control. Ability: your next jump rockets you 8m up. 10s cooldown.",
-		"active": true,
-	},
-	# Secondary
-	"trackstar": {
-		"name": "Trackstar",
-		"desc": "+15% speed and faster reloads. Ability: +35% speed for 6s. 24s cooldown.",
-		"active": true,
-	},
-	"stalker": {
-		"name": "Stalker",
-		"desc": "See enemy trails. Ability: see every player through walls for 4s. 14s cooldown.",
-		"active": true,
-	},
-	"skywalker": {
-		"name": "Skywalker",
-		"desc": "Double jump. Recharges when you land.",
-		"active": false,
-	},
-	"phantom": {
-		"name": "Phantom",
-		"desc": "Phase through walls for 2s (double-tap crouch to drop a floor). 23s cooldown.",
-		"active": true,
-	},
-	"reloader": {
-		"name": "Reload on Kill",
-		"desc": "A kill tops off your magazine. The shotgun and sniper are re-chambered too: click again to fire straight away. 3s cooldown.",
-		"active": false,
-	},
-	"parry": {
-		"name": "Parry",
-		"desc": "0.4s of invulnerability: shots, hits and enemy abilities bounce off your pink bubble. 10s cooldown.",
-		"active": true,
-	},
+const ACTIVE := {
+	"Mobility": ["grapple", "warp", "rocketjump"],
+	"Tactical": ["hider", "phantom", "bubble"],
+	"Support": ["uav", "magnet", "interlink"],
+}
+const PASSIVE := {
+	"Movement": ["moonwalker", "trackstar", "doublejump", "wallhugger", "aerodynamic", "unstoppable"],
+	"Perks": ["reloader", "cooldownkill", "juggernaut", "sharpshooter", "killstreak", "blastshield"],
+}
+const DEFAULT_ACTIVE := "grapple"
+const DEFAULT_PASSIVE := "trackstar"
+
+const NAMES := {
+	"grapple": "Grapple", "warp": "Warp", "rocketjump": "Rocket Jump",
+	"hider": "Hider", "phantom": "Phantom", "bubble": "Bubble",
+	"uav": "UAV", "magnet": "Magnet", "interlink": "Interlink",
+	"moonwalker": "Moonwalker", "trackstar": "Trackstar", "doublejump": "Double Jump",
+	"wallhugger": "Wallhugger", "aerodynamic": "Aerodynamic", "unstoppable": "Unstoppable",
+	"reloader": "Reload on Kill", "cooldownkill": "Cooldown on Kill", "juggernaut": "Juggernaut",
+	"sharpshooter": "Sharpshooter", "killstreak": "Killstreak", "blastshield": "Blast Shield",
 }
 
-const HIDER_TIME := 15.0
-const HIDER_CD := 12.0
-const TRACK_PASSIVE := 1.15
-const TRACK_ACTIVE := 1.35
-const TRACK_TIME := 6.0
-const TRACK_CD := 24.0
-# Trackstar's reloads and the shotgun / sniper re-chambering between shots are
-# faster: these are time multipliers (0.65 = 35% faster). The bat never reloads.
-const TRACK_RELOAD_MULT := 0.65
-const TRACK_SNIPER_MULT := 0.70
-const RECHAMBER_WEAPONS := ["shotgun", "sniper"]
-const PHANTOM_TIME := 2.0
-const PHANTOM_CD := 23.0
-const STALKER_TRAIL_TIME := 6.0  # seconds each piece of trail lingers
-const STALKER_SCAN_TIME := 4.0   # ability: every player's outline shows through walls for this long
-const STALKER_SCAN_CD := 14.0    # ...and it's ready again this long after activation
-const SKYWALKER_CD := 5.0
-const GRAPPLE_RANGE := 27.0
-const GRAPPLE_CD := 6.5          # starts when the hook latches on
-const GRAPPLE_MISS_CD := 1.0
-const GRAPPLE_HOOK_SPEED := 110.0  # thrown hook speed (m/s): ~0.27 s to full range
-const GRAPPLE_PULL := 42.0       # reel-in acceleration (m/s^2)
-const GRAPPLE_STEER := 14.0      # air steering while on the rope (m/s^2)
-const GRAPPLE_MAX_SPEED := 22.0  # the most speed the grapple can give you (m/s)
-const GRAPPLE_MAX_TIME := 2.5    # the rope lets go after this long
-const GRAPPLE_ARRIVE := 2.0      # within this distance you pop off the end
-const GRAPPLE_END_POP := 6.5     # upward speed at the end, to clear ledges
-const GRAPPLE_YANK := 11.0       # speed a hooked enemy is pulled towards you
-const WARP_DIST := 15.0
-const WARP_CD := 8.0
-const SWAP_CHARGE := 0.8         # the beam plays this long before the swap
-const SWAP_CD := 18.0
-const SWAP_RANGE := 20.0         # only enemies this close can be swapped with
-const MOON_GRAVITY := 0.7        # 20% less gravity
-const MOON_AIR := 1.20           # 15% better air control
-const MOON_ROCKET_H := 8.0       # m the rocket jump lifts you
-const MOON_CD := 10.0
-const RELOADER_CD := 3.0         # Reload on Kill: after it refills, the next kill within this long doesn't
-const PARRY_TIME := 0.4
-const PARRY_CD := 10.0           # from the end of the parry
+# Old saved ids that became a new addon.
+const RENAMED := {"skywalker": "doublejump", "parry": "bubble"}
+
+const RECHAMBER_WEAPONS := ["shotgun", "sniper", "gl"]
+
+
+## Text for the loadout screen, built from the tuned numbers.
+static func describe(id: String) -> String:
+	match id:
+		"grapple":
+			return "Hold to grapple (%.0fm) and swing. Hooking an enemy pulls them in. %.1fs cooldown." % [T.grapple_range, T.grapple_cd]
+		"warp":
+			return "Blink %.0fm the way you're looking, keeping all your speed that way. Leaves a blue afterimage for %.0fs. %.0fs cooldown." % [T.warp_dist, T.warp_afterimage_time, T.warp_cd]
+		"rocketjump":
+			return "Your next jump rockets you %.0fm up. %.0fs cooldown." % [T.rocket_height, T.rocket_cd]
+		"hider":
+			return "%.0fs nearly invisible: %.0f%% visible moving, %.0f%% still or crouched. A Tag you carry fades too. Firing ends it. %.0fs cooldown." % [T.hider_time, T.hider_moving_opacity * 100.0, T.hider_still_opacity * 100.0, T.hider_cd]
+		"phantom":
+			return "Phase through walls for %.0fs. Press again to end it early. If it ends inside something you take %.0f damage/s, doubling every second until you're out. %.0fs cooldown." % [T.phantom_time, T.phantom_stuck_dps, T.phantom_cd]
+		"bubble":
+			return "A %.0fs, %.0f HP shield. Nothing can push you while it's up. %.0fs cooldown." % [T.bubble_time, T.bubble_health, T.bubble_cd]
+		"uav":
+			return "Support. %d pulses reveal enemies to your team, through walls and on the minimap, where the pulse reached them. %.0fs cooldown (runs only while alive, kept through death)." % [T.uav_pulses, T.uav_cd]
+		"magnet":
+			return "Support. Aim at a teammate in sight to pull them to you. %.0fs cooldown (runs only while alive, kept through death)." % T.magnet_cd
+		"interlink":
+			return "Support. Aim at a teammate to link. Within %.0fm you share all damage and healing, even death (%.0fs respawn). Press again to break it. %.0fs cooldown (runs only while alive, kept through death)." % [T.interlink_range, T.interlink_respawn_time, T.interlink_cd]
+		"moonwalker":
+			return "%.0f%% less gravity and %.0f%% more air control." % [(1.0 - T.moon_gravity) * 100.0, (T.moon_air - 1.0) * 100.0]
+		"trackstar":
+			return "+%.0f%% move speed and faster reloads." % ((T.track_speed - 1.0) * 100.0)
+		"doublejump":
+			return "Jump again in the air. All your speed turns the way you're looking. Recharges when you land."
+		"wallhugger":
+			return "%d more wall jumps before gravity starts pulling harder." % T.wallhugger_extra_jumps
+		"aerodynamic":
+			return "Much more air control, with both the camera and A / D."
+		"unstoppable":
+			return "Speed cap raised by %.0f m/s." % T.unstoppable_cap_bonus
+		"reloader":
+			return "A kill reloads your weapon and cancels any reload or re-chamber, so you can fire right away. Then %.0fs until it can work again." % T.reloader_cd
+		"cooldownkill":
+			return "A kill takes %.0fs off your active addon's cooldown." % T.cooldown_per_kill
+		"juggernaut":
+			return "+%.0f max health." % T.juggernaut_hp
+		"sharpshooter":
+			return "Headshots do %.1fx damage." % T.sharpshooter_mult
+		"killstreak":
+			return "Each kill until you die: +%.0f%% speed and %.0f%% faster reloads, but health regen starts %.0fs later. Up to %d kills." % [T.streak_speed * 100.0, T.streak_reload * 100.0, T.streak_regen_delay, T.streak_max_stacks]
+		"blastshield":
+			return "Explosive damage is cut by %.0f%%." % ((1.0 - T.blast_shield_mult) * 100.0)
+	return ""
 
 
 ## Trackstar's time multiplier for reloading / re-chambering with weapon.
 static func track_mult(weapon: String) -> float:
-	return TRACK_SNIPER_MULT if weapon == "sniper" else TRACK_RELOAD_MULT
+	return T.track_sniper_mult if weapon == "sniper" else T.track_reload_mult
 
 
-## 0 for a primary addon, 1 for a secondary one, -1 if it isn't an addon.
+## 0 for an active addon, 1 for a passive one, -1 if it isn't an addon.
 static func slot_of(id: String) -> int:
-	return 0 if id in PRIMARY else (1 if id in SECONDARY else -1)
+	for sub: String in ACTIVE:
+		if id in ACTIVE[sub]:
+			return 0
+	for sub: String in PASSIVE:
+		if id in PASSIVE[sub]:
+			return 1
+	return -1
+
+
+## Support addons' cooldowns carry on through death, and only run while alive.
+static func is_support(id: String) -> bool:
+	return id in ACTIVE.Support
 
 
 static func display_name(id: String) -> String:
-	return DATA.get(id, {}).get("name", id)
+	return NAMES.get(id, id)

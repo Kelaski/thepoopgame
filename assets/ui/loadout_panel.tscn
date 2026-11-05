@@ -32,7 +32,7 @@ theme_type_variation = &"AccentLabel"
 theme_override_font_sizes/font_size = 16
 text = "PRIMARY ADDON"
 
-[node name="AddonRow" type="HBoxContainer" parent="." unique_id=150063779]
+[node name="AddonRow" type="VBoxContainer" parent="." unique_id=150063779]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 6
@@ -52,7 +52,7 @@ theme_type_variation = &"AccentLabel"
 theme_override_font_sizes/font_size = 16
 text = "SECONDARY ADDON"
 
-[node name="Addon2Row" type="HBoxContainer" parent="." unique_id=150063780]
+[node name="Addon2Row" type="VBoxContainer" parent="." unique_id=150063780]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 6

@@ -203,6 +203,10 @@ func _draw() -> void:
 				continue
 			draw_circle(_p(p.global_position), 4.0, Color(0, 0, 0, 0.8))
 			draw_circle(_p(p.global_position), 3.0, Mats.team_color(p.team).lightened(0.3))
+	# Enemies your team's UAV last saw
+	for pos: Vector3 in w.uav_dots():
+		draw_circle(_p(pos), 5.0, Color(0, 0, 0, 0.8))
+		draw_circle(_p(pos), 4.0, Color(1.0, 0.2, 0.15))
 	# Runner: always visible to everyone
 	if Game.holder != 0 and w.players.has(Game.holder):
 		var rp = w.players[Game.holder]

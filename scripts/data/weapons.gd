@@ -1,81 +1,71 @@
 class_name Weapons
-## Weapon definitions. All guns are hitscan.
-## Spread values are cone half-angles in degrees (hip / aimed).
+## Weapon definitions. All guns but the grenade launcher are hitscan. The numbers
+## live in assets/tuning/weapons/*.tres (edit them in the Inspector).
 
-const ORDER := ["ar", "smg", "shotgun", "sniper", "bat"]
+const ORDER := ["ar", "shotgun", "sniper", "gl", "bat"]
 
 const DATA := {
-	"ar": {
-		"name": "Assault Rifle",
-		"desc": "20 / 25 head dmg (less past 25m): 5 body shots or 4 headshots. 9.5 rounds/s, 20 rounds. Best at mid range.",
-		"body": 20.0, "head": 25.0, "falloff": 25.0, "body_far": 15.0, "head_far": 20.0, "rps": 9.5, "zoom": 1.5,
-		"mag": 20, "reload": 2.1, "hip": 2.0, "ads": 0.25, "range": 300.0, "kick": 0.55,
-	},
-	"smg": {
-		"name": "SMG",
-		"desc": "17 / 21 head dmg (less past 25m): 6 body shots or 5 headshots. 14 rounds/s. Matches the AR up to mid range.",
-		# Kill times match the AR up to 25 m (6 shots at 14/s vs the AR's 5 at 9.5/s);
-		# past that it takes twelve body shots, and its wider aim and shorter range hurt more.
-		"body": 17.0, "head": 21.0, "falloff": 25.0, "body_far": 9.0, "head_far": 12.0, "rps": 14.0, "zoom": 1.2,
-		"mag": 40, "reload": 1.8, "hip": 1.7, "ads": 0.9, "range": 200.0, "kick": 0.35,
-	},
-	"shotgun": {
-		"name": "Shotgun",
-		"desc": "13 pellets, 15 dmg each up close (less past 10m). 1 shot/s.",
-		"pellets": 13, "cone": 12.0, "rps": 1.0, "zoom": 1.15,
-		"mag": 6, "reload": 2.6, "hip": 0.0, "ads": 0.0, "range": 120.0, "kick": 2.5,
-	},
-	"sniper": {
-		"name": "Sniper",
-		"desc": "100 dmg, headshots kill. Pierces a wall and every player in line. One round: it reloads after every shot.",
-		# One round, so every shot is followed by a reload (2.5 s, the same pace as
-		# its 0.4 shots/s, which only matters for the host's hit-rate check).
-		"dmg": 100.0, "dmg_low": 90.0, "dmg_head": 150.0, "rps": 0.4, "zoom": 2.5,
-		"mag": 1, "reload": 2.5, "hip": 4.0, "ads": 0.0, "range": 400.0, "kick": 3.5,
-	},
-	"bat": {
-		"name": "Spiked Bat",
-		"desc": "35 dmg, more the faster you're moving. 150 HP, +10% speed. Kills launch the victim's gun.",
-		"dmg": 35.0, "rps": 2.25, "zoom": 1.0, "reach": 7.0,
-		"mag": 0, "reload": 0.0, "hip": 0.0, "ads": 0.0, "range": 7.0, "kick": 0.0,
-	},
+	"ar": preload("res://assets/tuning/weapons/ar.tres"),
+	"shotgun": preload("res://assets/tuning/weapons/shotgun.tres"),
+	"sniper": preload("res://assets/tuning/weapons/sniper.tres"),
+	"gl": preload("res://assets/tuning/weapons/grenade_launcher.tres"),
+	"bat": preload("res://assets/tuning/weapons/bat.tres"),
 }
 
-const MAX_DAMAGE := {
-	"ar": 25.0, "smg": 21.0, "shotgun": 195.0, "sniper": 150.0, "bat": 300.0, "thrown": 70.0,
-}
-# Spiked Bat momentum damage: 35 at or below your sprint speed, multiplied by 1.1
-# for every m/s above it (compounding), capped at BAT_MAX_DAMAGE.
-const BAT_SPEED_FACTOR := 1.1
-const BAT_MAX_DAMAGE := 300.0
-const BAT_SPEED_SLACK := 2.5  # server: extra m/s allowed over the attacker's last known speed
+const DEFAULT_MAX_HP := 100.0  # before a player has a weapon
 
-const THROWN_DAMAGE := 70.0
-const BAT_SPEED_MULT := 1.10
-const BAT_MAX_HP := 150.0
-const DEFAULT_MAX_HP := 100.0
+
+## Text for the loadout screen, built from the tuned numbers.
+static func describe(id: String) -> String:
+	var w: WeaponStats = DATA.get(id)
+	if w == null:
+		return ""
+	match id:
+		"ar":
+			return "%.0f / %.0f head dmg (less past %.0fm). %.1f rounds/s, %d rounds. Best at mid range." % [w.body, w.head, w.falloff, w.rps, w.mag]
+		"shotgun":
+			return "%d pellets, %.0f dmg each up close. %.1f shots/s. Loads %.1fs per shell; firing stops the reload." % [w.pellets, w.pellet_near, w.rps, w.reload_per_round]
+		"sniper":
+			return "%.0f dmg, headshots kill. Pierces a wall and every player in line. One round: it reloads after every shot." % w.dmg
+		"gl":
+			return "%d rounds, %.1fs between shots, %.1fs per shell. Arcing grenades do %.0f dmg and launch anyone nearby. The faster you move, the further they fly. They never hurt you or your team." % [w.mag, 1.0 / w.rps, w.reload_per_round, w.dmg]
+		"bat":
+			return "%.0f dmg, more the faster you're moving. %.0f HP, +%.0f%% speed. Kills launch the victim's gun." % [w.dmg, w.max_hp, (w.speed_mult - 1.0) * 100.0]
+	return ""
+
+
+## The most damage the host accepts from one shot.
+static func max_damage(id: String) -> float:
+	if id == "thrown":
+		return DATA.bat.thrown_damage
+	return DATA[id].max_damage if DATA.has(id) else 50.0
 
 
 static func max_hp(weapon_id: String) -> float:
-	return BAT_MAX_HP if weapon_id == "bat" else DEFAULT_MAX_HP
+	return DATA[weapon_id].max_hp if DATA.has(weapon_id) else DEFAULT_MAX_HP
 
 
+## Bat momentum: base damage, compounding for every m/s above your sprint speed, up to its cap.
 static func bat_damage(speed: float, sprint_speed: float) -> float:
 	var over := maxf(0.0, speed - sprint_speed)
-	return minf(float(DATA.bat.dmg) * pow(BAT_SPEED_FACTOR, over), BAT_MAX_DAMAGE)
+	return minf(DATA.bat.dmg * pow(DATA.bat.speed_factor, over), DATA.bat.max_damage)
 
 
 static func display_name(id: String) -> String:
-	if id == "thrown":
-		return "Thrown Gun"
-	if id == "suicide":
-		return "Suicide"
-	return DATA.get(id, {}).get("name", id)
+	match id:
+		"thrown": return "Thrown Gun"
+		"suicide": return "Suicide"
+		"stuck": return "Stuck in a Wall"
+	return DATA[id].name if DATA.has(id) else id
 
 
 static func shotgun_pellet_damage(dist: float) -> float:
-	if dist <= 10.0:
-		return 15.0
-	if dist <= 15.0:
-		return 10.5
-	return 6.0
+	var w: WeaponStats = DATA.shotgun
+	if dist <= w.pellet_near_dist:
+		return w.pellet_near
+	return w.pellet_mid if dist <= w.pellet_mid_dist else w.pellet_far
+
+
+## How fast a grenade leaves the launcher when the shooter moves at shooter_speed.
+static func grenade_speed(shooter_speed: float) -> float:
+	return DATA.gl.launch_speed + shooter_speed * DATA.gl.shooter_speed_scale

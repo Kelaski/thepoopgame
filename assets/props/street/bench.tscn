@@ -103,11 +103,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, 0.18)
 shape = SubResource("BoxShape3D_4tq5i")
 
 [node name="Shape3" type="CollisionShape3D" parent="Collision" unique_id=1876093690]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.66, 0.28)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.66, 0.2511553)
 shape = SubResource("BoxShape3D_nrray")
 
 [node name="Shape4" type="CollisionShape3D" parent="Collision" unique_id=140331290]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.84, 0.28)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.84, 0.25102082)
 shape = SubResource("BoxShape3D_o8i3q")
 
 [node name="Shape5" type="CollisionShape3D" parent="Collision" unique_id=1548349480]

@@ -23,8 +23,7 @@ const ACTIONS := [
 	["jump", "Jump / Double Jump"],
 	["crouch", "Crouch / Slide"],
 	["crouch_only", "Crouch"],
-	["addon", "Use Primary Addon"],
-	["addon2", "Use Secondary Addon"],
+	["addon", "Use Active Addon"],
 	["interact", "Interact / Doors"],
 	["fire", "Fire"],
 	["aim", "Aim Down Sights"],
@@ -43,8 +42,8 @@ const DEFAULTS := {
 	"weapon": "ar",
 	"map_size": "large",  # last map size chosen when hosting
 	"map_random": true,   # host: a new random city every match (false = the classic city)
-	"addon": "grapple",     # primary addon (Addons.PRIMARY)
-	"addon2": "trackstar",  # secondary addon (Addons.SECONDARY)
+	"addon": "grapple",     # active addon (Addons.ACTIVE)
+	"addon2": "trackstar",  # passive addon (Addons.PASSIVE)
 	# Controls
 	"sensitivity": 0.10,
 	"ads_sens_mult": 0.85,
@@ -81,7 +80,7 @@ const DEFAULTS := {
 	"minimap_scale": 1.0,      # 0.6 - 2.0
 	"minimap_labels": true,    # location names on the minimap
 	"crosshair_color": "ffffff",
-	# Holo sight reticle (AR / SMG), set in the crosshair editor
+	# Holo sight reticle (AR), set in the crosshair editor
 	"holo_style": "circle_dot",
 	"holo_color": "ff3b30",
 	"holo_size": 1.0,
@@ -223,14 +222,16 @@ func load_settings() -> void:
 ## Before 0.21.0 there was one addon slot: a saved secondary addon moves to the
 ## secondary slot, and anything that isn't an addon any more goes back to the default.
 func _migrate_addons() -> void:
-	var a := str(values.addon)
-	if Addons.slot_of(a) == 1:
-		values["addon2"] = a
-		values["addon"] = Addons.DEFAULT_PRIMARY
-	if Addons.slot_of(str(values.addon)) != 0:
-		values["addon"] = Addons.DEFAULT_PRIMARY
-	if Addons.slot_of(str(values.addon2)) != 1:
-		values["addon2"] = Addons.DEFAULT_SECONDARY
+	var saved := [str(values.addon), str(values.addon2)]
+	values["addon"] = Addons.DEFAULT_ACTIVE
+	values["addon2"] = Addons.DEFAULT_PASSIVE
+	for old: String in saved:  # an old primary may now be passive, and the other way round
+		var id: String = Addons.RENAMED.get(old, old)
+		match Addons.slot_of(id):
+			0: values["addon"] = id
+			1: values["addon2"] = id
+	if not Weapons.DATA.has(str(values.weapon)):
+		values["weapon"] = "ar"  # the SMG is gone
 
 
 func _migrate_binds(saved_version: int) -> void:

@@ -123,7 +123,7 @@ Open these in the Godot editor. Changes show up in game the next time a match lo
   - The ring shows the pickup radius (1.7 m, `Game.PICKUP_RADIUS`), so change both together.
 - **`assets/models/spray_decal.tscn`:** the spray decal. Its material is `assets/materials/spray_decal.tres`, and each player's image and aspect ratio are filled in at runtime.
 - **Thrown gun:** the gun a killing bat swing launches is now the victim's actual weapon model.
-- **Effect materials:** bullet tracers and impacts use `assets/materials/fx_tracers.tres`, and the Stalker trails use `fx_trails.tres`.
+- **Effect materials:** bullet tracers, impacts, UAV rings and Interlink lines use `assets/materials/fx_tracers.tres`.
 
 ## Editing props
 
@@ -141,8 +141,8 @@ Every prop and piece of furniture on the map is a template scene:
 Edit them in the Godot editor. The next match uses your changes.
 
 **How they're used:** the map places thousands of these, so they aren't added as nodes. When a map loads, each scene is read once and stamped into the same batched meshes and collision as before, so performance doesn't change (`scripts/map/prefabs.gd`). That puts some limits on what a template can contain:
-- **Meshes:** `BoxMesh`, `CylinderMesh` and `SphereMesh` parts. A part's colour is its material's albedo colour.
-- **Collision:** `CollisionShape3D` boxes and cylinders inside a `StaticBody3D`. The body's collision layer decides how a shape collides:
+- **Meshes:** `BoxMesh`, `CylinderMesh`, `SphereMesh` and `PrismMesh` parts. A part's colour is its material's albedo colour.
+- **Collision:** `CollisionShape3D` boxes, cylinders and convex shapes (for slopes like the skate ramps) inside a `StaticBody3D`. The body's collision layer decides how a shape collides:
   - `Collision` (layer 2): walls and furniture. Phantom can pass through, and the sniper can pierce one.
   - `FloorCollision` (layer 1): floors.
   - `SolidCollision` (layer 16): solid ground.
@@ -166,6 +166,15 @@ Edit them in the Godot editor. The next match uses your changes.
 - **Code-side randomness:** sizes such as crates, bushes and tree heights are still random in code.
 
 The parts are named `Part0`, `Part1` and so on, in build order. Rename them freely. Only the meshes, shapes, colours and metadata matter.
+
+## Tuning
+
+Every weapon and addon number is a named field you can edit in Godot's Inspector. Double-click a file in the FileSystem dock, change a value and save: hover over a field to see what it does.
+
+- **Weapons:** `assets/tuning/weapons/*.tres`, one file per weapon (`scripts/data/weapon_stats.gd` lists the fields). Grenade flight is under the Grenade section of `grenade_launcher.tres`: `launch_speed`, `shooter_speed_scale`, `grenade_gravity` and so on. The sniper's loudness is under Sound in `sniper.tres`.
+- **Addons:** `assets/tuning/addons.tres`, with one section per addon (`scripts/data/addon_tuning.gd` lists the fields).
+
+The loadout descriptions are built from these values, so they stay correct. If you raise a weapon's damage, raise its `max_damage` too: the host refuses anything above it. In multiplayer, the host's values decide damage and everyone's own copy decides their own movement and timers, so all players need the same build.
 
 ## Editing buildings
 
@@ -220,7 +229,9 @@ scripts/
   autoload/net.gd           # Steam lobbies (host/join/invites), roster, team/loadout requests
   autoload/game.gd          # server-authoritative Tag game mode
   data/weapons.gd           # weapon stats
-  data/addons.gd            # addon stats, and which are primary / secondary (Warp, Swap and Parry are checked by the host in autoload/game.gd)
+  data/addons.gd            # which addons are active / passive, and their descriptions (the numbers are in assets/tuning/addons.tres)
+  data/addon_tuning.gd      # every addon number, shown in the Inspector
+  data/weapon_stats.gd      # every weapon number, shown in the Inspector
   data/game_version.gd      # version number (major.minor.patch)
   map/map_data.gd           # classic layout transcribed from the sketch, map sizes
   map/city_gen.gd           # random city layouts (one per match, from a seed): recursive splits into
@@ -249,6 +260,5 @@ assets/ui/                  # every menu, the HUD and reusable setting rows (row
 - **Shotgun falloff** keeps the same 10 m / 15 m ranges and the same ratios as before (100% / 70% / 40%), so 15 / 10.5 / 6 damage per pellet.
 - **Wall running** starts automatically, and its controls are Jump and Crouch, so all of it is rebindable. Foliage blocks sight but not bullets.
 - **Dropped-Tag timer:** the timer keeps running while the Tag is on the ground (it only waits for the first pickup of a round). A pickup adds +10 s (enemy) or +15 s (teammate), capped at 2:00. If it runs out while the Tag is down, the round goes to overtime and the next pickup wins it.
-- **Phantom's** 23 s cooldown starts when the phase ends. Trackstar's 24 s cooldown starts at activation.
-- Skywalker's double jump is passive, so the ability key does nothing for it.
-- **Grapple's** cooldown starts when the hook hits (like Trackstar's, from activation). A miss only costs 1 s so you can try again.
+- **Phantom's** cooldown starts when the phase ends.
+- **Grapple's** cooldown starts when the hook hits . A miss only costs 1 s so you can try again.

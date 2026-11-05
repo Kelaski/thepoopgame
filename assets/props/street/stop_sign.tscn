@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://deowtk8p8t77h"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6j4fx"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.549, 0.5804, 0.6039, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_f3cjj"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2.5
+radial_segments = 8
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cdc1v"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7843, 0.1569, 0.1765, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_621tx"]
+size = Vector3(0.62, 0.62, 0.03)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2br5m"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.949, 0.949, 0.949, 1)
+roughness = 0.85
+rim_enabled = true
+rim = 0.35
+rim_tint = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_8y0zo"]
+size = Vector3(0.44, 0.11, 0.01)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_b9qfu"]
+height = 2.5
+radius = 0.04
+
+[node name="StopSign" type="Node3D" unique_id=327811717]
+
+[node name="Part0" type="MeshInstance3D" parent="." unique_id=501519266]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+material_override = SubResource("StandardMaterial3D_6j4fx")
+mesh = SubResource("CylinderMesh_f3cjj")
+
+[node name="Part2" type="MeshInstance3D" parent="." unique_id=2020545664]
+transform = Transform3D(0.7071, -0.7071, 0, 0.7071, 0.7071, 0, 0, 0, 1, 0, 2.42, 0.06)
+material_override = SubResource("StandardMaterial3D_cdc1v")
+mesh = SubResource("BoxMesh_621tx")
+
+[node name="Part3" type="MeshInstance3D" parent="." unique_id=1180341736]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.42, 0.08)
+material_override = SubResource("StandardMaterial3D_2br5m")
+mesh = SubResource("BoxMesh_8y0zo")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1859518907]
+collision_layer = 2
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=1211436861]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("CylinderShape3D_b9qfu")

@@ -85,6 +85,8 @@ const GRASS := Color("6aa84f")
 const CONCRETE := Color("b9b4a6")
 const ASPHALT := Color("3c3d42")
 const TAXI := Color("f2c230")
+const BUS_STOP_JUNCTION := 10.0  # m a bus stop keeps from the edge of a junction
+const MAX_SIGNALS := 2           # traffic lights, and stop signs, per junction
 const CAR_GAP := 1.4  # min space between vehicles: a crouched player is 0.76 m wide
 const CAR_COLORS := [Color("c0453a"), Color("4f7fae"), Color("e0b13c"), Color("ece6da"), Color("3a3d42"), Color("5a8a4a"), Color("9aa3a8"), Color("1f2a44")]
 
@@ -115,6 +117,8 @@ var _fboxes: Array = []
 var _cyls: Array = []
 var _fcyls: Array = []
 var _spheres: Array = []
+var _prisms := {}        # "prism:<left_to_right>" -> [[transform, colour]]
+var _prism_meshes := {}  # "prism:<left_to_right>" -> unit PrismMesh
 var _glows: Array = []   # [kind, transform, colour, detail]: glowing parts
 var _specials := {}      # material name -> [[kind, transform, colour, detail]]: parts drawn with their own material
 var _floor_body: StaticBody3D
@@ -142,7 +146,10 @@ var _avoid: Array = []       # Vector3: spawn zones + Tag spots
 var _junctions: Array = []   # Rect2: where roads cross
 var _door_pts: Array = []    # Vector2: ground-floor door centres (props keep clear)
 var _lots: Array = []        # Rect2: car parks (cut building lots, or from the layout)
-var _car_rects: Array = []   # Rect2: footprint of every vehicle placed so far
+var _car_rects: Array = []   # Rect2: footprint of every vehicle placed so far (and crane bases)
+var _crane_bases: Array = [] # Vector3: street props keep clear of them
+var _crossed := {}           # _arm_key -> true for junction arms with a zebra crossing
+var _sign_pts: Array = []    # Vector2: traffic lights and stop signs (bus stops keep clear)
 var _dumpsters: Array = []   # sketch-pixel points from the layout
 var park_name := MapData.PARK_NAME
 var bridges: Array = []      # [building A id, building B id, material]
@@ -245,6 +252,11 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE, seed := 0) -> void:
 		_build_building(b)
 		_end_chunk()
 
+	# Cranes before the street props, so cars and props keep clear of their bases.
+	_begin_chunk("Cranes")
+	_build_cranes()
+	_end_chunk()
+
 	# After the buildings, so street props can keep clear of their doors.
 	_begin_chunk("StreetProps")
 	_build_street_props()
@@ -255,12 +267,12 @@ func build(parent: Node3D, size := MapData.DEFAULT_SIZE, seed := 0) -> void:
 		_build_park()
 		_end_chunk()
 
-	_begin_chunk("Cranes")
-	_build_cranes()
-	_end_chunk()
-
 	_begin_chunk("Boundary")
 	_build_boundary()
+	_end_chunk()
+
+	_begin_chunk("Outskirts")
+	_build_outskirts()
 	_end_chunk()
 
 	_build_spawn_points()
@@ -293,6 +305,7 @@ func _begin_chunk(nm: String) -> void:
 	_cyls = []
 	_fcyls = []
 	_spheres = []
+	_prisms = {}
 	_glows = []
 	_specials = {}
 
@@ -303,8 +316,11 @@ func _end_chunk() -> void:
 	_make_mm(_box_mesh, _fboxes, FURNITURE_VIS_RANGE)
 	_make_mm(_cyl_mesh, _fcyls, FURNITURE_VIS_RANGE)
 	_make_mm(_sph_mesh, _spheres, 0.0)
+	for kind: String in _prisms:
+		_make_mm(_prism_meshes[kind], _prisms[kind], 0.0)
 	# Glowing parts: one batch per shape and draw distance
 	var meshes := {"box": _box_mesh, "cyl": _cyl_mesh, "sphere": _sph_mesh}
+	meshes.merge(_prism_meshes)
 	for kind: String in meshes:
 		for detail: bool in [false, true]:
 			var items := []
@@ -423,6 +439,10 @@ func _prefab(name: String, xf: Transform3D, slots := {}) -> void:
 				col = col.lightened(p.lighten)
 		var t: Transform3D = xf * p.xform
 		var detail: bool = _detail if p.batch == "" else p.batch == "detail"
+		if p.kind.begins_with("prism") and not _prism_meshes.has(p.kind):
+			var pm := PrismMesh.new()
+			pm.left_to_right = float(p.kind.get_slice(":", 1))
+			_prism_meshes[p.kind] = pm
 		if p.material != "":
 			if not _specials.has(p.material):
 				_specials[p.material] = []
@@ -439,8 +459,15 @@ func _prefab(name: String, xf: Transform3D, slots := {}) -> void:
 				(_fcyls if detail else _cyls).append([t, col])
 			"sphere":
 				_spheres.append([t, col])
+			_:
+				_prisms.get_or_add(p.kind, []).append([t, col])
 	for s: Dictionary in r.shapes:
 		var t: Transform3D = xf * s.xform
+		if s.kind == "convex":  # bake the scale and turn into the points (ramps)
+			var cv := ConvexPolygonShape3D.new()
+			cv.points = Transform3D(t.basis, Vector3.ZERO) * (s.points as PackedVector3Array)
+			_add_shape(s.layer, cv, Transform3D(Basis(), t.origin))
+			continue
 		var sc := t.basis.get_scale()
 		var rot := t.basis.orthonormalized()
 		var size: Vector3 = s.size * sc
@@ -552,17 +579,122 @@ func _build_ground() -> void:
 		var outward := -1.0 if side % 2 == 0 else 1.0
 		var mid := bc.x if horizontal else bc.y
 		var length := bounds.size.x if horizontal else bounds.size.y
-		var n := maxi(1, int(length / 4.0))
-		for i in n + 1:
-			var t := mid - length / 2.0 + i * length / n
-			var pc := Vector3(t, 1.75, fixed) if horizontal else Vector3(fixed, 1.75, t)
-			box(pc, Vector3(0.15, 3.5, 0.15), post_col, L_WALL)
-		var center := Vector3(mid, 1.6, fixed) if horizontal else Vector3(fixed, 1.6, mid)
-		var size := Vector3(length, 3.0, 0.06) if horizontal else Vector3(0.06, 3.0, length)
-		box(center, size, fence_col, L_WALL)
-		var top := Vector3(mid, 3.45, fixed) if horizontal else Vector3(fixed, 3.45, mid)
-		var top_size := Vector3(length, 0.1, 0.12) if horizontal else Vector3(0.12, 0.1, length)
-		box(top, top_size, post_col, L_WALL)
+		# The fence stops either side of each road that leaves the map (_build_outskirts).
+		var segs := [[mid - length / 2.0, mid + length / 2.0]]
+		for e in _exits():
+			if e[0] != side:
+				continue
+			var next := []
+			for sg: Array in segs:
+				if e[2] <= sg[0] or e[1] >= sg[1]:
+					next.append(sg)
+					continue
+				if e[1] - sg[0] > 0.5:
+					next.append([sg[0], e[1]])
+				if sg[1] - e[2] > 0.5:
+					next.append([e[2], sg[1]])
+			segs = next
+		for sg: Array in segs:
+			var seg_len: float = sg[1] - sg[0]
+			var seg_mid: float = (sg[0] + sg[1]) * 0.5
+			var n := maxi(1, int(seg_len / 4.0))
+			for i in n + 1:
+				var t: float = sg[0] + i * seg_len / n
+				var pc := Vector3(t, 1.75, fixed) if horizontal else Vector3(fixed, 1.75, t)
+				box(pc, Vector3(0.15, 3.5, 0.15), post_col, L_WALL)
+			var center := Vector3(seg_mid, 1.6, fixed) if horizontal else Vector3(fixed, 1.6, seg_mid)
+			var size := Vector3(seg_len, 3.0, 0.06) if horizontal else Vector3(0.06, 3.0, seg_len)
+			box(center, size, fence_col, L_WALL)
+			var top := Vector3(seg_mid, 3.45, fixed) if horizontal else Vector3(fixed, 3.45, seg_mid)
+			var top_size := Vector3(seg_len, 0.1, 0.12) if horizontal else Vector3(0.12, 0.1, seg_len)
+			box(top, top_size, post_col, L_WALL)
+
+
+## Roads that leave the map: [side, start, end] along that side of the fence
+## (sides as in the fence: 0 = min z, 1 = max z, 2 = min x, 3 = max x).
+func _exits() -> Array:
+	var out := []
+	for r: Rect2 in road_rects:
+		if r.size.y > r.size.x:  # runs along z
+			if r.position.y <= bounds.position.y + 0.1:
+				out.append([0, r.position.x, r.end.x])
+			if r.end.y >= bounds.end.y - 0.1:
+				out.append([1, r.position.x, r.end.x])
+		else:
+			if r.position.x <= bounds.position.x + 0.1:
+				out.append([2, r.position.y, r.end.y])
+			if r.end.x >= bounds.end.x - 0.1:
+				out.append([3, r.position.y, r.end.y])
+	return out
+
+
+## Beyond the fence (out of reach, no collision): each road carries on out past a
+## toll plaza into the distance, and a ring of far-off buildings stands around
+## the map, with gaps where the roads run out.
+func _build_outskirts() -> void:
+	const OUT := 230.0         # how far the roads run on
+	const BOOTH_HALF := 1.6    # the toll plaza reaches this far either side of its middle (along the road)
+	var corridors := []
+	var sides_done := []
+	for e in _exits():
+		var side: int = e[0]
+		var horizontal := side < 2  # the fence side runs along x; the road along z
+		var fixed: float = [bounds.position.y, bounds.end.y, bounds.position.x, bounds.end.x][side]
+		var outward := -1.0 if side % 2 == 0 else 1.0
+		var w: float = e[2] - e[1]
+		var tc: float = (e[1] + e[2]) * 0.5
+		var road_c := fixed + outward * OUT * 0.5
+		var c := Vector3(tc, 0.012, road_c) if horizontal else Vector3(road_c, 0.012, tc)
+		var s := Vector3(w, 0.024, OUT) if horizontal else Vector3(OUT, 0.024, w)
+		box(c, s, ASPHALT, DECOR)
+		for i in int(OUT / 6.0):
+			var d := fixed + outward * (3.0 + i * 6.0)
+			box(Vector3(tc, 0.03, d) if horizontal else Vector3(d, 0.03, tc), Vector3(0.18, 0.02, 2.2) if horizontal else Vector3(2.2, 0.02, 0.18), Color("e8c84a"), DECOR)
+		# The first road out of each side gets a toll plaza, any others a closed gate.
+		var piece := "props/street/toll_booth" if not side in sides_done else "props/street/road_gate"
+		# Both flush with the fence: the gate on its line, the toll plaza's near edge on it.
+		var bd := fixed + outward * (BOOTH_HALF + 0.08 if piece.ends_with("toll_booth") else 0.0)
+		sides_done.append(side)
+		# Turned so the piece's -Z side (where the toll plaza's posts stand) faces the fence.
+		var yaw := (0.0 if horizontal else PI * 0.5) + (PI if outward < 0.0 else 0.0)
+		_prefab(piece, _at(Vector3(tc, 0.0, bd) if horizontal else Vector3(bd, 0.0, tc), yaw, Vector3(w / 6.0, 1.0, 1.0)))
+		var corridor := Rect2(c.x - s.x * 0.5, c.z - s.z * 0.5, s.x, s.z)
+		corridors.append(corridor.grow(8.0))
+	_build_skyline(corridors)
+
+
+## Far-off buildings in a ring 60-150 m beyond the fence: plain blocks in hazy
+## colours with darker window bands, taller now and then, clear of the roads out.
+func _build_skyline(corridors: Array) -> void:
+	var ring := bounds.grow(60.0)
+	var near := Color("737c8b")
+	var far := Color("939ba8")
+	for side in 4:
+		var horizontal := side < 2
+		var lo := (ring.position.x if horizontal else ring.position.y) - 90.0
+		var hi := (ring.end.x if horizontal else ring.end.y) + 90.0
+		var fixed: float = [ring.position.y, ring.end.y, ring.position.x, ring.end.x][side]
+		var outward := -1.0 if side % 2 == 0 else 1.0
+		var t := lo
+		while t < hi:
+			var w := rng.randf_range(12.0, 32.0)
+			var depth := rng.randf_range(12.0, 28.0)
+			var h := rng.randf_range(16.0, 55.0) if rng.randf() < 0.8 else rng.randf_range(60.0, 110.0)
+			var dist := rng.randf_range(0.0, 90.0)
+			var off := fixed + outward * (dist + depth * 0.5)
+			var cx := t + w * 0.5
+			var foot := Rect2(cx - w * 0.5, off - depth * 0.5, w, depth) if horizontal else Rect2(off - depth * 0.5, cx - w * 0.5, depth, w)
+			t += w + rng.randf_range(3.0, 12.0)
+			if _hits_any(foot, corridors, 0.0):
+				continue
+			var col := near.lerp(far, dist / 90.0)
+			var c := foot.get_center()
+			box(Vector3(c.x, h * 0.5, c.y), Vector3(foot.size.x, h, foot.size.y), col, DECOR)
+			var band := col.darkened(0.28)
+			var y := 4.0
+			while y < h - 2.0:
+				box(Vector3(c.x, y, c.y), Vector3(foot.size.x + 0.1, 0.9, foot.size.y + 0.1), band, DECOR)
+				y += 3.6
 
 
 ## Invisible walls round the map, flush with the inside of the fence posts so
@@ -619,6 +751,7 @@ func _build_street_props() -> void:
 	_avoid = spawn_dots.duplicate()
 	for o in objectives:
 		_avoid.append(o.pos)
+	_avoid.append_array(_crane_bases)
 	_find_junctions()
 	_build_crosswalks()
 	_build_corners()
@@ -662,20 +795,13 @@ func _in_junction(p: Vector2, grow: float) -> bool:
 
 
 func _find_junctions() -> void:
-	_junctions.clear()
-	for i in road_rects.size():
-		for k in range(i + 1, road_rects.size()):
-			var a: Rect2 = road_rects[i]
-			var b: Rect2 = road_rects[k]
-			if a.intersects(b):
-				var o := a.intersection(b)
-				if o.size.x > 2.0 and o.size.y > 2.0:
-					_junctions.append(o)
+	_junctions = CityGen.junction_rects(road_rects, 0.1)
 
 
 ## Zebra crossings across every road just outside each junction it runs into.
 func _build_crosswalks() -> void:
 	var paint := Color("e8e4d8")
+	_crossed.clear()
 	for j: Rect2 in _junctions:
 		for r: Rect2 in road_rects:
 			if not r.intersects(j):
@@ -690,6 +816,7 @@ func _build_crosswalks() -> void:
 					mid = Vector2(r.get_center().x, j.position.y - 1.6 if side < 0 else j.end.y + 1.6)
 				if not r.has_point(mid) or _in_junction(mid, 0.3):
 					continue
+				_crossed[_arm_key(j, Vector2(side, 0) if horizontal else Vector2(0, side))] = true
 				var n := int(width / 0.9)
 				for k in n:
 					var o := (k + 0.5) * width / n - width * 0.5
@@ -699,22 +826,64 @@ func _build_crosswalks() -> void:
 						box(Vector3(mid.x + o, 0.034, mid.y), Vector3(0.45, 0.02, 2.4), paint, DECOR)
 
 
-## Every junction corner on the sidewalk gets a traffic light, its mast arm over
-## the road (the four corners' arms point round the junction like a pinwheel, so
-## every approach has one), and some get a street name sign as well.
+## Junction signals, one per incoming lane, on the pavement to the right of it:
+## a traffic light where the road has a zebra crossing (the road running
+## through), a stop sign where it hasn't (a side road ending here). At most
+## MAX_SIGNALS of each per junction, and never two within 3 m of each other
+## (junctions close together would double up on a corner).
 func _build_corners() -> void:
+	_sign_pts.clear()
 	for j: Rect2 in _junctions:
-		for corner: Vector2 in [Vector2(1, 1), Vector2(-1, 1), Vector2(-1, -1), Vector2(1, -1)]:
-			var c := j.get_center() + Vector2(j.size.x * 0.5 + 0.8, j.size.y * 0.5 + 0.8) * corner
-			if _on_road(c, 0.3) or not _street_clear(c, 0.5, 0.4) or not bounds.grow(-2.0).has_point(c):
+		var half := j.size * 0.5 + Vector2(0.8, 0.8)
+		var lights := 0
+		var stops := 0
+		for d: Vector2 in _junction_arms(j):
+			var right := Vector2(d.y, -d.x)  # kerb side for traffic driving in (towards -d)
+			var c := j.get_center() + Vector2(d.x * half.x, d.y * half.y) + Vector2(right.x * half.x, right.y * half.y)
+			var lit := _crossed.has(_arm_key(j, d))
+			if (lights if lit else stops) >= MAX_SIGNALS or not _corner_clear(c) or _near_sign(c, 3.0):
 				continue
-			# Arm direction for this corner (pinwheel), the light's local -Z.
-			var arm: Vector3 = {Vector2(1, 1): Vector3(-1, 0, 0), Vector2(-1, 1): Vector3(0, 0, -1), Vector2(-1, -1): Vector3(1, 0, 0), Vector2(1, -1): Vector3(0, 0, 1)}[corner]
-			_prefab("props/street/traffic_light", _at(Vector3(c.x, 0.0, c.y), _yaw_to(-arm)))
-			if rng.randf() < 0.5:
-				var sc := c + Vector2(arm.z, -arm.x) * 1.4  # a step along the curb
-				if not _on_road(sc, 0.3) and _street_clear(sc, 0.5, 0.3):
-					_prefab("props/street/street_sign", _at(Vector3(sc.x, 0.0, sc.y), _yaw_to(-arm)))
+			_sign_pts.append(c)
+			if lit:
+				lights += 1
+				# The mast arm reaches out over the incoming lane.
+				_prefab("props/street/traffic_light", _at(Vector3(c.x, 0.0, c.y), _yaw_to(Vector3(right.x, 0.0, right.y))))
+			else:
+				stops += 1
+				_prefab("props/street/stop_sign", _at(Vector3(c.x, 0.0, c.y), _yaw_to(Vector3(d.x, 0.0, d.y))))
+
+
+func _near_sign(p: Vector2, d: float) -> bool:
+	for q: Vector2 in _sign_pts:
+		if q.distance_to(p) < d:
+			return true
+	return false
+
+
+## Key for one arm (direction d) of junction j, for _crossed.
+static func _arm_key(j: Rect2, d: Vector2) -> Vector3i:
+	return Vector3i(roundi(j.get_center().x * 10.0), roundi(j.get_center().y * 10.0), roundi(d.x) * 3 + roundi(d.y))
+
+
+## Directions (unit Vector2) a road leaves junction j in: 4 for a crossroads, 3 for a T.
+func _junction_arms(j: Rect2) -> Array:
+	var arms := []
+	for d: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]:
+		var probe := j.get_center() + Vector2(d.x * (j.size.x * 0.5 + 4.0), d.y * (j.size.y * 0.5 + 4.0))
+		if bounds.has_point(probe) and _on_road(probe, 0.0):
+			arms.append(d)
+	return arms
+
+
+## A spot on the pavement at a corner that's free for a sign or a signal. Unlike
+## other street props these may stand by spawn zones (which sit on junctions).
+func _corner_clear(c: Vector2) -> bool:
+	if _on_road(c, 0.3) or not bounds.grow(-2.0).has_point(c) or _in_building(c, 0.9):
+		return false
+	for d: Vector2 in _door_pts:
+		if d.distance_to(c) < 2.6:
+			return false
+	return not (has_park and park_rect.grow(0.9).has_point(c))
 
 
 ## Footprint of a vehicle centred at c2: body length x width plus the wheels,
@@ -814,21 +983,27 @@ func _sidewalk_item(p: Vector2, along_x: bool, side: float, slot: int) -> void:
 			_street_furniture(c, out, along_x)
 
 
+## A bus stop keeps well back from junctions (BUS_STOP_JUNCTION) and at least
+## 3 m clear of every traffic light and sign (the shelter is about 4 m long).
+func _stop_spot_ok(p: Vector2) -> bool:
+	return not _in_junction(p, BUS_STOP_JUNCTION) and not _near_sign(p, 3.0 + 2.1)
+
+
 func _street_furniture(c: Vector3, out: Vector3, along_x: bool) -> void:
 	var dir := Vector3(1, 0, 0) if along_x else Vector3(0, 0, 1)
 	var roll := rng.randf()
 	var shelter_at := c + out * 1.0
 	var p2 := Vector2(c.x, c.z)
-	if roll < 0.12 and _street_clear(Vector2(shelter_at.x, shelter_at.z), 0.6, 1.8):
+	if roll < 0.12 and _street_clear(Vector2(shelter_at.x, shelter_at.z), 0.6, 1.8) and _stop_spot_ok(Vector2(shelter_at.x, shelter_at.z)):
 		_prefab("props/street/bus_shelter", _at(shelter_at, _yaw_to(out)))
 	elif roll < 0.32:
-		_prefab("props/street/bench", _at(c, _yaw_to(out)))
+		_prefab("props/street/bench", _at(c, _yaw_to(-out)))  # its back to the road: you sit facing the pavement
 	elif roll < 0.45:
 		_prefab("props/street/bin", _at(c))
 	elif roll < 0.58:
-		_prefab("props/street/hydrant_news", _at(c, _yaw_x(dir)))
+		_prefab("props/street/hydrant_news", _at(c, _yaw_to(out)))  # the news boxes' fronts face the pavement
 	elif roll < 0.64:
-		_prefab("props/street/mailbox", _at(c))
+		_prefab("props/street/mailbox", _at(c, _yaw_to(out)))
 	elif roll < 0.8:
 		# A pair of parking meters along the curb.
 		for k: float in [-1.2, 1.2]:
@@ -1134,6 +1309,12 @@ func _build_building(b: Array) -> void:
 		var slot := int(ROOM_V / MODULE)
 		for es: int in ends:
 			solid[es] = [slot - 1, slot, slot + 1] if fmod(ROOM_V, MODULE) < 0.35 or fmod(ROOM_V, MODULE) > MODULE - 0.35 else [slot]
+	# Walls built right against a neighbour (a strip mall, a terrace): no windows there.
+	for side in 4:
+		for m: int in _touching_modules(r, side):
+			if not solid.has(side):
+				solid[side] = []
+			solid[side].append(m)
 	# The cinema's screen fills the far end wall (Interiors._lay_theater): no windows
 	# behind it, or you'd see the back of the screen through them.
 	if type == "theater" and fh >= 5.0:
@@ -1258,6 +1439,30 @@ func _build_building(b: Array) -> void:
 			if _hits_any(Rect2(p, Vector2.ZERO), stairs, 1.0):
 				continue
 			spawn_points.append(Vector3(p.x, y, p.y))
+
+
+## Wall modules on one side of building rect r (sides as in _build_exterior_walls:
+## 0 = low z, 1 = high z, 2 = low x, 3 = high x) that another building stands
+## right against.
+func _touching_modules(r: Rect2, side: int) -> Array:
+	var out := []
+	var horizontal := side < 2
+	var n := _modules_along(r.size.x if horizontal else r.size.y)
+	var a0 := (r.position.x if horizontal else r.position.y) + WALL_T
+	for ob in _active:
+		var o := MapData.px_rect(ob[3])
+		if o == r:
+			continue
+		var gap: float = [r.position.y - o.end.y, o.position.y - r.end.y, r.position.x - o.end.x, o.position.x - r.end.x][side]
+		if absf(gap) > 0.35:
+			continue
+		var lo := o.position.x if horizontal else o.position.y
+		var hi := o.end.x if horizontal else o.end.y
+		for i in n:
+			var t := a0 + (i + 0.5) * MODULE
+			if t > lo and t < hi and not i in out:
+				out.append(i)
+	return out
 
 
 func _hits_any(r: Rect2, rects: Array, grow: float) -> bool:
@@ -1624,6 +1829,17 @@ const PATH_W := 2.6  # width of props/park/path (paving and kerbs)
 ##   bushes dotted over the lawns
 ## * picnic tables with umbrellas on the open lawns (the umbrella tops bounce you)
 ## * the basketball court, the playground on a sandpit, and the pond
+## Every park differs: what fills each spot is picked from PARK_PIECES (a
+## skate park or a football pitch for the court, a gazebo or an outdoor gym for
+## the playground, a statue for the fountain, picnic tables for the umbrellas).
+const PARK_PIECES := {
+	"court": ["basketball_court", "skate_park", "soccer_pitch"],
+	"play": ["playground", "gazebo", "outdoor_gym"],
+	"centre": ["fountain", "statue"],
+	"picnic": ["picnic_umbrella", "picnic_table"],
+}
+
+
 func _build_park() -> void:
 	_detail = false  # park props are always drawn (no furniture draw distance)
 	var r := park_rect
@@ -1637,17 +1853,24 @@ func _build_park() -> void:
 	_prefab("props/park/lawn", _at(Vector3(r.get_center().x, 0, r.get_center().y), 0.0, Vector3(r.size.x, 1, r.size.y)))
 	_label(park_name.to_upper(), Vector3(r.get_center().x, 3.0, r.end.y + 0.5), 0.0, 96, Color("d8f0c0"))
 	# Basketball court (left), playground on a sandpit (top left), pond (bottom right)
+	var pick := {}
+	for k: String in PARK_PIECES:
+		pick[k] = PARK_PIECES[k][rng.randi() % PARK_PIECES[k].size()]
 	var court := Rect2(x0 + 2.5 * kx, z0 + minf(13.0 * kz, r.size.y - 27.0), 14.0, 26.0)
 	var cc := court.get_center()
-	_prefab("props/park/basketball_court", _at(Vector3(cc.x, 0, cc.y)))  # hoops, fence, lines, benches, ball rack, floodlights
-	map_marks.append(["court", court])
+	_prefab("props/park/" + pick.court, _at(Vector3(cc.x, 0, cc.y)))  # the court: hoops, fence, lines, benches... or a skate park / pitch
+	if pick.court == "basketball_court":
+		map_marks.append(["court", court])
+	elif pick.court == "skate_park":
+		map_marks.append(["plaza", court])
 	court.size.x += 1.6  # the team benches, ball rack and floodlights stand along its +X side
 	var pg := Rect2(x0 + 6.5 * kx - 4.0, z0 + 5.1 * kz - 2.6, 8.0, 5.2)
 	var pc := pg.get_center()
 	var sand := pg.grow(1.2)  # props/park/sandpit is this size
-	_prefab("props/park/sandpit", _at(Vector3(pc.x, 0, pc.y)))
-	map_marks.append(["sand", sand])
-	_prefab("props/park/playground", _at(Vector3(pc.x, 0, pc.y)))
+	if pick.play == "playground":
+		_prefab("props/park/sandpit", _at(Vector3(pc.x, 0, pc.y)))
+		map_marks.append(["sand", sand])
+	_prefab("props/park/" + pick.play, _at(Vector3(pc.x, 0, pc.y)))
 
 	# Paths first: everything else keeps off them.
 	var path_x := maxf(x0 + 19.5 * kx, court.end.x + 2.2)
@@ -1667,7 +1890,7 @@ func _build_park() -> void:
 	var avoid := [court.grow(1.0), sand.grow(0.8)]
 	for o in objectives:
 		avoid.append(Rect2(o.pos.x - 3.5, o.pos.z - 3.5, 7.0, 7.0))
-	for s: Vector3 in spawn_dots:
+	for s: Vector3 in spawn_dots + _crane_bases:
 		avoid.append(Rect2(s.x - 3.0, s.z - 3.0, 6.0, 6.0))
 
 	# The plaza and fountain sit on the main path, at the crossing if there's
@@ -1698,10 +1921,11 @@ func _build_park() -> void:
 		map_marks.append(["pond", pond])
 	if plaza.is_finite():
 		_prefab("props/park/plaza", _at(Vector3(plaza.x, 0, plaza.y)))
-		_prefab("props/park/fountain", _at(Vector3(plaza.x, 0, plaza.y)))
-		var spray: Node3D = FOUNTAIN_SPRAY.instantiate()  # real particles, so a node rather than baked
-		spray.position = Vector3(plaza.x, 0, plaza.y)
-		_chunk.add_child(spray)
+		_prefab("props/park/" + pick.centre, _at(Vector3(plaza.x, 0, plaza.y), rng.randf() * TAU))
+		if pick.centre == "fountain":
+			var spray: Node3D = FOUNTAIN_SPRAY.instantiate()  # real particles, so a node rather than baked
+			spray.position = Vector3(plaza.x, 0, plaza.y)
+			_chunk.add_child(spray)
 		# Benches round the fountain on the diagonals, facing it
 		for i in 4:
 			var ba := PI * 0.25 + i * PI * 0.5
@@ -1771,7 +1995,7 @@ func _build_park() -> void:
 		var foot := Rect2(sp - Vector2(1.7, 1.7), Vector2(3.4, 3.4))
 		if tables >= 6 or _hits_any(foot, avoid, 0.0) or _hits_any(foot, path_keep, 0.0):
 			continue
-		_prefab("props/park/picnic_umbrella", _at(Vector3(sp.x, 0, sp.y), rng.randf_range(-0.3, 0.3)))
+		_prefab("props/park/" + pick.picnic, _at(Vector3(sp.x, 0, sp.y), rng.randf_range(-0.3, 0.3)))
 		avoid.append(foot)
 		tables += 1
 
@@ -1999,6 +2223,13 @@ func _crane(mid: Vector3, out: Vector3, p0: Vector3, p1: Vector3, material: Stri
 	# Footing, mast (props/crane/mast is 10 m tall, stretched to this crane) and
 	# one set of braces every 1.4 m.
 	_prefab("props/crane/footing", _at(base))
+	# Keep traffic and street props clear, and cone it off when it stands in the road.
+	_car_rects.append(Rect2(base.x - 2.6, base.z - 2.6, 5.2, 5.2))
+	_crane_bases.append(base)
+	if _on_road(Vector2(base.x, base.z), 1.0):
+		for i in 10:
+			var a := TAU * i / 10.0
+			_prefab("props/street/traffic_cone", _at(base + Vector3(cos(a), 0.0, sin(a)) * 3.0, a))
 	_prefab("props/crane/mast", _at(base + Vector3(0, 1.0, 0), 0.0, Vector3(1, (top_y - 1.0) / 10.0, 1)))
 	var y := 2.0
 	while y < top_y - 1.0:

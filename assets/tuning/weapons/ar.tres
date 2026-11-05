@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="WeaponStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+name = "Assault Rifle"
+body = 20.0
+head = 25.0
+falloff = 25.0
+body_far = 15.0
+head_far = 20.0
+dmg = 0.0
+max_damage = 25.0
+rps = 9.5
+zoom = 1.5
+hip = 2.0
+ads = 0.25
+max_range = 300.0
+kick = 0.55
+mag = 20
+reload = 2.1

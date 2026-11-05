@@ -366,7 +366,7 @@ const RELAYED := {
 	"_grapple_yank": [0, false],
 	"fx_shot": [3, false],
 	"door_rpc": [3, false],
-	"_fx_projectile": [4, false],
+	"_fx_projectile": [4, false], "uav_pulse": [2, false],
 }
 var _relay_from := 0  # while a relayed message runs: who originally sent it
 
@@ -680,9 +680,9 @@ func _add_player(id: int, pname: String, weapon: String, addon: String, addon2: 
 	if not Weapons.DATA.has(weapon):
 		weapon = "ar"
 	if Addons.slot_of(addon) != 0:
-		addon = Addons.DEFAULT_PRIMARY
+		addon = Addons.DEFAULT_ACTIVE
 	if Addons.slot_of(addon2) != 1:
-		addon2 = Addons.DEFAULT_SECONDARY
+		addon2 = Addons.DEFAULT_PASSIVE
 	players[id] = {"name": pname, "team": team, "weapon": weapon, "addon": addon, "addon2": addon2, "kills": 0, "deaths": 0}
 
 

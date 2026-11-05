@@ -281,7 +281,7 @@ func _process(delta: float) -> void:
 		_speed.text = "%.1f M/S" % Vector2(lp.velocity.x, lp.velocity.z).length()
 
 	# Weapon
-	var wd: Dictionary = Weapons.DATA[lp.weapon]
+	var wd: WeaponStats = Weapons.DATA[lp.weapon]
 	_weapon.text = String(wd.name).to_upper()
 	if lp.weapon == "bat":
 		_ammo.text = "-"
@@ -302,8 +302,8 @@ func _process(delta: float) -> void:
 	elif lp.weapon == "sniper" and lp.ads_t > 0.85:
 		_crosshair.mode = "scope"
 	elif lp.ads_t > 0.6:
-		# The AR and SMG holo sights provide their own reticle.
-		_crosshair.mode = "none" if lp.weapon in ["ar", "smg"] else "dot"
+		# The AR holo sight provides its own reticle.
+		_crosshair.mode = "none" if lp.weapon == "ar" else "dot"
 	else:
 		_crosshair.mode = "normal"
 		var spread: float = lerpf(float(wd.hip), float(wd.ads), lp.ads_t) if lp.weapon != "shotgun" else float(wd.cone) * 0.5

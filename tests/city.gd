@@ -24,6 +24,7 @@ func _ready() -> void:
 		var a: Array = MapData.SIZES[size].rect
 		var area := Rect2(a[0], a[1], a[2] - a[0], a[3] - a[1])
 		var nb := 0
+		var touching := 0
 		var nt := 0
 		for seed in range(1, 21):
 			var l := CityGen.generate(size, seed * 7919)
@@ -40,8 +41,14 @@ func _ready() -> void:
 				if not area.encloses(r):
 					_fail("%s crosses the fence" % tag)
 				for k in range(i + 1, rects.size()):
-					if r.grow(14.0).intersects(rects[k]):  # at least 2.8 m between buildings... minus snapping slack
-						_fail("%s is too close to %s" % [tag, l.buildings[k][1]])
+					# Neighbours either touch (a strip mall) or leave at least an alley, never overlap.
+					var g := _gap(r, rects[k])
+					if r.grow(-1.0).intersects(rects[k]):
+						_fail("%s overlaps %s" % [tag, l.buildings[k][1]])
+					elif g > 0.5 and g < 14.0:
+						_fail("%s is %.1f m from %s (too narrow for an alley)" % [tag, g / 10.0, l.buildings[k][1]])
+					elif g <= 0.5 and not r.grow(-1.0).intersects(rects[k]):
+						touching += 1
 				var near := INF
 				for rd: Rect2 in roads:
 					if rd.grow(10.0).intersects(r):
@@ -66,7 +73,7 @@ func _ready() -> void:
 				for rd2: Rect2 in roads:
 					if rd != rd2 and rd.intersects(rd2):
 						nt += 1
-		stats[size] = "%.1f buildings per city" % (nb / 20.0)
+		stats[size] = "%.1f buildings per city, %d touching pairs" % [nb / 20.0, touching]
 	print("CITY ", stats)
 	var t0 := Time.get_ticks_msec()
 	var parent := Node3D.new()
