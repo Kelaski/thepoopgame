@@ -36,7 +36,10 @@ func _ready() -> void:
 	streams["addon"] = _chirp(400.0, 800.0, 0.18, 0.35)
 	streams["addon_end"] = _chirp(700.0, 350.0, 0.18, 0.3)
 	streams["jump"] = _thud(rng, 0.08, 120.0)
-	streams["round"] = _chirp(300.0, 600.0, 0.6, 0.5)
+	# Round over: a two-note horn. Match over: a rising fanfare, or a falling one.
+	streams["round_end"] = _notes([392.0, 523.25], [0.22, 0.55], 0.42, 0.35)
+	streams["match_win"] = _notes([523.25, 659.25, 783.99, 1046.5], [0.14, 0.14, 0.14, 0.9], 0.4, 0.25)
+	streams["match_lose"] = _notes([440.0, 349.23, 293.66, 220.0], [0.24, 0.24, 0.24, 1.0], 0.4, 0.5)
 	streams["tick"] = _tone(1000.0, 0.03, 0.35)
 	streams["count"] = _beep(196.0, 0.3, 0.55)
 	streams["go"] = _go(rng)
@@ -225,6 +228,29 @@ func _beam(length: float) -> AudioStreamWAV:
 		phase += TAU * hz / RATE
 		var env := minf(1.0, t * 8.0) * minf(1.0, (1.0 - t) * 20.0)
 		s[i] = (sin(phase) * 0.6 + signf(sin(phase * 2.0)) * 0.12) * env * 0.45
+	return _wav(s)
+
+
+## A short tune: each note (hz) for its length (s), a bright horn-like tone
+## (fundamental, octave and fifth) that rings on a little. buzz adds some edge.
+func _notes(hz: Array, lengths: Array, vol: float, buzz: float) -> AudioStreamWAV:
+	var total := 0.0
+	for l: float in lengths:
+		total += l
+	var s := PackedFloat32Array()
+	s.resize(int((total + 0.15) * RATE))
+	var start := 0
+	for i in hz.size():
+		var n := int((float(lengths[i]) + 0.15) * RATE)
+		for j in n:
+			if start + j >= s.size():
+				break
+			var t := float(j) / RATE
+			var env := minf(1.0, t * 60.0) * exp(-t * (2.0 if i == hz.size() - 1 else 5.0))
+			var ph := TAU * float(hz[i]) * t
+			var tone := sin(ph) + 0.35 * sin(ph * 2.0) + 0.2 * sin(ph * 1.5) + buzz * 0.15 * signf(sin(ph))
+			s[start + j] += tone * env * vol * 0.6
+		start += int(float(lengths[i]) * RATE)
 	return _wav(s)
 
 

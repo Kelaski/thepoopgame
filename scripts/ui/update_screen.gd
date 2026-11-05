@@ -1,11 +1,12 @@
 class_name UpdateScreen
 extends Control
 ## Start-up update check (assets/ui/update_screen.tscn). In exported builds it asks
-## GitHub for the newest release; if it's newer than this build it downloads the
-## zip for this platform, checks its SHA-256 against the one GitHub publishes,
+## GitHub for the newest release; if it's newer than this build it asks the player
+## (Update or Cancel). Update downloads the zip for this platform, checks its SHA-256 against the one GitHub publishes,
 ## unpacks it, and hands over to a small script that waits for the game to close,
 ## copies the new files over the old ones and starts the new version.
-## Any failure just carries on to the main menu. The editor and debug builds skip it.
+## Cancel, or any failure, carries on to the main menu on this version. The editor
+## and debug builds skip it.
 
 signal finished  # carry on to the main menu
 
@@ -17,6 +18,8 @@ var _http: HTTPRequest
 var _release_url := ""
 var _digest := ""   # "sha256:<hex>" from GitHub, if it gives one
 var _zip := ""
+var _url := ""       # the release download for this platform
+var _version := ""   # its version, for the messages
 # For trying a full install by hand: pretend to be this version, install here, don't relaunch.
 var local_version := GameVersion.CURRENT
 var install_dir := ""   # "" = the folder the game runs from
@@ -30,6 +33,8 @@ static func applies() -> bool:
 
 func _ready() -> void:
 	%SkipButton.pressed.connect(_done)
+	%UpdateButton.pressed.connect(_download)
+	%UpdateButton.visible = false
 	%DownloadButton.pressed.connect(func(): OS.shell_open(_release_url))
 	%DownloadButton.visible = false
 	%Bar.visible = false
@@ -55,6 +60,9 @@ func _done() -> void:
 	set_process(false)
 	if _http:
 		_http.cancel_request()
+		_http.download_file = ""
+	if _zip != "" and FileAccess.file_exists(_zip):
+		DirAccess.remove_absolute(_zip)  # a download cancelled halfway
 	finished.emit()
 
 
@@ -111,21 +119,32 @@ func _on_release(result: int, code: int, _h: PackedStringArray, body: PackedByte
 		_offer("Version %s is out. The game folder can't be written to, so download it yourself:" % version)
 		return
 	_digest = str(asset.get("digest", ""))
+	_url = url
+	_version = version
+	# Ask first: Cancel keeps playing on this version.
+	_status("Version %s is out (you have %s). Update now?" % [version, local_version])
+	%UpdateButton.visible = true
+	%SkipButton.text = "Cancel"
+
+
+func _download() -> void:
+	%UpdateButton.visible = false
 	DirAccess.make_dir_recursive_absolute(DIR)
 	_zip = ProjectSettings.globalize_path(DIR + "/download.zip")
-	_status("Downloading version %s..." % version)
+	_status("Downloading version %s..." % _version)
 	%Bar.visible = true
 	%Bar.value = 0.0
 	_http.timeout = 0.0  # big file: no overall timeout
 	_http.download_file = _zip
-	_http.request_completed.connect(_on_download.bind(version), CONNECT_ONE_SHOT)
-	if _http.request(url, ["User-Agent: TagRush-Updater"]) != OK:
-		_offer("Couldn't download version %s." % version)
+	_http.request_completed.connect(_on_download.bind(_version), CONNECT_ONE_SHOT)
+	if _http.request(_url, ["User-Agent: TagRush-Updater"]) != OK:
+		_offer("Couldn't download version %s." % _version)
 
 
 ## No automatic update possible: say so, with a link to the release page.
 func _offer(text: String) -> void:
 	_status(text)
+	%UpdateButton.visible = false
 	%Bar.visible = false
 	%DownloadButton.visible = true
 	%SkipButton.text = "Continue"

@@ -1134,6 +1134,11 @@ func _build_building(b: Array) -> void:
 		var slot := int(ROOM_V / MODULE)
 		for es: int in ends:
 			solid[es] = [slot - 1, slot, slot + 1] if fmod(ROOM_V, MODULE) < 0.35 or fmod(ROOM_V, MODULE) > MODULE - 0.35 else [slot]
+	# The cinema's screen fills the far end wall (Interiors._lay_theater): no windows
+	# behind it, or you'd see the back of the screen through them.
+	if type == "theater" and fh >= 5.0:
+		var far_side := 3 if _ax else 1
+		solid[far_side] = range(_modules_along((z1 - z0) if _ax else (x1 - x0)))
 	_build_exterior_walls(type, floors, fh, x0, z0, x1, z1, door_spots, st, solid)
 
 	# --- Signs: the name centred on each wall that has a street door (or on the

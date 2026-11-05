@@ -25,8 +25,8 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 5. **Winning.** When the clock hits 0, the team holding the Tag wins the round. If it's lying on the ground, it's **overtime**: whoever grabs it first wins. First to 3 rounds wins the match.
 
 **Staying in the fight:**
-- **Respawn:** 6 s after you're eliminated (7 s if your team has the Tag), near your team. You get 3 s of spawn protection, which ends early if you move or shoot.
-- **Health:** 100 HP (150 with the Spiked Bat). It regenerates quickly after 8 s without taking damage, and every kill heals you 30 HP over 3 s.
+- **Respawn:** 6 s after you're eliminated (7 s if your team has the Tag), near your team. You get 3 s of spawn protection, which ends early if you move, look around or shoot.
+- **Health:** 100 HP (150 with the Spiked Bat). It regenerates quickly after 8 s without taking damage, and every kill heals you 30 HP over 2.5 s.
 - **No friendly fire.** Bullets pass through teammates.
 - **Damage direction:** a red arc around your crosshair points at whoever is shooting you.
 
@@ -34,8 +34,8 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 
 | Weapon | Best at | Details |
 |---|---|---|
-| **Assault Rifle** | Mid range | 33 dmg (45 headshot), 9.5 rounds/s, 30-round magazine, 1.5x holo sight |
-| **SMG** | Close to mid range | 22 dmg (30 headshot) up to 25 m, as strong as the AR there but weaker beyond. 14 rounds/s, tight hip fire, 40-round magazine |
+| **Assault Rifle** | Mid range | 20 dmg (25 headshot): 5 body shots or 4 headshots kill. 9.5 rounds/s, 20-round magazine, 1.5x holo sight |
+| **SMG** | Close to mid range | 17 dmg (21 headshot) up to 25 m: 6 body shots or 5 headshots, as quick a kill as the AR there but weaker beyond. 14 rounds/s, tight hip fire, 40-round magazine |
 | **Shotgun** | Point blank | 13 pellets of 15 dmg up close, 1 shot/s, 6 shells |
 | **Sniper** | Long range | 100 dmg, headshots always kill, pierces a wall and every player in line. One round: it reloads after every shot (2.5 s). Its scope glints when it's aimed at you |
 | **Spiked Bat** | Speed | 35 dmg, more the faster you're moving (up to 300). 150 HP and +10% speed while held. A killing swing launches your victim's gun |
@@ -116,7 +116,7 @@ Online play runs through **Steam**, so Steam has to be running and signed in. Yo
 - **Join:** click **Join Game** and pick a lobby from the list. You can also accept a Steam invite, or right-click a friend in your Steam friends list and choose **Join Game**. That even starts Tag Rush for you if it isn't running.
 - No ports, router settings or firewall prompts. Everything goes through Steam's network, which also keeps your IP address private.
 - Everyone needs the same version of the game. Lobbies on other versions show their version in the list and can't be joined.
-- **Automatic updates:** when you start the game it checks for a newer version, downloads it, and restarts into it. If the game folder can't be written to (for example under Program Files), it offers the download page instead.
+- **Automatic updates:** when you start the game it checks for a newer version and asks you. **Update** downloads it and restarts into it; **Cancel** keeps playing on the version you have. If the game folder can't be written to (for example under Program Files), it offers the download page instead.
 - **Teammates** have a white outline, so you can see them through walls.
 
 ## Controls

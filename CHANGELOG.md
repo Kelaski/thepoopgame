@@ -7,6 +7,21 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.24.0
+
+### Added
+- **The updater asks first:** when a new version is out, choose **Update** to download and install it, or **Cancel** to keep playing on the version you have. Cancelling during the download stops it too.
+- **Sounds for the end of a round and of a match:** a horn when a round ends, and a fanfare when your team wins the match or a falling tune when it loses.
+
+### Changed
+- **AR:** 20 damage (25 headshot), so 5 body shots or 4 headshots kill. 20-round magazine (was 30).
+- **SMG:** 17 damage (21 headshot) up to 25 m, so 6 body shots or 5 headshots, which kills as quickly as the AR there. Past 25 m it does 9 (12 headshot).
+- **Reload on Kill** has a 3 second cooldown after it refills, shown on its bar. The "refills on kill" label is gone.
+- **Kill reward** heals 30 health over 2.5 seconds (was 3).
+- **Spawn protection** also ends when you look around.
+- **Cinemas:** the movie screen blocks you, and the wall behind it has no windows (you could see the back of the screen through them).
+- **Parking meters** no longer block you.
+
 ## 0.23.0
 
 ### Changed

@@ -7,14 +7,16 @@ const ORDER := ["ar", "smg", "shotgun", "sniper", "bat"]
 const DATA := {
 	"ar": {
 		"name": "Assault Rifle",
-		"desc": "33 / 45 head dmg (less past 25m). 9.5 rounds/s. Best at mid range.",
-		"body": 33.0, "head": 45.0, "falloff": 25.0, "body_far": 22.0, "head_far": 30.0, "rps": 9.5, "zoom": 1.5,
-		"mag": 30, "reload": 2.1, "hip": 2.0, "ads": 0.25, "range": 300.0, "kick": 0.55,
+		"desc": "20 / 25 head dmg (less past 25m): 5 body shots or 4 headshots. 9.5 rounds/s, 20 rounds. Best at mid range.",
+		"body": 20.0, "head": 25.0, "falloff": 25.0, "body_far": 15.0, "head_far": 20.0, "rps": 9.5, "zoom": 1.5,
+		"mag": 20, "reload": 2.1, "hip": 2.0, "ads": 0.25, "range": 300.0, "kick": 0.55,
 	},
 	"smg": {
 		"name": "SMG",
-		"desc": "22 / 30 head dmg (less past 25m). 14 rounds/s. Matches the AR up to mid range.",
-		"body": 22.0, "head": 30.0, "falloff": 25.0, "body_far": 13.0, "head_far": 18.0, "rps": 14.0, "zoom": 1.2,
+		"desc": "17 / 21 head dmg (less past 25m): 6 body shots or 5 headshots. 14 rounds/s. Matches the AR up to mid range.",
+		# Kill times match the AR up to 25 m (6 shots at 14/s vs the AR's 5 at 9.5/s);
+		# past that it takes twelve body shots, and its wider aim and shorter range hurt more.
+		"body": 17.0, "head": 21.0, "falloff": 25.0, "body_far": 9.0, "head_far": 12.0, "rps": 14.0, "zoom": 1.2,
 		"mag": 40, "reload": 1.8, "hip": 1.7, "ads": 0.9, "range": 200.0, "kick": 0.35,
 	},
 	"shotgun": {
@@ -40,7 +42,7 @@ const DATA := {
 }
 
 const MAX_DAMAGE := {
-	"ar": 45.0, "smg": 30.0, "shotgun": 195.0, "sniper": 150.0, "bat": 300.0, "thrown": 70.0,
+	"ar": 25.0, "smg": 21.0, "shotgun": 195.0, "sniper": 150.0, "bat": 300.0, "thrown": 70.0,
 }
 # Spiked Bat momentum damage: 35 at or below your sprint speed, multiplied by 1.1
 # for every m/s above it (compounding), capped at BAT_MAX_DAMAGE.

@@ -683,6 +683,8 @@ func _input(event: InputEvent) -> void:
 		if Settings.g("invert_y"):
 			dy = -dy
 		pitch = clampf(pitch - deg_to_rad(dy), deg_to_rad(-89.0), deg_to_rad(89.0))
+		if rel.length() > 0.5:
+			_on_moved()  # looking around ends spawn protection too
 
 
 # ================================================================ simulation
@@ -1743,8 +1745,9 @@ func on_kill(victim := 0) -> void:
 	if _predicted_kills.has(victim):
 		_predicted_kills.erase(victim)
 		return
-	if addon2 != "reloader" or weapon == "bat" or not alive:
+	if addon2 != "reloader" or weapon == "bat" or not alive or addon_cd[SEC] > 0.0:
 		return
+	addon_cd[SEC] = Addons.RELOADER_CD
 	ammo = int(Weapons.DATA[weapon].mag)
 	reloading = 0.0
 	if weapon in Addons.RECHAMBER_WEAPONS:
@@ -2094,7 +2097,9 @@ func addon_status(slot: int) -> Array:
 		"skywalker":
 			return ["DOUBLE JUMP READY" if dj_ready else "LAND TO RECHARGE", 1.0 if dj_ready else 0.0, "passive"]
 		"reloader":
-			return ["REFILLS ON KILL", 1.0, "passive"]
+			if cd > 0.0:
+				return _cooling(slot)
+			return ["READY", 1.0, "ready"]
 	return ["READY [%s]" % Settings.bind_text("addon" if slot == PRI else "addon2"), 1.0, "ready"]
 
 

@@ -58,7 +58,7 @@ const DATA := {
 	},
 	"reloader": {
 		"name": "Reload on Kill",
-		"desc": "Every kill tops off your magazine. The shotgun and sniper are re-chambered too: click again to fire straight away.",
+		"desc": "A kill tops off your magazine. The shotgun and sniper are re-chambered too: click again to fire straight away. 3s cooldown.",
 		"active": false,
 	},
 	"parry": {
@@ -105,6 +105,7 @@ const MOON_GRAVITY := 0.7        # 20% less gravity
 const MOON_AIR := 1.20           # 15% better air control
 const MOON_ROCKET_H := 8.0       # m the rocket jump lifts you
 const MOON_CD := 10.0
+const RELOADER_CD := 3.0         # Reload on Kill: after it refills, the next kill within this long doesn't
 const PARRY_TIME := 0.4
 const PARRY_CD := 10.0           # from the end of the parry
 

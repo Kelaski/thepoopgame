@@ -16,10 +16,6 @@ height = 1.05
 radial_segments = 8
 rings = 1
 
-[sub_resource type="CylinderShape3D" id="CylinderShape3D_3omzn"]
-height = 1.05
-radius = 0.04
-
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_46d37"]
 diffuse_mode = 3
 specular_mode = 1
@@ -30,9 +26,6 @@ rim = 0.35
 rim_tint = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_tpbds"]
-size = Vector3(0.26, 0.42, 0.2)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_uhoz4"]
 size = Vector3(0.26, 0.42, 0.2)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kt1u2"]
@@ -87,15 +80,3 @@ mesh = SubResource("BoxMesh_cm71y")
 transform = Transform3D(1, 0, 0, 0, 0.6, 0, 0, 0, 0.8, 0, 1.48, 0)
 material_override = SubResource("StandardMaterial3D_46d37")
 mesh = SubResource("SphereMesh_2yl2i")
-
-[node name="Collision" type="StaticBody3D" parent="."]
-collision_layer = 2
-collision_mask = 0
-
-[node name="Shape0" type="CollisionShape3D" parent="Collision"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52, 0)
-shape = SubResource("CylinderShape3D_3omzn")
-
-[node name="Shape1" type="CollisionShape3D" parent="Collision"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
-shape = SubResource("BoxShape3D_uhoz4")

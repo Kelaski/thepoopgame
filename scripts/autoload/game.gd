@@ -39,7 +39,7 @@ const ENEMY_PICKUP_BONUS := 10.0
 const TEAM_PICKUP_BONUS := 15.0
 const RUNNER_KILL_REWARD := 5.0
 const KILL_HEAL := 30.0       # health a kill gives back to the killer...
-const KILL_HEAL_TIME := 3.0   # ...over this long...
+const KILL_HEAL_TIME := 2.5   # ...over this long...
 const KILL_HEAL_DELAY := 0.3  # ...starting this long after the kill
 var _kill_heals := {}  # server: id -> [[start time, health still to give], ...] (kills stack)
 
@@ -395,14 +395,27 @@ func _server_round_won(team: int) -> void:
 		phase = Phase.MATCH_END
 		phase_time = MATCH_END_TIME
 		_announce.rpc("%s TEAM WINS THE MATCH!" % Mats.team_name(team).to_upper(), Mats.team_color(team))
+		_round_sound.rpc(team, true)
 	else:
 		phase = Phase.ROUND_END
 		phase_time = ROUND_END_TIME
 		_announce.rpc("%s team wins round %d" % [Mats.team_name(team), round_num], Mats.team_color(team))
+		_round_sound.rpc(team, false)
 		# A new time of day for the next round (always a different one).
 		var next := (time_of_day + 1 + randi() % (TIMES_OF_DAY.size() - 1)) % TIMES_OF_DAY.size()
 		_set_time_of_day.rpc(next)
 	_push_state()
+
+
+## The round (or the match) is over: a horn for the round, and for the match a
+## fanfare if your team won it or a falling tune if it didn't.
+@rpc("authority", "call_local", "reliable")
+func _round_sound(winner: int, match_over: bool) -> void:
+	if not match_over:
+		Sfx.play("round_end", -2.0, 1.0, "UI")
+		return
+	var mine := Net.team_of(multiplayer.get_unique_id())
+	Sfx.play("match_win" if mine == winner or mine < 0 else "match_lose", -1.0, 1.0, "UI")
 
 
 ## Respawn time for a player who just died: the team holding the Tag waits longer

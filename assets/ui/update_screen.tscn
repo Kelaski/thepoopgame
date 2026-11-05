@@ -58,6 +58,12 @@ layout_mode = 2
 theme_override_constants/separation = 10
 alignment = 1
 
+[node name="UpdateButton" type="Button" parent="Center/Panel/Content/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+text = "Update"
+
 [node name="DownloadButton" type="Button" parent="Center/Panel/Content/Buttons"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 44)

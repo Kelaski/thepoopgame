@@ -67,6 +67,11 @@ func _ready() -> void:
 	rk.reloading = 2.0
 	rk.on_kill()
 	_check(rk.ammo == int(Weapons.DATA.sniper.mag) and rk.fire_cd == 0.0 and rk.reloading == 0.0, "Reload on Kill re-chambers the sniper")
+	# Within 3 s of that, another kill does nothing; after it, it works again.
+	rk.ammo = 0
+	rk.on_kill()
+	_check(rk.ammo == 0, "Reload on Kill waits out its 3 s cooldown")
+	rk.addon_cd[Player.SEC] = 0.0
 	# Other guns: the magazine is topped off, the time between shots is left alone.
 	rk.weapon = "ar"
 	rk.ammo = 3
@@ -75,7 +80,7 @@ func _ready() -> void:
 	_check(rk.ammo == int(Weapons.DATA.ar.mag) and is_equal_approx(rk.fire_cd, 0.08), "Reload on Kill tops off the AR")
 	rk.free()
 
-	# Kill reward: nothing for 0.3 s, then 30 health over 3 s.
+	# Kill reward: nothing for 0.3 s, then 30 health over 2.5 s.
 	var saved_alive: Dictionary = Game.alive_ids
 	var saved_hp: Dictionary = Game.hp
 	Game.alive_ids = {7: true}
@@ -88,10 +93,19 @@ func _ready() -> void:
 		Game._tick_kill_heals(1.0 / 60.0)
 		if i == 17 or i == 108 or i == 239:  # 0.28 s, 1.8 s, 4 s
 			at[i] = Game.hp[7]
-	_check(is_equal_approx(at[17], 50.0) and absf(at[108] - 65.0) < 1.0 and absf(at[239] - 80.0) < 0.01, "kill heal: %.0f, %.0f, %.0f health at 0.28 s, 1.8 s, 4 s" % [at[17], at[108], at[239]])
+	_check(is_equal_approx(at[17], 50.0) and absf(at[108] - 68.0) < 1.0 and absf(at[239] - 80.0) < 0.01, "kill heal: %.0f, %.0f, %.0f health at 0.28 s, 1.8 s, 4 s" % [at[17], at[108], at[239]])
 	Game.alive_ids = saved_alive
 	Game.hp = saved_hp
 	Game._kill_heals.clear()
+
+	# Round and match sounds exist and aren't silent.
+	for snd in ["round_end", "match_win", "match_lose"]:
+		var w: AudioStreamWAV = Sfx.streams.get(snd)
+		var loud := 0
+		if w:
+			for i in range(0, w.data.size() - 1, 2):
+				loud = maxi(loud, absi(w.data.decode_s16(i)))
+		_check(w != null and loud > 3000 and loud < 32767, "%s sound (peak %d)" % [snd, loud])
 
 	# Sprays: a small PNG is fine, one whose header claims 4096x4096 is refused before decoding.
 	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)

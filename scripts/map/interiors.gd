@@ -665,9 +665,10 @@ func _lay_theater(k: int, fh: float) -> void:
 	if k == 0:
 		var sw := minf(1.0, (vm - 1.0) / 8.4)
 		var sp := mb._uv(um - 0.05, vm * 0.5)
-		if fh >= 5.0:
+		var screen_foot := mb._uv_rect(um - 1.0, vm * 0.5 - 4.2 * sw, um, vm * 0.5 + 4.2 * sw)
+		if fh >= 5.0 and not _blocked(screen_foot, _fzones):  # never in front of a door or the stairs
 			mb._prefab("furniture/theater_screen", MapBuilder._at(Vector3(sp.x, _fy, sp.y), MapBuilder._yaw_to(-_ud()), Vector3(sw, 1, 1)))
-			mb._occupied.append(mb._uv_rect(um - 1.0, vm * 0.5 - 4.2 * sw, um, vm * 0.5 + 4.2 * sw))
+			mb._occupied.append(screen_foot)
 		_by_door("concession_stand", 3.0)
 		_by_door("ticket_kiosk", 1.6, false)
 		_by_door("ticket_kiosk", 1.6, false)
