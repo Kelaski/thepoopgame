@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/viewmodel_preview.gd" id="e2"]
+
+[sub_resource type="Environment" id="r1"]
+background_mode = 1
+ambient_light_source = 2
+
+[sub_resource type="PlaneMesh" id="r2"]
+size = Vector2(200, 200)
+
+[node name="ViewmodelPreview" type="Control"]
+script = ExtResource("e2")
+clip_contents = true
+custom_minimum_size = Vector2(460, 300)
+size_flags_horizontal = 3
+
+[node name="Container" type="SubViewportContainer" parent="."]
+stretch = true
+mouse_filter = 2
+anchor_right = 1
+anchor_bottom = 1
+
+[node name="Viewport" type="SubViewport" parent="Container"]
+unique_name_in_owner = true
+own_world_3d = true
+handle_input_locally = false
+msaa_3d = 2
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Container/Viewport"]
+unique_name_in_owner = true
+environment = SubResource("r1")
+
+[node name="Sun" type="DirectionalLight3D" parent="Container/Viewport"]
+unique_name_in_owner = true
+
+[node name="Ground" type="MeshInstance3D" parent="Container/Viewport"]
+unique_name_in_owner = true
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, -1.6, 0)
+mesh = SubResource("r2")
+
+[node name="Camera" type="Camera3D" parent="Container/Viewport"]
+unique_name_in_owner = true
+near = 0.04
+current = true
+
+[node name="Holder" type="Node3D" parent="Container/Viewport/Camera"]
+unique_name_in_owner = true

@@ -18,20 +18,21 @@ func _quit(code: int) -> void:
 
 
 func _ready() -> void:
+	get_tree().create_timer(180.0).timeout.connect(_fail.bind("timed out"))  # never hang a test run
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--size="):
 			_size_before = Settings.g("map_size")
 			Settings.values["map_size"] = a.substr(7)
 		elif a == "--classic":
-			Settings.values["map_random"] = false  # in memory only
-	add_child((load("res://scenes/main.tscn") as PackedScene).instantiate())
+			Settings.values["map_size"] = "classic"  # in memory only
+	add_child((load("res://assets/main.tscn") as PackedScene).instantiate())
 	var t := 0.0
 	while Game.round_num < 1 and t < 40.0:
 		await get_tree().process_frame
 		t += get_process_delta_time()
 	if Game.round_num < 1:
 		return _fail("the match never started")
-	var b: MapBuilder = Game.world.builder
+	var b: Level = Game.world.builder
 	var last_obj := Game.objective
 	var last: Array = Game._last_team_dots.duplicate()
 	var even := 0

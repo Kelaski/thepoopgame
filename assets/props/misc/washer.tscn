@@ -1,0 +1,87 @@
+[gd_scene format=3]
+
+
+[sub_resource type="StandardMaterial3D" id="r1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.95, 0.95, 0.92, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="r2"]
+size = Vector3(0.72, 0.9, 0.7)
+
+[sub_resource type="BoxShape3D" id="r3"]
+size = Vector3(0.72, 0.9, 0.7)
+
+[sub_resource type="BoxMesh" id="r4"]
+size = Vector3(0.72, 0.9, 0.7)
+
+[sub_resource type="BoxShape3D" id="r5"]
+size = Vector3(0.72, 0.9, 0.7)
+
+[sub_resource type="StandardMaterial3D" id="r6"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.56, 0.82, 0.94, 1)
+roughness = 0.85
+
+[sub_resource type="CylinderMesh" id="r7"]
+top_radius = 0.18
+bottom_radius = 0.18
+height = 0.03
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxShape3D" id="r8"]
+size = Vector3(0.27, 0.03, 0.27)
+
+[sub_resource type="CylinderMesh" id="r9"]
+top_radius = 0.18
+bottom_radius = 0.18
+height = 0.03
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxShape3D" id="r10"]
+size = Vector3(0.27, 0.03, 0.27)
+
+[node name="Washer" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_mask = 0
+
+[node name="White1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.42, 0.45, 0)
+mesh = SubResource("r2")
+material_override = SubResource("r1")
+
+[node name="White1" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.42, 0.45, 0)
+shape = SubResource("r3")
+
+[node name="White2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.42, 0.45, 0)
+mesh = SubResource("r4")
+material_override = SubResource("r1")
+
+[node name="White2" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.42, 0.45, 0)
+shape = SubResource("r5")
+
+[node name="Glass3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.00000, -1.00000, 0.00000, 1.00000, 0.00000, -0.42, 0.5, 0.36)
+mesh = SubResource("r7")
+material_override = SubResource("r6")
+
+[node name="Glass3" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.00000, -1.00000, 0.00000, 1.00000, 0.00000, -0.42, 0.5, 0.36)
+shape = SubResource("r8")
+
+[node name="Glass4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.00000, -1.00000, 0.00000, 1.00000, 0.00000, 0.42, 0.5, 0.36)
+mesh = SubResource("r9")
+material_override = SubResource("r6")
+
+[node name="Glass4" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 0.00000, -1.00000, 0.00000, 1.00000, 0.00000, 0.42, 0.5, 0.36)
+shape = SubResource("r10")

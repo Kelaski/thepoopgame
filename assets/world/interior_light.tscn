@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+
+
+[node name="InteriorLight" type="OmniLight3D"]
+omni_range = 10
+light_energy = 1.1
+light_color = Color(1, 0.84, 0.6, 1)
+

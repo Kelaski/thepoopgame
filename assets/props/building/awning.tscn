@@ -1,0 +1,155 @@
+[gd_scene format=3 uid="uid://cwt33xnmp25kk"]
+
+[sub_resource type="StandardMaterial3D" id="r1"]
+diffuse_mode = 3
+albedo_color = Color(0.88, 0.24, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="r4"]
+size = Vector3(0.3, 0.05, 1.25)
+
+[sub_resource type="BoxMesh" id="r5"]
+size = Vector3(0.3, 0.2, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="r2"]
+diffuse_mode = 3
+albedo_color = Color(0.98, 0.95, 0.88, 1)
+
+[sub_resource type="StandardMaterial3D" id="r3"]
+diffuse_mode = 3
+albedo_color = Color(0.27, 0.29, 0.34, 1)
+
+[sub_resource type="BoxMesh" id="r7"]
+size = Vector3(0.05, 0.05, 1.21987)
+
+[sub_resource type="BoxShape3D" id="bounce_pad"]
+size = Vector3(3, 0.1, 1.22)
+
+[node name="Awning" type="Node3D" unique_id=864754086]
+
+[node name="Canvas0" type="MeshInstance3D" parent="." unique_id=2001098759]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, -1.35, 3.58361, 0.609936)
+material_override = SubResource("r1")
+mesh = SubResource("r4")
+metadata/slot = "body"
+
+[node name="Drop0" type="MeshInstance3D" parent="." unique_id=463196840]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 3.34721, 1.21987)
+material_override = SubResource("r1")
+mesh = SubResource("r5")
+metadata/slot = "body"
+
+[node name="Canvas1" type="MeshInstance3D" parent="." unique_id=1113248716]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, -1.05, 3.58361, 0.609936)
+material_override = SubResource("r2")
+mesh = SubResource("r4")
+
+[node name="Drop1" type="MeshInstance3D" parent="." unique_id=671312639]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, 3.34721, 1.21987)
+material_override = SubResource("r2")
+mesh = SubResource("r5")
+
+[node name="Canvas2" type="MeshInstance3D" parent="." unique_id=1521440827]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, -0.75, 3.58361, 0.609936)
+material_override = SubResource("r1")
+mesh = SubResource("r4")
+metadata/slot = "body"
+
+[node name="Drop2" type="MeshInstance3D" parent="." unique_id=1400511445]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 3.34721, 1.21987)
+material_override = SubResource("r1")
+mesh = SubResource("r5")
+metadata/slot = "body"
+
+[node name="Canvas3" type="MeshInstance3D" parent="." unique_id=501750280]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, -0.45, 3.58361, 0.609936)
+material_override = SubResource("r2")
+mesh = SubResource("r4")
+
+[node name="Drop3" type="MeshInstance3D" parent="." unique_id=1744767300]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 3.34721, 1.21987)
+material_override = SubResource("r2")
+mesh = SubResource("r5")
+
+[node name="Canvas4" type="MeshInstance3D" parent="." unique_id=522967585]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, -0.15, 3.58361, 0.609936)
+material_override = SubResource("r1")
+mesh = SubResource("r4")
+metadata/slot = "body"
+
+[node name="Drop4" type="MeshInstance3D" parent="." unique_id=716421208]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 3.34721, 1.21987)
+material_override = SubResource("r1")
+mesh = SubResource("r5")
+metadata/slot = "body"
+
+[node name="Canvas5" type="MeshInstance3D" parent="." unique_id=1728720228]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, 0.15, 3.58361, 0.609936)
+material_override = SubResource("r2")
+mesh = SubResource("r4")
+
+[node name="Drop5" type="MeshInstance3D" parent="." unique_id=771392679]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 3.34721, 1.21987)
+material_override = SubResource("r2")
+mesh = SubResource("r5")
+
+[node name="Canvas6" type="MeshInstance3D" parent="." unique_id=1950432965]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, 0.45, 3.58361, 0.609936)
+material_override = SubResource("r1")
+mesh = SubResource("r4")
+metadata/slot = "body"
+
+[node name="Drop6" type="MeshInstance3D" parent="." unique_id=1316542710]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 3.34721, 1.21987)
+material_override = SubResource("r1")
+mesh = SubResource("r5")
+metadata/slot = "body"
+
+[node name="Canvas7" type="MeshInstance3D" parent="." unique_id=1299114792]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, 0.75, 3.58361, 0.609936)
+material_override = SubResource("r2")
+mesh = SubResource("r4")
+
+[node name="Drop7" type="MeshInstance3D" parent="." unique_id=828351313]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 3.34721, 1.21987)
+material_override = SubResource("r2")
+mesh = SubResource("r5")
+
+[node name="Canvas8" type="MeshInstance3D" parent="." unique_id=1282863647]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, 1.05, 3.58361, 0.609936)
+material_override = SubResource("r1")
+mesh = SubResource("r4")
+metadata/slot = "body"
+
+[node name="Drop8" type="MeshInstance3D" parent="." unique_id=956139582]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, 3.34721, 1.21987)
+material_override = SubResource("r1")
+mesh = SubResource("r5")
+metadata/slot = "body"
+
+[node name="Canvas9" type="MeshInstance3D" parent="." unique_id=1730329130]
+transform = Transform3D(1, 0, 0, 0, 0.9759, -0.21823, 0, 0.21823, 0.9759, 1.35, 3.58361, 0.609936)
+material_override = SubResource("r2")
+mesh = SubResource("r4")
+
+[node name="Drop9" type="MeshInstance3D" parent="." unique_id=496647883]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 3.34721, 1.21987)
+material_override = SubResource("r2")
+mesh = SubResource("r5")
+
+[node name="BracketLeft" type="MeshInstance3D" parent="." unique_id=1110147629]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 3.38721, 0.609936)
+material_override = SubResource("r3")
+mesh = SubResource("r7")
+
+[node name="BracketRight" type="MeshInstance3D" parent="." unique_id=1832380353]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 3.38721, 0.609936)
+material_override = SubResource("r3")
+mesh = SubResource("r7")
+
+[node name="BouncePad" type="StaticBody3D" parent="."]
+collision_layer = 32
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape3D" parent="BouncePad"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.64, 0.61)
+shape = SubResource("bounce_pad")

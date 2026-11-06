@@ -139,12 +139,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
 [node name="TpGun" type="Node3D" parent="BodyRoot/TpPivot" unique_id=1947943076]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.24, -0.12, -0.3)
 
-[node name="TagMarker" type="MeshInstance3D" parent="BodyRoot" unique_id=1273122894]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.45, 0)
-visible = false
-material_override = SubResource("StandardMaterial3D_ob8sk")
-mesh = SubResource("SphereMesh_gp7mg")
-
 [node name="Nameplate" type="Label3D" parent="." unique_id=719737190]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
 visible = false

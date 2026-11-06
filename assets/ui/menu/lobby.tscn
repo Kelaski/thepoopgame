@@ -1,0 +1,141 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/ui/menu/loadout_panel.tscn" id="e1"]
+[ext_resource type="Script" path="res://scripts/ui/menu/chat_hints.gd" id="e2"]
+[ext_resource type="Script" path="res://scripts/ui/menu/lobby.gd" id="e3"]
+
+
+[node name="LobbyScreen" type="Control"]
+script = ExtResource("e3")
+anchor_right = 1
+anchor_bottom = 1
+
+[node name="Background" type="ColorRect" parent="."]
+color = Color(0.04, 0.045, 0.06, 1)
+anchor_right = 1
+anchor_bottom = 1
+
+[node name="Center" type="CenterContainer" parent="."]
+mouse_filter = 2
+anchor_right = 1
+anchor_bottom = 1
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(1680, 860)
+
+[node name="Box" type="VBoxContainer" parent="Center/Panel"]
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/Panel/Box" groups=["accent"]]
+text = "LOBBY"
+theme_override_font_sizes/font_size = 38
+
+[node name="Columns" type="HBoxContainer" parent="Center/Panel/Box"]
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="TeamA" type="VBoxContainer" parent="Center/Panel/Box/Columns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(390, 0)
+theme_override_constants/separation = 4
+
+[node name="JoinA" type="Button" parent="Center/Panel/Box/Columns/TeamA"]
+unique_name_in_owner = true
+text = "Join Red"
+
+[node name="TeamB" type="VBoxContainer" parent="Center/Panel/Box/Columns"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(390, 0)
+theme_override_constants/separation = 4
+
+[node name="JoinB" type="Button" parent="Center/Panel/Box/Columns/TeamB"]
+unique_name_in_owner = true
+text = "Join Blue"
+
+[node name="Right" type="VBoxContainer" parent="Center/Panel/Box/Columns"]
+theme_override_constants/separation = 10
+size_flags_horizontal = 3
+
+[node name="Loadout" parent="Center/Panel/Box/Columns/Right" instance=ExtResource("e1")]
+
+[node name="ChatLog" type="RichTextLabel" parent="Center/Panel/Box/Columns/Right"]
+unique_name_in_owner = true
+scroll_following = true
+size_flags_vertical = 3
+
+[node name="Hints" type="VBoxContainer" parent="Center/Panel/Box/Columns/Right"]
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+script = ExtResource("e2")
+
+[node name="ChatInput" type="LineEdit" parent="Center/Panel/Box/Columns/Right"]
+unique_name_in_owner = true
+placeholder_text = "Say something..."
+
+[node name="Bottom" type="HBoxContainer" parent="Center/Panel/Box"]
+theme_override_constants/separation = 10
+
+[node name="Start" type="Button" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+text = "Start match"
+custom_minimum_size = Vector2(240, 0)
+
+[node name="Shuffle" type="Button" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+text = "Shuffle teams"
+
+[node name="Privacy" type="OptionButton" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+
+[node name="Map" type="OptionButton" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 0)
+
+[node name="Status" type="Label" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.68, 0.7, 0.75, 1)
+
+[node name="Invite" type="Button" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+text = "Invite friends"
+
+[node name="Settings" type="Button" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+text = "Settings"
+
+[node name="Leave" type="Button" parent="Center/Panel/Box/Bottom"]
+unique_name_in_owner = true
+text = "Leave"
+
+[node name="InvitePanel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+custom_minimum_size = Vector2(460, 560)
+
+[node name="Box" type="VBoxContainer" parent="InvitePanel"]
+theme_override_constants/separation = 10
+
+[node name="InviteTitle" type="Label" parent="InvitePanel/Box" groups=["accent"]]
+text = "INVITE FRIENDS"
+theme_override_font_sizes/font_size = 24
+
+[node name="InviteScroll" type="ScrollContainer" parent="InvitePanel/Box"]
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="InviteList" type="VBoxContainer" parent="InvitePanel/Box/InviteScroll"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+
+[node name="InviteClose" type="Button" parent="InvitePanel/Box"]
+unique_name_in_owner = true
+text = "Close"

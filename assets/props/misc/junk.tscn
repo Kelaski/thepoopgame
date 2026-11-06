@@ -1,0 +1,74 @@
+[gd_scene format=3]
+
+
+[sub_resource type="StandardMaterial3D" id="r1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.56, 0.66, 0.68, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="r2"]
+size = Vector3(1.2, 0.6, 1)
+
+[sub_resource type="BoxShape3D" id="r3"]
+size = Vector3(1.2, 0.6, 1)
+
+[sub_resource type="StandardMaterial3D" id="r4"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.56, 0.36, 0.2, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="r5"]
+size = Vector3(0.7, 0.5, 0.8)
+
+[sub_resource type="BoxShape3D" id="r6"]
+size = Vector3(0.7, 0.5, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="r7"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.16, 0.16, 0.18, 1)
+roughness = 0.85
+
+[sub_resource type="CylinderMesh" id="r8"]
+top_radius = 0.25
+bottom_radius = 0.25
+height = 0.28
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxShape3D" id="r9"]
+size = Vector3(0.375, 0.28, 0.375)
+
+[node name="Junk" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_mask = 0
+
+[node name="Corrugated1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.3, 0.3, 0)
+mesh = SubResource("r2")
+material_override = SubResource("r1")
+
+[node name="Corrugated1" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.3, 0.3, 0)
+shape = SubResource("r3")
+
+[node name="Wood2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.55, 0.25, 0.2)
+mesh = SubResource("r5")
+material_override = SubResource("r4")
+
+[node name="Wood2" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.55, 0.25, 0.2)
+shape = SubResource("r6")
+
+[node name="Rubber3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.3, 0.74, 0)
+mesh = SubResource("r8")
+material_override = SubResource("r7")
+
+[node name="Rubber3" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.3, 0.74, 0)
+shape = SubResource("r9")

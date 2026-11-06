@@ -3,7 +3,7 @@ extends Node
 ## (peer id 1). The server owns the roster (names, teams, loadouts, K/D) and broadcasts it.
 ##
 ## Hosting creates a Steam lobby. Players join through an invite, through Steam's
-## friends list ("Join Game"), or by picking the lobby in Join Game. All game traffic
+## friends list (Steam's "Join Game"), or by picking the lobby in the server browser. All game traffic
 ## goes through Steam's relay (SteamMultiplayerPeer), so nobody needs open ports,
 ## UPnP or firewall rules, and nobody's IP address is shown to anyone.
 ##
@@ -39,7 +39,7 @@ var _hosting := false   # waiting for Steam to create our lobby
 var _joining := 0       # lobby we asked Steam to enter
 var _reject_reason := ""
 
-var players := {}  # peer id -> {name, team, weapon, addon (primary), addon2 (secondary), kills, deaths}
+var players := {}  # peer id -> {name, team, weapon, active, passive, kills, deaths}
 var sprays := {}   # peer id -> PackedByteArray (validated PNG)
 var _spray_tex := {}
 var _chat_times := {}  # server: peer id -> recent message timestamps (rate limit)
@@ -140,31 +140,21 @@ func _init_steam() -> void:
 		push_warning("Steam init failed: %s" % r)
 		return
 	steam_ok = true
-	# Your name is your Steam name (kept up to date) unless you've typed your own.
-	if not Settings.g("custom_name") and Sanitize.player_name(steam_name()) != "":
-		Settings.s("player_name", Sanitize.player_name(steam_name()))
 	Steam.lobby_created.connect(_on_lobby_created)
 	Steam.lobby_joined.connect(_on_lobby_joined)
 	Steam.join_requested.connect(_on_join_requested)
 	Steam.lobby_match_list.connect(_on_lobby_match_list)
 
 
-## Your Steam name (used as the default player name).
-func steam_name() -> String:
-	return Steam.getPersonaName() if steam_ok else ""
+## Your name is your Steam name. --name= (debug builds only) is for the local tests.
+var name_override := ""
 
 
-## The name you get when you don't type one: your Steam name, or "Player".
-func default_name() -> String:
-	var s := Sanitize.player_name(steam_name())
+func local_name() -> String:
+	if name_override != "":
+		return name_override
+	var s := Sanitize.player_name(Steam.getPersonaName()) if steam_ok else ""
 	return s if s != "" else "Player"
-
-
-## A name box changed: a typed name is kept, an empty box goes back to the default.
-func set_player_name(t: String) -> void:
-	var custom := t.strip_edges() != ""
-	Settings.s("custom_name", custom, false)
-	Settings.s("player_name", t if custom else default_name())
 
 
 ## A lobby Steam asked us to join when it launched the game ("+connect_lobby <id>"
@@ -217,6 +207,8 @@ func _on_lobby_match_list(lobbies: Array) -> void:
 			"id": int(id),
 			"name": Sanitize.player_name(Steam.getLobbyData(id, "name")),
 			"version": Sanitize.text(Steam.getLobbyData(id, "version")).left(16),
+			"map": Sanitize.text(Steam.getLobbyData(id, "map")).left(24),
+			"status": Sanitize.text(Steam.getLobbyData(id, "status")).left(24),
 			"players": Steam.getNumLobbyMembers(id),
 			"max": Steam.getLobbyMemberLimit(id),
 		})
@@ -239,6 +231,13 @@ func invitable_friends() -> Array:
 		out.append({"id": fid, "name": fname, "playing": int(game.get("id", 0)) == APP_ID})
 	out.sort_custom(func(a, b): return a.playing and not b.playing if a.playing != b.playing else a.name.naturalnocasecmp_to(b.name) < 0)
 	return out
+
+
+## What the server browser shows about our game: the map, and whether a match is on.
+func publish_lobby_info() -> void:
+	if steam_ok and lobby_id != 0 and multiplayer.is_server():
+		Steam.setLobbyData(lobby_id, "map", Level.size_name(Game.map_size))
+		Steam.setLobbyData(lobby_id, "status", "In match" if Game.in_match else "In lobby")
 
 
 func invite(friend_id: int) -> bool:
@@ -276,7 +275,8 @@ func _on_lobby_created(result: int, id: int) -> void:
 	Steam.setLobbyJoinable(id, true)
 	Steam.setLobbyData(id, "game", LOBBY_GAME)
 	Steam.setLobbyData(id, "version", GameVersion.CURRENT)
-	Steam.setLobbyData(id, "name", Sanitize.player_name(Settings.g("player_name")))
+	Steam.setLobbyData(id, "name", local_name())
+	publish_lobby_info.call_deferred()
 	_start_server(peer)
 
 
@@ -470,7 +470,7 @@ func host() -> String:
 	return ""
 
 
-## Joins a Steam lobby (from Join Game or an invite). Finishes in _on_lobby_joined.
+## Joins a Steam lobby (from the server browser or an invite). Finishes in _on_lobby_joined.
 func join_lobby(id: int) -> String:
 	leave()
 	if not steam_ok:
@@ -514,7 +514,7 @@ func _start_server(peer: MultiplayerPeer) -> void:
 	multiplayer.multiplayer_peer = peer
 	online = true
 	players.clear()
-	_add_player(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"), Settings.g("addon2"))
+	_add_player(1, local_name(), Settings.g("weapon"), Settings.g("active"), Settings.g("passive"))
 	Game._set_map_size_local(str(Settings.g("map_size")))
 	roster_changed.emit()
 	upload_my_spray()
@@ -522,6 +522,7 @@ func _start_server(peer: MultiplayerPeer) -> void:
 
 
 func leave() -> void:
+	_bans.clear()
 	_hosting = false
 	_joining = 0
 	if lobby_id != 0 and steam_ok:
@@ -564,7 +565,7 @@ func name_of(id: int) -> String:
 # ------------------------------------------------------------ connection events
 
 func _on_connected() -> void:
-	register.rpc_id(1, Settings.g("player_name"), Settings.g("weapon"), Settings.g("addon"), GameVersion.CURRENT, Settings.g("addon2"))
+	register.rpc_id(1, local_name(), Settings.g("weapon"), Settings.g("active"), GameVersion.CURRENT, Settings.g("passive"))
 	upload_my_spray()
 	joined_ok.emit()
 	# Reverse check: a host on an older build never answers the registration.
@@ -593,6 +594,37 @@ func _on_server_disconnected() -> void:
 @rpc("authority", "reliable")
 func _rejected(reason: String) -> void:
 	_reject_reason = Sanitize.text(reason)
+
+
+var _bans := {}  # server: who can't join this lobby ("steam:123" or "ip:1.2.3.4") -> their name
+
+
+## Who a peer is, in a way that survives reconnecting.
+func _identity(id: int) -> String:
+	var peer := multiplayer.multiplayer_peer
+	if peer is SteamMultiplayerPeer:
+		return "steam:%d" % peer.get_steam_id_for_peer_id(id)
+	return "ip:%s" % (peer as ENetMultiplayerPeer).get_peer(id).get_remote_address()
+
+
+## /kick and /ban (host only). Returns a reply for the chat.
+func server_remove(sender: int, target_name: String, ban: bool) -> String:
+	var verb := "ban" if ban else "kick"
+	if sender != 1:
+		return "Only the host can %s." % verb
+	if target_name == "":
+		return "Usage: /%s <name>" % verb
+	for id: int in players:
+		if str(players[id].name).to_lower() == target_name.to_lower():
+			if id == 1:
+				return "You can't %s yourself." % verb
+			var who: String = players[id].name
+			if ban:
+				_bans[_identity(id)] = who
+			_reject(id, "You were %s by the host." % ("banned" if ban else "kicked"))
+			Game._announce.rpc("%s was %s." % [who, "banned" if ban else "kicked"], Color.WHITE)
+			return "Done."
+	return "No player called \"%s\"." % target_name.left(24)
 
 
 func _reject(id: int, reason: String) -> void:
@@ -637,12 +669,15 @@ func _on_peer_disconnected(id: int) -> void:
 ## addon2 comes last (with a default), so an older build still gets as far as the
 ## version check and is told to update.
 @rpc("any_peer", "reliable")
-func register(pname: String, weapon: String, addon: String, version: String, addon2 := "") -> void:
+func register(pname: String, weapon: String, active: String, version: String, passive := "") -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
 	if players.has(id):
 		return  # already registered (re-registering would reset their team mid-match)
+	if _bans.has(_identity(id)):
+		_reject(id, "You are banned from this lobby.")
+		return
 	if version != GameVersion.CURRENT:
 		_reject(id, "Version mismatch: the host is on %s, you're on %s. Update to the same version." % [GameVersion.CURRENT, version.left(16)])
 		return
@@ -655,7 +690,13 @@ func register(pname: String, weapon: String, addon: String, version: String, add
 	if peer is SteamMultiplayerPeer and not _in_lobby(peer.get_steam_id_for_peer_id(id)):
 		_reject(id, "Join the host's lobby to play.")
 		return
-	_add_player(id, pname, weapon, addon, addon2)
+	if peer is SteamMultiplayerPeer:
+		# The name comes from Steam, not the client (which only fills in if Steam hasn't cached it yet).
+		var steam_id: int = peer.get_steam_id_for_peer_id(id)
+		var persona := Sanitize.player_name(Steam.getFriendPersonaName(steam_id))
+		if persona != "" and persona != str(steam_id):
+			pname = persona
+	_add_player(id, pname, weapon, active, passive)
 	_broadcast()
 	for sid in sprays:
 		_spray_data.rpc_id(id, sid, sprays[sid])
@@ -663,7 +704,7 @@ func register(pname: String, weapon: String, addon: String, version: String, add
 	Game.on_player_joined(id)
 
 
-func _add_player(id: int, pname: String, weapon: String, addon: String, addon2: String) -> void:
+func _add_player(id: int, pname: String, weapon: String, active: String, passive: String) -> void:
 	pname = Sanitize.player_name(pname)
 	if pname == "":
 		pname = "Player %d" % (players.size() + 1)
@@ -679,11 +720,11 @@ func _add_player(id: int, pname: String, weapon: String, addon: String, addon2: 
 	var team := 0 if team_count(0) <= team_count(1) else 1
 	if not Weapons.DATA.has(weapon):
 		weapon = "ar"
-	if Addons.slot_of(addon) != 0:
-		addon = Addons.DEFAULT_ACTIVE
-	if Addons.slot_of(addon2) != 1:
-		addon2 = Addons.DEFAULT_PASSIVE
-	players[id] = {"name": pname, "team": team, "weapon": weapon, "addon": addon, "addon2": addon2, "kills": 0, "deaths": 0}
+	if Addons.slot_of(active) != 0:
+		active = Addons.DEFAULT_ACTIVE
+	if Addons.slot_of(passive) != 1:
+		passive = Addons.DEFAULT_PASSIVE
+	players[id] = {"name": pname, "team": team, "weapon": weapon, "active": active, "passive": passive, "kills": 0, "deaths": 0}
 
 
 func _broadcast() -> void:
@@ -717,7 +758,7 @@ func request_team(team: int) -> void:
 
 
 @rpc("any_peer", "call_local", "reliable")
-func request_loadout(weapon: String, addon: String, addon2: String) -> void:
+func request_loadout(weapon: String, active: String, passive: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var id := sender()
@@ -728,10 +769,10 @@ func request_loadout(weapon: String, addon: String, addon2: String) -> void:
 		return
 	if Weapons.DATA.has(weapon):
 		players[id].weapon = weapon
-	if Addons.slot_of(addon) == 0:
-		players[id].addon = addon
-	if Addons.slot_of(addon2) == 1:
-		players[id].addon2 = addon2
+	if Addons.slot_of(active) == 0:
+		players[id].active = active
+	if Addons.slot_of(passive) == 1:
+		players[id].passive = passive
 	if Game.in_match and Game.is_alive(id):
 		Game.hp[id] = Game.max_hp_of(id)  # swapped in the countdown: full health for the new weapon (the bat has 150)
 	_broadcast()

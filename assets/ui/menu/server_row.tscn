@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/server_row.gd" id="e1"]
+
+[node name="ServerRow" type="HBoxContainer"]
+script = ExtResource("e1")
+theme_override_constants/separation = 12
+
+[node name="Host" type="Label" parent="."]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+text_overrun_behavior = 3
+clip_text = true
+
+[node name="Map" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+
+[node name="State" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 0)
+
+[node name="Players" type="Label" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
+
+[node name="Join" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(130, 0)
+text = "Join"

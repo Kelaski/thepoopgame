@@ -10,10 +10,10 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 
 - **One objective, constant action.** Every round is a race to the same spot, then a fight over it. The Tag can change hands many times before the clock runs out.
 - **Momentum movement.** Slides that keep your speed, slide-hops, bunny hops, air strafing, wall runs, wall kicks and mantling, all chaining into each other. Easy to pick up, with a lot of room to master.
-- **Five weapons, eleven addons.** Pick a weapon, a primary addon (like a grappling hook, a blink or a swap) and a secondary addon (like phasing through walls, a parry or seeing enemies through walls).
-- **A new city every match.** Random cities with avenues, side streets and alleys, lined with offices, a mall, a casino, a school, apartments, a park and more, in three sizes. Every building can be explored, from the ground floor to the roof.
-- **Changing time of day.** Matches start in the morning, afternoon, evening or at night, and the sky shifts between rounds.
-- **Make it yours.** Recolour the menus, teams and sky, design your crosshair and holo sight, upload a spray, set your own skybox and bring your own music.
+- **Five weapons, twenty-one addons.** Pick a weapon, an active addon (like a grappling hook, a blink or a shield) and a passive addon (like a double jump, extra health or faster reloads).
+- **A new city every match.** Random cities with avenues and side streets, lined with offices, malls, casinos, schools, gyms, parks and more, in three sizes, or the hand-made Classic map. Every building can be explored, from the ground floor to the roof.
+- **Changing time of day.** Matches start by day, in the afternoon, in the evening or at night, and the sky shifts between rounds.
+- **Make it yours.** Recolour the menus and teams, design your crosshair and holo sight, move your gun on screen, upload a spray and bring your own music.
 - **Play with friends on Steam.** One player hosts a lobby and invites friends, or anyone can join a public lobby. No ports to open.
 
 ## How a round works
@@ -37,12 +37,12 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 | **Assault Rifle** | Mid range | 20 dmg (25 headshot): 5 body shots or 4 headshots kill. 9.5 rounds/s, 20-round magazine, 1.5x holo sight |
 | **Shotgun** | Point blank | 13 pellets of 15 dmg up close, 1 shot/s, 6 shells. Loads one shell every 0.8 s, and firing stops the reload |
 | **Sniper** | Long range | 100 dmg, headshots always kill, pierces a wall and every player in line. One round: it reloads after every shot (2.5 s). Its scope glints when it's aimed at you |
-| **Grenade Launcher** | Area denial | 6 arcing grenades, 2 s between shots, one shell every 1.2 s. They fly at 10 m/s plus your own speed, and explode on hitting anything solid or within 0.5 m of an enemy. 75 damage to enemies, never to you or your team, and the 1.5 m blast launches every player it reaches. Walls stop it |
+| **Grenade Launcher** | Area denial | 6 arcing grenades, 2 s between shots, one shell every 1.2 s. They fly at 25 m/s plus your own speed, and explode on hitting anything solid or within 0.5 m of an enemy. 75 damage to enemies, never to you or your team, and the 2.25 m blast launches every player it reaches. Walls stop it |
 | **Spiked Bat** | Speed | 35 dmg, more the faster you're moving (up to 300). 150 HP and +10% speed while held. A killing swing launches your victim's gun |
 
 ## Addons
 
-You pick one **Active** addon, used with **E**, and one **Passive** addon, which has no key. Every number can be changed in `assets/tuning/addons.tres`.
+You pick one **Active** addon, used with **E**, and one **Passive** addon, which has no key. Every addon's numbers are in its own file in `assets/tuning/addons/`.
 
 ### Active: Mobility
 
@@ -99,7 +99,7 @@ Tag Rush plays fast. Moving forward is always a sprint, and every move keeps you
 - **Slide** while sprinting for a burst of speed. A slide rides up over low things like the planters under trees, keeping its speed. Slides follow the way you're moving, speed up downhill and slow down uphill. The boost comes back every 2 s.
 - **Slide-hop and bunny hop:** jump out of a slide and keep all your speed. Time your next jump as you land to keep it going.
 - **Air strafe:** hold A or D and turn with the mouse to steer and pick up speed in the air.
-- **Wall run** along walls to speed up, then **kick off** to chain into the next wall, a slide or a hop. A run starts when you hold a movement key towards the wall (A or D, say), and lasts while you hold a movement key.
+- **Wall run** along walls to speed up, then **kick off** to chain into the next wall, a slide or a hop. A run starts when you're moving along a wall and holding forward, holding a key towards it, or touching it, and lasts while you hold a movement key.
 - **Mantle** onto ledges, through windows and over rooftop ledges: jump at them and keep holding **Space** while you push into them. You keep most of your speed, and a slide straight after a mantle gets an extra boost.
 - **Bounce pads:** jump into or onto an umbrella or kiosk awning and it launches you twice as high as a jump.
 - **Doors** fly open when you sprint or slide into them.
@@ -107,43 +107,40 @@ Tag Rush plays fast. Moving forward is always a sprint, and every move keeps you
 
 ## The city
 
-- **Three sizes:** Small, Medium and Large, chosen by the host in the lobby.
-- **Random or classic:** a freshly generated city every match, or the hand-made Classic city.
-- **A real street grid:** a wide avenue and side streets meeting at crossroads and T-junctions, and blocks of different sizes. The road running through a junction has zebra crossings and traffic lights; a side road ending there has a stop sign. Buildings line the pavement, some touching like a strip mall and some with narrow alleys between them, and taller buildings stand in the middle of the city. Service lanes and car parks sit behind the buildings.
-- **Rounds move around:** each round both teams start somewhere new, out of each other's sight and about the same distance from the Tag, and the Tag appears in a different spot. Inside a building it can be on any floor, like the 3rd floor of a tower, so look up.
-- **Every building can be explored**, with stairs up to an open roof. Shops, offices, a bank vault, a casino floor, a cinema, a school, apartments, a motel, a warehouse and more, each furnished like the real thing.
-- **Busy streets:** stopped traffic you can slide between, traffic lights and stop signs at the junctions, bus stops, parking meters, bike racks, planters, kiosks and street lamps that light up at night.
-- **Interiors like the real thing:** a bank with teller counters, queue posts and ATMs; offices with a reception desk and meeting tables; a casino with carpet, chandeliers, slots and roulette; a nightclub with a DJ booth and booths; motel rooms with twin beds; school corridors lined with lockers; and more.
-- **Busy rooftops:** air conditioning units and ducts to take cover behind, skylights, antennas, satellite dishes, billboards and roof terraces.
-- **A park** that's different every match: a basketball court, a skate park or a football pitch; a playground, a gazebo or an outdoor gym; a fountain or a statue; picnic umbrellas to bounce off or picnic tables with grills; and always a pond.
-- **Rooftop routes:** tower cranes hang bridges between rooftops (a crane standing in the road is coned off).
-- **Beyond the fence:** the roads run on out of the city past toll plazas (or a closed gate, where a side has more than one road out), towards a distant skyline all around the map.
+- **Four maps:** Classic, or a random city in Small, Medium or Large, chosen by the host in the lobby.
+- **Streets that meet properly:** roads with kerbs and dashes, crossings and stop signs where they join, and bends, not just a grid.
+- **Rounds move around:** each round both teams start somewhere new, out of each other's sight where the map allows and about the same distance from the Tag, and the Tag appears in a different spot. Inside a building it can be on any floor, so look up.
+- **Every building can be explored**, with stairs up to an open roof, and each is furnished for what it is: gyms, casinos, schools, offices, diners, apartments and more.
+- **Parks** with ponds, playgrounds, paths, benches and hedges.
+- **Busy streets and rooftops:** parked cars, lamps that light up at night, water towers, air conditioning units and antennas.
+- **Rooftop routes:** tower cranes hold beams between rooftops.
+- **Beyond the fence:** roads run off across open grass, towards a lit-up city skyline all around the map.
+- **Warm, cartoony light** that shifts between day, afternoon, evening and night.
 - **Windows** are open gaps you can shoot, jump and grapple through.
 
 ## Make it yours
 
-Open **Customization** from the main menu, the lobby or the pause menu:
+Open **Settings** from the main menu, the lobby or the pause menu. As well as controls, keybinds, video, audio and HUD options, it has:
 
-- **Player:** your name (you can also type it on the main menu). Leave it empty to use your Steam name.
-- **Music:** play the Tag Rush Theme, your own playlist, or both. Add songs from your computer (OGG, MP3 and WAV work out of the box; more formats with [ffmpeg](https://ffmpeg.org) installed).
-- **Colours:** recolour the menus, the teams, the Tag and the sky, or pick a preset (Default, Midnight, Neon, Pastel, Desert). Your colours only change your own screen.
+- **View model:** move your gun left, right, up, down, forward and back, with a live preview.
+- **Music:** play the Tag Rush Theme, your own playlist, or both. Add songs from your computer (OGG, MP3 and WAV work out of the box; more formats with [ffmpeg](https://ffmpeg.org) installed). Music plays from the moment you start the game, with controls on the main menu and in the pause menu. Press **M** in a match to open this tab.
+- **Colours:** recolour the menus, the teams and the Tag, or pick a preset (Default, Midnight, Neon, Pastel, Desert). Your colours only change your own screen.
 - **Crosshair:** a full crosshair editor with a live preview and share codes, custom crosshair and sniper scope images, and holo sight reticle options for the AR.
 - **Spray:** pick an image and press **T** in a match to spray it on a wall.
-- **Skybox:** use any 360° panorama as your sky.
 
 ## Playing with friends
 
-Online play runs through **Steam**, so Steam has to be running and signed in. Your name is your Steam name unless you type your own, on the main menu or in Customization. Clear the box to go back to your Steam name.
+Online play runs through **Steam**, so Steam has to be running and signed in. Your name is your Steam name.
 
-- **Host:** click **Host Game**. In the lobby, choose who can join:
-  - **Public:** listed in Join Game for everyone.
+- **Host:** click **Host Lobby**. In the lobby, choose who can join:
+  - **Public:** listed in the Server Browser for everyone.
   - **Friends only:** your Steam friends can join.
   - **Invite only:** only players you invite.
 
-  Press **Invite Friends** to invite people, pick the teams and the map, then press **START MATCH**.
-- **Join:** click **Join Game** and pick a lobby from the list. You can also accept a Steam invite, or right-click a friend in your Steam friends list and choose **Join Game**. That even starts Tag Rush for you if it isn't running.
+  Press **Invite Friends** to invite people, pick the teams and the map, then press **Start match**.
+- **Join:** click **Server Browser** and pick a game from the list. You can also accept a Steam invite, or right-click a friend in your Steam friends list and choose Steam's **Join Game**. That even starts Tag Rush for you if it isn't running.
 - No ports, router settings or firewall prompts. Everything goes through Steam's network, which also keeps your IP address private.
-- Everyone needs the same version of the game. Lobbies on other versions show their version in the list and can't be joined.
+- Everyone needs the same version of the game. Games on other versions show as Other version in the list and can't be joined.
 - **Automatic updates:** when you start the game it checks for a newer version and asks you. **Update** downloads it and restarts into it; **Cancel** keeps playing on the version you have. If the game folder can't be written to (for example under Program Files), it offers the download page instead.
 - **Teammates** have a white outline, so you can see them through walls.
 

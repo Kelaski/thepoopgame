@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="AerodynamicAddon" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/addons/aerodynamic.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Aerodynamic"
+air = 1.6
+strafe = 1.6

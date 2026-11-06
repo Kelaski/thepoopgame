@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+
+
+[node name="SignLettering" type="Label3D"]
+pixel_size = 0.008
+outline_size = 0
+double_sided = false
+

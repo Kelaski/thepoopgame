@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="WeaponStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="LauncherStats" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/data/weapon_stats.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/data/weapons/launcher_stats.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -13,11 +13,11 @@ max_range = 300.0
 kick = 3.0
 mag = 6
 reload_per_round = 1.2
-launch_speed = 10.0
+launch_speed = 25.0
 shooter_speed_scale = 1.0
 grenade_gravity = 9.8
 proximity_radius = 0.5
-blast_radius = 1.5
+blast_radius = 2.25
 knockback_speed = 12.0
-knockback_lift = 4.0
+knockback_lift = 4.48
 max_life = 6.0

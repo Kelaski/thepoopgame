@@ -3,39 +3,34 @@ extends Node
 ##
 ## Optional command-line flags (after "--"):
 ##   --host            host a Steam lobby immediately
-##   --name=NAME       player name
+##   --name=NAME       player name (debug builds only; otherwise it's your Steam name)
 ##   --autostart=N     host starts the match once N players are connected
 ## Debug builds only, for testing two copies on one PC without Steam:
 ##   --host --port=PORT   host a local match     --join=IP[:PORT]   join one
 ## Steam adds "+connect_lobby <id>" when it launches the game from an invite.
 
 # Every screen is a scene in assets/ui (its script holds the behaviour).
-const MAIN_MENU_SCENE := preload("res://assets/ui/main_menu.tscn")
-const JOIN_MENU_SCENE := preload("res://assets/ui/join_menu.tscn")
-const CONNECTING_SCENE := preload("res://assets/ui/connecting.tscn")
-const LOBBY_SCENE := preload("res://assets/ui/lobby.tscn")
-const HUD_SCENE := preload("res://assets/ui/hud.tscn")
-const PAUSE_SCENE := preload("res://assets/ui/pause_menu.tscn")
-const SETTINGS_SCENE := preload("res://assets/ui/settings_menu.tscn")
-const CUSTOMIZE_SCENE := preload("res://assets/ui/customize_hub.tscn")
-const MUSIC_SCENE := preload("res://assets/ui/music_menu.tscn")
-const COLORS_SCENE := preload("res://assets/ui/colors_menu.tscn")
-const CROSSHAIR_SCENE := preload("res://assets/ui/crosshair_editor.tscn")
-const SPRAY_SCENE := preload("res://assets/ui/spray_menu.tscn")
-const SKYBOX_SCENE := preload("res://assets/ui/skybox_menu.tscn")
-const CHAT_SCENE := preload("res://assets/ui/chat_box.tscn")
-const VERSION_SCENE := preload("res://assets/ui/version_label.tscn")
-const LOADING_SCENE := preload("res://assets/ui/loading_label.tscn")
-const UPDATE_SCENE := preload("res://assets/ui/update_screen.tscn")
+const MAIN_MENU_SCENE := preload("res://assets/ui/menu/main_menu.tscn")
+const CONNECTING_SCENE := preload("res://assets/ui/menu/connecting.tscn")
+const LOBBY_SCENE := preload("res://assets/ui/menu/lobby.tscn")
+const HUD_SCENE := preload("res://assets/ui/hud/hud.tscn")
+const PAUSE_SCENE := preload("res://assets/ui/menu/pause_menu.tscn")
+const SETTINGS_SCENE := preload("res://assets/ui/menu/settings_menu.tscn")
+const CHAT_SCENE := preload("res://assets/ui/hud/chat_box.tscn")
+const VERSION_SCENE := preload("res://assets/ui/hud/version_label.tscn")
+const UPDATE_SCENE := preload("res://assets/ui/menu/update_screen.tscn")
 
 var ui_layer: CanvasLayer
 var ui_root: Control
+var menu_root: Control  # menus are laid out for 1920 x 1080 and scaled to the 1600 x 900 canvas
+var _music_started := false
 var screen: Control
 var overlay: Control
 var world: World
 var hud: Hud
 var _autostart := 0
 var _settings_back_to_pause := false
+const MENU_SCALE := 1600.0 / 1920.0
 
 
 func _ready() -> void:
@@ -55,8 +50,14 @@ func _ready() -> void:
 	var chat: ChatBox = CHAT_SCENE.instantiate()
 	chat.name = "Chat"
 	ui_root.add_child(chat)
+	menu_root = Control.new()
+	menu_root.name = "Menus"
+	menu_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu_root.scale = Vector2.ONE * MENU_SCALE
+	ui_root.add_child(menu_root)
+	ui_root.resized.connect(_fit_menus)
+	_fit_menus()
 	_add_version_label()
-	add_child(LOADING_SCENE.instantiate())  # "Loading (XXs)" while the host picks a city
 	Net.joined_ok.connect(_on_joined)
 	Net.join_failed.connect(_on_join_failed)
 	Net.disconnected.connect(_on_disconnected)
@@ -66,6 +67,10 @@ func _ready() -> void:
 	Game.match_ended.connect(_on_match_ended)
 	if not _handle_cmdline():
 		_after_update(show_main_menu.bind(""))
+
+
+func _fit_menus() -> void:
+	menu_root.size = ui_root.size / MENU_SCALE
 
 
 ## Exported builds check for a newer version first (assets/ui/update_screen.tscn),
@@ -98,7 +103,8 @@ func _handle_cmdline() -> bool:
 		elif a.begins_with("--join="):
 			join_addr = a.substr(7)
 		elif a.begins_with("--name="):
-			Settings.s("player_name", a.substr(7), false)
+			if OS.is_debug_build():
+				Net.name_override = a.substr(7)
 		elif a.begins_with("--port="):
 			port = int(a.substr(7))
 		elif a.begins_with("--autostart="):
@@ -140,7 +146,8 @@ func _set_screen(c: Control) -> void:
 		screen.queue_free()
 	screen = c
 	if c:
-		ui_root.add_child(c)
+		c.theme = MenuKit.theme()
+		menu_root.add_child(c)
 	_update_mouse()
 
 
@@ -159,15 +166,6 @@ func show_lobby() -> void:
 	_set_screen(l)
 
 
-## "Join Game": the lobby browser.
-func show_join_menu(message := "") -> void:
-	close_overlay()
-	var j: JoinMenu = JOIN_MENU_SCENE.instantiate()
-	j.main = self
-	j.message = message
-	_set_screen(j)
-
-
 func show_connecting() -> void:
 	var c: Control = CONNECTING_SCENE.instantiate()
 	c.get_node("%CancelButton").pressed.connect(leave_to_menu.bind(""))
@@ -183,7 +181,7 @@ func host_game() -> void:
 		show_main_menu(err)
 
 
-## Join a Steam lobby: from Join Game, an invite, or Steam's friends list. Leaves
+## Join a Steam lobby: from the server browser, an invite, or Steam's friends list. Leaves
 ## whatever we're in first (an invite can arrive mid-match).
 func join_lobby(lobby: int) -> void:
 	_teardown_world()
@@ -234,7 +232,6 @@ func _on_match_started() -> void:
 	hud = HUD_SCENE.instantiate()
 	hud.main = self
 	ui_root.add_child(hud)
-	Sfx.start_music()
 	ui_root.move_child(hud, 0)
 	_update_mouse()
 
@@ -250,7 +247,6 @@ func _on_match_ended() -> void:
 
 
 func _teardown_world() -> void:
-	Sfx.stop_music()
 	if hud:
 		hud.queue_free()
 		hud = null
@@ -269,52 +265,6 @@ func open_pause() -> void:
 	_set_overlay(p)
 
 
-var _back_to_hub := false
-
-
-## Customization screens. from_hub = Back returns to the Customize hub.
-func open_customize(back_to_pause: bool) -> void:
-	_settings_back_to_pause = back_to_pause
-	var h: CustomizeHub = CUSTOMIZE_SCENE.instantiate()
-	h.main = self
-	h.back_to_pause = back_to_pause
-	_set_overlay(h)
-
-
-func open_music(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(MUSIC_SCENE.instantiate(), back_to_pause, from_hub)
-
-
-func open_colors(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(COLORS_SCENE.instantiate(), back_to_pause, from_hub)
-
-
-func open_crosshair(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(CROSSHAIR_SCENE.instantiate(), back_to_pause, from_hub)
-
-
-func open_spray(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(SPRAY_SCENE.instantiate(), back_to_pause, from_hub)
-
-
-func open_skybox(back_to_pause: bool, from_hub := false) -> void:
-	_open_custom(SKYBOX_SCENE.instantiate(), back_to_pause, from_hub)
-
-
-func _open_custom(menu: Control, back_to_pause: bool, from_hub: bool) -> void:
-	_settings_back_to_pause = back_to_pause
-	_back_to_hub = from_hub
-	menu.set("on_back", _custom_back)
-	_set_overlay(menu)
-
-
-func _custom_back() -> void:
-	if _back_to_hub:
-		open_customize(_settings_back_to_pause)
-	else:
-		_settings_back()
-
-
 const COLORS_APPLY_INTERVAL := 0.1
 var _colors_dirty := false
 var _colors_cooldown := 0.0
@@ -327,6 +277,9 @@ func _on_colors_changed() -> void:
 
 
 func _process(delta: float) -> void:
+	if not _music_started and Sfx.songs_ready() and DisplayServer.get_name() != "headless":
+		_music_started = true  # from launch, through menus and matches
+		Sfx.start_music()
 	_colors_cooldown = maxf(0.0, _colors_cooldown - delta)
 	if _colors_dirty and _colors_cooldown <= 0.0:
 		_colors_dirty = false
@@ -341,12 +294,15 @@ func _apply_colors() -> void:
 	if not Game.in_match:
 		Mats.refresh()
 	ui_root.theme = UiKit.make_theme()
+	MenuKit.theme()
+	MenuKit.paint_accents(self)
 
 
-func open_settings(back_to_pause: bool) -> void:
+func open_settings(back_to_pause: bool, tab := "") -> void:
 	_settings_back_to_pause = back_to_pause
 	var s: SettingsMenu = SETTINGS_SCENE.instantiate()
 	s.on_back = _settings_back
+	s.start_tab = tab
 	_set_overlay(s)
 
 
@@ -361,7 +317,8 @@ func _set_overlay(c: Control) -> void:
 	if overlay:
 		overlay.queue_free()
 	overlay = c
-	ui_root.add_child(c)
+	c.theme = MenuKit.theme()
+	menu_root.add_child(c)
 	_update_mouse()
 
 
@@ -370,7 +327,7 @@ func _set_overlay(c: Control) -> void:
 func replace_overlay(old: Control, fresh: Control) -> void:
 	if overlay == old:
 		_set_overlay(fresh)
-	elif overlay is CustomizeHub and overlay.is_ancestor_of(old):
+	elif overlay is SettingsMenu and overlay.is_ancestor_of(old):
 		overlay.replace_tab(old, fresh)
 	else:
 		old.get_parent().add_child(fresh)
@@ -396,7 +353,11 @@ func _update_mouse() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+	if event is InputEventKey and event.is_action_pressed("music_player") and not event.echo and not Game.typing:
+		if Game.in_match and world and overlay == null:
+			open_settings(true, "Music")
+			get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.is_action_pressed("pause") and not event.echo:
 		if Game.in_match and world:
 			if overlay:
 				close_overlay()

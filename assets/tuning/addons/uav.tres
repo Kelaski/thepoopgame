@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UavAddon" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/addons/uav.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "UAV"
+pulses = 5
+pulse_speed = 9.0
+pulse_interval = 1.5
+max_radius = 60.0
+last_linger = 1.5
+cd = 25.0

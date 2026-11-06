@@ -1,39 +1,42 @@
 [gd_scene format=3]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kkiif"]
-cull_mode = 2
+[sub_resource type="StandardMaterial3D" id="r1"]
+albedo_color = Color(1, 0.76, 0.1, 1)
+emission_enabled = true
+emission = Color(1, 0.66, 0.1, 1)
+emission_energy_multiplier = 1.8
+diffuse_mode = 3
+
+[sub_resource type="PrismMesh" id="r2"]
+size = Vector3(0.6, 0.7, 0.14)
+
+[sub_resource type="StandardMaterial3D" id="r3"]
 shading_mode = 0
-albedo_color = Color(1, 0.8235294, 0.24705882, 1)
-
-[sub_resource type="SphereMesh" id="SphereMesh_iq2q1"]
-radius = 0.45
-height = 0.9
-radial_segments = 4
-rings = 2
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tdv0t"]
 transparency = 1
+albedo_color = Color(1, 0.8, 0.2, 0.32)
 cull_mode = 2
-shading_mode = 0
-albedo_color = Color(1, 0.8235294, 0.24705882, 0.25)
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_usrkq"]
-top_radius = 0.25
-bottom_radius = 0.25
-height = 60.0
-radial_segments = 8
-cap_top = false
-cap_bottom = false
+[sub_resource type="CylinderMesh" id="r4"]
+top_radius = 0.28
+bottom_radius = 0.28
+height = 40
+radial_segments = 12
 
-[node name="Tag" type="Node3D" unique_id=676353163]
+[node name="Tag" type="Node3D"]
 
-[node name="Gem" type="MeshInstance3D" parent="." unique_id=1002559397]
+[node name="Mesh" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-material_override = SubResource("StandardMaterial3D_kkiif")
-mesh = SubResource("SphereMesh_iq2q1")
+mesh = SubResource("r2")
+material_override = SubResource("r1")
 
-[node name="Beam" type="MeshInstance3D" parent="." unique_id=1565643176]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 30, 0)
-material_override = SubResource("StandardMaterial3D_tdv0t")
+[node name="Light" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+light_color = Color(1, 0.75, 0.3, 1)
+light_energy = 1.5
+omni_range = 5
+
+[node name="Beacon" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, 20, 0)
+mesh = SubResource("r4")
+material_override = SubResource("r3")
 cast_shadow = 0
-mesh = SubResource("CylinderMesh_usrkq")

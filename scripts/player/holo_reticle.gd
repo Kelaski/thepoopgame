@@ -1,6 +1,6 @@
 class_name HoloReticle
 extends Sprite3D
-## The reticle projected in the AR and SMG holo sights (assets/models/holo_reticle.tscn).
+## The reticle projected in the AR's holo sight (assets/models/holo_reticle.tscn).
 ## Drawn inside the sight's frame, unshaded and bright enough to glow, in the
 ## style, colour, size and brightness from the crosshair editor's Holo Sight
 ## section (holo_style, holo_color, holo_size, holo_brightness).

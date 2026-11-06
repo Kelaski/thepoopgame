@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://ccj4dql72iyuh"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v6tkm"]
 shading_mode = 0
@@ -64,7 +64,7 @@ rings = 1
 [node name="Lamp" type="Node3D" unique_id=2068709364]
 
 [node name="Part0" type="MeshInstance3D" parent="." unique_id=96127619]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, -0.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.3429856, -0.45)
 material_override = SubResource("StandardMaterial3D_v6tkm")
 mesh = SubResource("BoxMesh_v6tkm")
 metadata/glow = true
@@ -83,16 +83,16 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
 shape = SubResource("CylinderShape3D_p1ier")
 
 [node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=874201940]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, -0.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.3429856, -0.45)
 shape = SubResource("BoxShape3D_i36op")
 
 [node name="Detail0" type="MeshInstance3D" parent="." unique_id=1044348140]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.47, -0.22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.4493103, -0.22)
 material_override = SubResource("StandardMaterial3D_kguik")
 mesh = SubResource("BoxMesh_p1ier")
 
 [node name="Detail1" type="MeshInstance3D" parent="." unique_id=1461570460]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.6, -0.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.4429855, -0.45)
 material_override = SubResource("StandardMaterial3D_kguik")
 mesh = SubResource("BoxMesh_i36op")
 

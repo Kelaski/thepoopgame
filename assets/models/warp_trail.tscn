@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+
+[sub_resource type="CylinderMesh" id="r1"]
+top_radius = 0.22
+bottom_radius = 0.08
+height = 1
+radial_segments = 10
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="r2"]
+resource_local_to_scene = true
+shading_mode = 0
+transparency = 1
+cull_mode = 2
+albedo_color = Color(0.55, 0.85, 1, 0.7)
+
+[node name="WarpTrail" type="MeshInstance3D"]
+mesh = SubResource("r1")
+material_override = SubResource("r2")
+cast_shadow = 0
+

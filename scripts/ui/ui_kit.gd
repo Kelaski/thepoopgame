@@ -1,8 +1,8 @@
 class_name UiKit
-## Shared UI theme + small widget helpers. The screens are scenes in assets/ui;
+## The in-game theme (MenuKit adds the menus' look on top) + small widget helpers. The screens are scenes in assets/ui;
 ## these helpers build the parts that are generated at runtime (lists, rows).
 
-# Live palette (customizable in Customize Colours). Call refresh() after changes.
+# Live palette (Settings > Colours). Call refresh() after changes.
 static var BG := Color(0.08, 0.09, 0.11, 0.93)
 static var BG_SOFT := Color(0.12, 0.13, 0.16, 0.95)
 static var ACCENT := Color("ffd23f")
@@ -41,50 +41,14 @@ static func make_theme() -> Theme:
 	var panel := _sb(BG, 12, 18.0)
 	t.set_stylebox("panel", "PanelContainer", panel)
 	t.set_stylebox("panel", "Panel", panel)
-	var bn := _sb(BUTTON, 8, 8.0)
-	var bh := _sb(BUTTON_HOVER, 8, 8.0)
-	var bp := _sb(ACCENT.darkened(0.1), 8, 8.0)
-	var bd := _sb(BUTTON.darkened(0.3), 8, 8.0)
-	var bf := _sb(Color(0, 0, 0, 0), 8, 8.0)
-	bf.border_color = ACCENT
-	bf.set_border_width_all(2)
-	for type in ["Button", "OptionButton"]:
-		t.set_stylebox("normal", type, bn)
-		t.set_stylebox("hover", type, bh)
-		t.set_stylebox("pressed", type, bp)
-		t.set_stylebox("hover_pressed", type, bp)
-		t.set_stylebox("disabled", type, bd)
-		t.set_stylebox("focus", type, bf)
-		t.set_color("font_color", type, TEXT)
-		t.set_color("font_hover_color", type, Color.WHITE)
-		t.set_color("font_pressed_color", type, Color("1a1a1a"))
-		t.set_color("font_hover_pressed_color", type, Color("1a1a1a"))
-		t.set_color("font_focus_color", type, TEXT)
-		t.set_color("font_disabled_color", type, MUTED)
 	var le := _sb(BUTTON.darkened(0.35), 6, 8.0)
+	var focus := _sb(Color(0, 0, 0, 0), 8, 8.0)
+	focus.border_color = ACCENT
+	focus.set_border_width_all(2)
 	t.set_stylebox("normal", "LineEdit", le)
-	t.set_stylebox("focus", "LineEdit", bf)
+	t.set_stylebox("focus", "LineEdit", focus)
 	t.set_color("font_color", "LineEdit", TEXT)
 	t.set_color("font_color", "Label", TEXT)
-	t.set_stylebox("panel", "TabContainer", _sb(BG_SOFT, 8, 14.0))
-	t.set_stylebox("tab_selected", "TabContainer", _sb(BUTTON_HOVER, 6, 8.0))
-	t.set_stylebox("tab_unselected", "TabContainer", _sb(BUTTON.darkened(0.2), 6, 8.0))
-	t.set_stylebox("tab_hovered", "TabContainer", _sb(BUTTON, 6, 8.0))
-	t.set_color("font_color", "CheckButton", TEXT)
-	t.set_color("font_color", "CheckBox", TEXT)
-	t.set_stylebox("panel", "ItemList", _sb(BG_SOFT, 6, 6.0))
-	t.set_color("font_selected_color", "TabContainer", ACCENT)
-	t.set_color("font_unselected_color", "TabContainer", TEXT)
-	# Dropdown lists: fully opaque with a border, so the options never blend into
-	# the menu (or the match) behind them.
-	var pop := _sb(Color(BG_SOFT, 1.0).darkened(0.15), 6, 6.0)
-	pop.set_border_width_all(1)
-	pop.border_color = Color(ACCENT, 0.6)
-	t.set_stylebox("panel", "PopupMenu", pop)
-	t.set_stylebox("hover", "PopupMenu", _sb(Color(ACCENT, 0.35), 4, 4.0))
-	t.set_color("font_color", "PopupMenu", TEXT)
-	t.set_color("font_hover_color", "PopupMenu", Color.WHITE)
-	t.set_font_size("font_size", "PopupMenu", 18)
 	# Type variations used by the scenes in assets/ui (Theme Type Variation in the
 	# Inspector), so palette changes recolour every screen.
 	for v: Array in [["TitleLabel", ACCENT], ["AccentLabel", ACCENT], ["MutedLabel", MUTED]]:
@@ -97,10 +61,6 @@ static func make_theme() -> Theme:
 		t.set_color("font_color", v[0], v[1])
 		t.set_constant("outline_size", v[0], 6)
 		t.set_color("font_outline_color", v[0], Color(0, 0, 0, 0.85))
-	t.set_type_variation("MenuBackground", "Panel")
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = MENU_BG
-	t.set_stylebox("panel", "MenuBackground", bg)
 	return t
 
 
@@ -131,80 +91,9 @@ static func button(text: String, cb: Callable, min_w := 240.0) -> Button:
 	return b
 
 
-static func vbox(sep := 10) -> VBoxContainer:
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", sep)
-	return v
-
-
 static func hbox(sep := 10) -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", sep)
-	return h
-
-
-## Full-screen centred panel; returns the VBox to fill.
-static func centered_panel(parent: Control, min_size := Vector2(480, 0)) -> VBoxContainer:
-	var cc := CenterContainer.new()
-	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	parent.add_child(cc)
-	var pc := PanelContainer.new()
-	pc.custom_minimum_size = min_size
-	cc.add_child(pc)
-	var v := vbox(12)
-	pc.add_child(v)
-	return v
-
-
-static func slider_row(text: String, min_v: float, max_v: float, step: float, value: float, cb: Callable, fmt := "%.2f") -> HBoxContainer:
-	var h := hbox(12)
-	var l := label(text)
-	l.custom_minimum_size.x = 260
-	h.add_child(l)
-	var s := HSlider.new()
-	s.min_value = min_v
-	s.max_value = max_v
-	s.step = step
-	s.value = value
-	s.custom_minimum_size = Vector2(260, 28)
-	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(s)
-	var val := label(fmt % value, 18, ACCENT)
-	val.custom_minimum_size.x = 70
-	h.add_child(val)
-	s.value_changed.connect(func(v: float): _on_slider(v, val, cb, fmt))
-	return h
-
-
-static func _on_slider(v: float, val: Label, cb: Callable, fmt: String) -> void:
-	val.text = fmt % v
-	cb.call(v)
-
-
-static func check_row(text: String, value: bool, cb: Callable) -> HBoxContainer:
-	var h := hbox(12)
-	var l := label(text)
-	l.custom_minimum_size.x = 260
-	h.add_child(l)
-	var c := CheckButton.new()
-	c.button_pressed = value
-	c.toggled.connect(cb)
-	h.add_child(c)
-	return h
-
-
-static func option_row(text: String, items: Array, selected: int, cb: Callable) -> HBoxContainer:
-	var h := hbox(12)
-	var l := label(text)
-	l.custom_minimum_size.x = 260
-	h.add_child(l)
-	var o := OptionButton.new()
-	for it in items:
-		o.add_item(str(it))
-	o.selected = selected
-	o.custom_minimum_size.x = 200
-	o.item_selected.connect(cb)
-	h.add_child(o)
 	return h
 
 

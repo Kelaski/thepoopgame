@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/setting_option.gd" id="1_k7c2a"]
+[ext_resource type="Script" path="res://scripts/ui/rows/setting_option.gd" id="1_k7c2a"]
 
 [node name="SettingOption" type="HBoxContainer" unique_id=329863769]
 theme_override_constants/separation = 12

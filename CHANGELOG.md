@@ -7,6 +7,49 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.26.0: The Big Beautiful Bartdate
+
+### Added
+- **New menus:** a new main menu, server browser (with map and match state), lobby with team slots and its own chat, pause menu and loadout dropdowns. Settings now holds everything in one place, with Music, Colours, Crosshair and Spray as tabs.
+- **New maps:** Classic, or a random city in Small, Medium or Large, with new buildings, parks and props.
+- **Warm, cartoony lighting** with a new sky, a lit-up city skyline and open grass beyond the fence. Quality presets, ambient occlusion, ink outlines (off by default), window modes and an aiming field of view offset are in Settings > Video.
+- **View model settings:** move your gun on screen, with a live preview.
+- **A music player on the main menu,** and music from the moment you start the game, through menus and matches. Press M in a match to open the Music tab.
+- **Warp leaves a trail** from where you were to where you went, alongside the afterimage.
+- **/kick and /ban** in chat, for the host. A ban lasts until the host closes the lobby.
+- **Reload ring on every gun:** the ring around the crosshair shows reloads and re-chambering on all of them.
+- **New Tag:** a glowing Tag with a light of its own, worn on the runner's back like a backpack.
+- **New pings:** a ring and distance marker, shared with your team. Three pings in 4 s puts you on a 15 s cooldown.
+
+### Changed
+- **Wall running** starts again when you hold forward, hold a key towards the wall, or touch it.
+- **Wall jumps:** kick off the same wall again and again without touching the floor.
+- **Grenade Launcher:** grenades fly at 25 m/s, the blast reaches 2.25 m and shows exactly what it hits, and it launches players 12% higher.
+- **Shorter descriptions** on the loadout screen.
+- **Lobby:** Start match and Shuffle teams come first, and every weapon and addon is laid out under its category, and random maps are labelled Procedural.
+- **Tower cranes** are back to the old model.
+- **Street trees** have no planter box, and small street signs have no collision.
+- **Everything starts on the top graphics settings,** and nothing fades out at a distance any more. Existing players are moved up once; settings can still be lowered.
+- **Your name is always your Steam name.** The name box is gone, and the host reads names from Steam.
+
+### Fixed
+- **Grenades:** they no longer pass through a wall you're up against, or fly on without exploding, and they now explode on umbrellas and awnings.
+- **Cooldown on Kill** no longer lets the host's cooldown check fall out of step with yours, which could refuse an addon that showed as ready.
+- **Between rounds,** grenades and being stuck in a wall with Phantom no longer do damage.
+- **Joining a match in progress:** doors that are already open now show as open.
+- **Swapping addons** no longer resets a Support addon's cooldown.
+- **After respawning,** UAV pulses and a Magnet pull from your last life no longer carry on.
+- **Second matches:** a map error that appeared when starting another match in the same session is gone.
+- **Big lobbies:** with more than 8 players, position updates go out at half the rate, so the host's upload holds up.
+
+### Tidied
+- **Every addon and weapon has its own file** in `assets/tuning/`: open one in Godot to change its numbers. Addons also keep what they do in `scripts/addons/`.
+- **Clearer code:** the player and game scripts are split by job, and folders and names are consistent. Test files no longer ship in releases.
+
+### Removed
+- All old maps and the host picking the best of many cities (with its Loading label): skate parks, toll plazas, gates and the old junction rules went with them.
+- Custom skyboxes and sky colours.
+
 ## 0.25.0
 
 ### Added

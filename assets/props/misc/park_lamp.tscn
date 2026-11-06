@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+
+[sub_resource type="StandardMaterial3D" id="r1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.27, 0.29, 0.34, 1)
+roughness = 0.85
+
+[sub_resource type="CylinderMesh" id="r2"]
+top_radius = 0.05
+bottom_radius = 0.05
+height = 3
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="r3"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(1, 0.9, 0.66, 1)
+roughness = 0.85
+
+[sub_resource type="SphereMesh" id="r4"]
+radius = 0.5
+height = 1
+radial_segments = 12
+rings = 6
+
+[node name="ParkLamp" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_mask = 0
+
+[node name="MetalDark1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, 1.5, 0)
+mesh = SubResource("r2")
+material_override = SubResource("r1")
+
+[node name="Lamp2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.38000, 0.00000, 0.00000, 0.00000, 0.38000, 0.00000, 0.00000, 0.00000, 0.38000, 0, 3.18, 0)
+mesh = SubResource("r4")
+material_override = SubResource("r3")
+metadata/glow = true

@@ -8,66 +8,37 @@ const TRACER_LIFE := 0.07
 
 const PLAYER_SCENE := preload("res://assets/models/player.tscn")
 const TAG_SCENE := preload("res://assets/models/tag.tscn")
+const TAG_MESH_HEIGHT := 1.0   # the Tag's mesh, above its scene's origin
+const TAG_BACK_HEIGHT := 1.25  # worn: this high above the runner's feet...
+const TAG_BACK_OFFSET := 0.32  # ...and this far behind them
+const TAG_LIGHT_ENERGY := 1.5
 const TAG_HIGHLIGHT := preload("res://assets/materials/tag_highlight.tres")
 const SPRAY_SCENE := preload("res://assets/models/spray_decal.tscn")
-const PING_SCENE := preload("res://assets/models/ping_marker.tscn")
-## Ping kinds: [title shown on the marker, lifetime in seconds]
-const PING_KINDS := {
-	"spot": ["", 6.0],
-	"enemy": ["ENEMY", 4.5],
-	"danger": ["DANGER", 6.0],
-	"tag": ["TAG", 6.0],
-}
-const PING_DANGER := Color("ff4a3a")
-const PING_SPOT := Color("ffe14a")   # a plain (single tap) ping is yellow
-const PINGS_PER_PLAYER := 3     # older pings from the same player disappear
-const PING_BURST := 5           # at most this many pings...
-const PING_BURST_TIME := 3.0    # ...per this many seconds (server-side spam limit)
+const PING_SECONDS := 7.0      # how long a ping shows
+const PING_BURST := 3           # this many pings...
+const PING_BURST_TIME := 4.0    # ...within this many seconds (server side)...
+const PING_COOLDOWN := 15.0     # ...puts you on this cooldown
 const DOOR_REACH := 9.0         # a remote player must be this close to move a door
 const MAX_SHOT_TRACERS := 16    # shotgun pellets are 13
 const MAX_PROJECTILES := 12
 const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # bullet tracers + impacts
 const GRENADE_SCENE := preload("res://assets/models/grenade.tscn")
+const WARP_TRAIL_SCENE := preload("res://assets/models/warp_trail.tscn")
 const EXPLOSION_SCENE := preload("res://assets/models/explosion.tscn")
 const UAV_RING_SEGMENTS := 48
-## Times of day (same order as Game.TIMES_OF_DAY). top / horizon tint the sky
-## colours from Customization; sky scales the sky's brightness; night turns on the
-## street lamps' lights (0 = off, 1 = full).
-const TIMES := [
-	{"pitch": -16.0, "yaw": -115.0, "sun": Color("ffd2a0"), "energy": 0.95, "ambient": 0.6,
-		"top": Color(0.85, 0.9, 1.0), "horizon": Color(1.12, 0.95, 0.85), "sky": 0.85, "night": 0.0},
-	{"pitch": -52.0, "yaw": -38.0, "sun": Color("fff1dc"), "energy": 1.25, "ambient": 0.75,
-		"top": Color(1, 1, 1), "horizon": Color(1, 1, 1), "sky": 1.0, "night": 0.0},
-	{"pitch": -9.0, "yaw": 65.0, "sun": Color("ff9a5a"), "energy": 0.8, "ambient": 0.5,
-		"top": Color(0.62, 0.55, 0.85), "horizon": Color(1.3, 0.78, 0.55), "sky": 0.7, "night": 0.6},
-	{"pitch": -40.0, "yaw": 150.0, "sun": Color("9fb2ff"), "energy": 0.3, "ambient": 0.32,
-		"top": Color(0.1, 0.12, 0.26), "horizon": Color(0.2, 0.22, 0.36), "sky": 0.3, "night": 1.0},
-]
+const SKY_ENV_SCENE := preload("res://assets/world/sky_env.tscn")
 const TOD_BLEND_TIME := 10.0  # seconds to blend into a new time of day
-const GROUND_BOTTOM := Color("6f7f5a")
-## Shadow quality (Settings > Video): [splits, max distance in m, shadow map size].
-## More splits keep near shadows sharp while the far edge reaches further out.
-const SHADOW_QUALITY := [
-	[2, 70.0, 2048],    # Low
-	[4, 130.0, 4096],   # Medium
-	[4, 220.0, 4096],   # High
-	[4, 320.0, 8192],   # Ultra
-]
-var builder: MapBuilder
-var pings: Array = []   # [owner id, kind, PingMarker] for your team, oldest first
+var builder: Level
+var pings: Array = []   # [{pos, until}] from your team (the HUD and minimap draw them)
+var _ping_locks := {}   # server: id -> when their ping cooldown ends
 var _ping_times := {}   # server: id -> recent ping times
 var players := {}  # peer id -> Player
 var players_node: Node3D
-var env: WorldEnvironment
-var sun: DirectionalLight3D
-var _proc_sky: ProceduralSkyMaterial
-var _pano_sky: PanoramaSkyMaterial
-var _tod := {}       # current (blended) time-of-day values
-var _tod_from := {}
-var _tod_t := 1.0     # 0..1 through the blend
+var sky_env: SkyEnv
 
 var tag_node: Node3D
 var tag_beam: MeshInstance3D
+var tag_light: OmniLight3D
 var tag_gem: MeshInstance3D
 var _tag_highlit := false  # the countdown's see-through-walls highlight is on
 
@@ -86,9 +57,12 @@ var _hb_timer := 0.0
 
 func _ready() -> void:
 	name = "World"
-	_build_environment()
-	builder = MapBuilder.new()
+	sky_env = SKY_ENV_SCENE.instantiate()
+	add_child(sky_env)
+	builder = Level.new()
 	builder.build(self, Game.map_size, Game.map_seed)
+	builder.settle_objectives()
+	sky_env.blend_to(clampi(Game.time_of_day, 0, SkyEnv.TIMES.size() - 1), 0.0)  # with the street lights and skyline in place
 	players_node = Node3D.new()
 	players_node.name = "Players"
 	add_child(players_node)
@@ -97,12 +71,10 @@ func _ready() -> void:
 	Game.world = self
 	Net.roster_changed.connect(sync_players)
 	Settings.changed.connect(_apply_settings)
-	Settings.colors_changed.connect(_apply_colors)
-	Game.time_of_day_changed.connect(_on_time_of_day_changed)
+	Game.time_of_day_changed.connect(func() -> void: sky_env.blend_to(Game.time_of_day, TOD_BLEND_TIME))
 	Net.spray_updated.connect(_on_spray_updated)
 	sync_players()
 	_apply_settings()
-	_apply_colors()
 
 
 func _exit_tree() -> void:
@@ -112,161 +84,18 @@ func _exit_tree() -> void:
 
 # ================================================================ setup
 
-func _build_environment() -> void:
-	env = WorldEnvironment.new()
-	var e := Environment.new()
-	var sky := Sky.new()
-	var sm := ProceduralSkyMaterial.new()
-	sm.ground_bottom_color = Color("6f7f5a")
-	sm.sun_angle_max = 20.0
-	sky.sky_material = sm
-	_proc_sky = sm
-	_pano_sky = PanoramaSkyMaterial.new()
-	_pano_sky.filter = true
-	sky.radiance_size = Sky.RADIANCE_SIZE_32
-	e.background_mode = Environment.BG_SKY
-	e.sky = sky
-	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	e.ambient_light_energy = 0.75
-	e.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
-	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	e.tonemap_white = 6.0
-	e.fog_enabled = true
-
-	e.fog_density = 0.0025
-	e.fog_aerial_perspective = 0.3
-	e.adjustment_enabled = true
-	# Bloom only catches the over-bright glowing parts (bulbs, screens, neon).
-	e.glow_intensity = 0.7
-	e.glow_bloom = 0.0
-	e.glow_hdr_threshold = 2.0
-	e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
-	env.environment = e
-	add_child(env)
-	sun = DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-52.0, -38.0, 0.0)
-	sun.light_energy = 1.25
-	sun.light_color = Color("fff1dc")
-	sun.directional_shadow_blend_splits = true
-	sun.directional_shadow_fade_start = 0.9
-	sun.shadow_blur = 1.0
-	add_child(sun)
-	_tod = TIMES[clampi(Game.time_of_day, 0, TIMES.size() - 1)].duplicate()
-	_tod_from = _tod.duplicate()
-	_apply_time_of_day()
-
-
-## Sky and fog colours follow the colour customization live.
-func _apply_colors() -> void:
-	var top := _tinted(Palette.get_color("sky_top"), _tod.get("top", Color.WHITE))
-	var horizon := _tinted(Palette.get_color("sky_horizon"), _tod.get("horizon", Color.WHITE))
-	var sky: float = _tod.get("sky", 1.0)
-	if _proc_sky:
-		_proc_sky.sky_top_color = top
-		_proc_sky.sky_horizon_color = horizon
-		_proc_sky.ground_horizon_color = horizon
-		_proc_sky.ground_bottom_color = GROUND_BOTTOM * sky
-		_proc_sky.energy_multiplier = sky
-	if _pano_sky:
-		_pano_sky.energy_multiplier = float(Settings.g("sky_energy")) * sky
-	if env and env.environment:
-		env.environment.fog_light_color = horizon
-
-
-static func _tinted(c: Color, t: Color) -> Color:
-	return Color(c.r * t.r, c.g * t.g, c.b * t.b)
-
-
-func _on_time_of_day_changed() -> void:
-	_tod_from = _tod.duplicate()
-	_tod_t = 0.0
-
-
-func _update_time_of_day(delta: float) -> void:
-	if _tod_t >= 1.0:
-		return
-	_tod_t = minf(1.0, _tod_t + delta / TOD_BLEND_TIME)
-	var k := smoothstep(0.0, 1.0, _tod_t)
-	var target: Dictionary = TIMES[clampi(Game.time_of_day, 0, TIMES.size() - 1)]
-	for key: String in target:
-		var a: Variant = _tod_from[key]
-		var b: Variant = target[key]
-		if key == "yaw":
-			_tod[key] = rad_to_deg(lerp_angle(deg_to_rad(a), deg_to_rad(b), k))
-		else:
-			_tod[key] = lerp(a, b, k)
-	_apply_time_of_day()
-
-
-## Sun, ambient light, sky and street lamps for the current blended time of day.
-func _apply_time_of_day() -> void:
-	if sun:
-		sun.rotation_degrees = Vector3(_tod.pitch, _tod.yaw, 0.0)
-		sun.light_color = _tod.sun
-		sun.light_energy = _tod.energy
-	if env and env.environment:
-		env.environment.ambient_light_energy = _tod.ambient
-	_apply_colors()
-	_apply_night_lights()
-
-## Uses the player's custom skybox (an equirectangular panorama) when enabled and
-## present, otherwise the generated sky. Updates live from the Skybox menu.
-func _apply_sky() -> void:
-	if env == null or env.environment == null or env.environment.sky == null:
-		return
-	var tex: Texture2D = null
-	if Settings.g("sky_custom"):
-		tex = UserImages.texture(UserImages.SKYBOX)
-	var e := env.environment
-	if tex:
-		_pano_sky.panorama = tex
-		_pano_sky.energy_multiplier = float(Settings.g("sky_energy"))
-		e.sky.sky_material = _pano_sky
-		_pano_sky.energy_multiplier *= float(_tod.get("sky", 1.0))
-		e.sky_rotation = Vector3(0.0, deg_to_rad(float(Settings.g("sky_rotation"))), 0.0)
-	else:
-		e.sky.sky_material = _proc_sky
-		e.sky_rotation = Vector3.ZERO
-
-
 func _apply_settings() -> void:
-	_apply_sky()
-	if env and env.environment:
-		env.environment.adjustment_brightness = float(Settings.g("brightness"))
-		env.environment.glow_enabled = bool(Settings.g("bloom"))
-	if sun:
-		sun.shadow_enabled = bool(Settings.g("shadows"))
-		var sq: Array = SHADOW_QUALITY[clampi(int(Settings.g("shadow_quality")), 0, SHADOW_QUALITY.size() - 1)]
-		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if sq[0] == 4 else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-		sun.directional_shadow_max_distance = sq[1]
-		RenderingServer.directional_shadow_atlas_set_size(sq[2], true)
 	_apply_lights()
 
 
-## Interior lights: Off hides them, Low keeps every other lamp lit with a shorter
-## reach, High lights them all. Lights fade out with distance either way.
+## Interior lights: Off hides them, Low keeps every other lamp lit, High lights them all.
 func _apply_lights() -> void:
 	if builder == null:
 		return
 	var q := int(Settings.g("interior_lights"))
 	for i in builder.lights.size():
-		var l: OmniLight3D = builder.lights[i]
-		l.visible = q == 2 or (q == 1 and i % 2 == 0)
-		l.distance_fade_begin = 60.0 if q == 2 else 30.0
-	_apply_night_lights()
+		builder.lights[i].visible = q == 2 or (q == 1 and i % 2 == 0)
 
-
-## Street lamps light up in the evening and at night (they follow the Interior
-## lights setting too: Off turns them off, Low keeps every other one).
-func _apply_night_lights() -> void:
-	if builder == null:
-		return
-	var q := int(Settings.g("interior_lights"))
-	var night: float = _tod.get("night", 0.0)
-	for i in builder.night_lights.size():
-		var l: OmniLight3D = builder.night_lights[i]
-		l.visible = night > 0.02 and (q == 2 or (q == 1 and i % 2 == 0))
-		l.light_energy = float(l.get_meta("energy", 1.0)) * night
 
 ## The Tag (assets/models/tag.tscn): Gem and Beam, tinted with the
 ## Tag colour (which players can customize) at load.
@@ -274,10 +103,18 @@ func _build_tag() -> void:
 	tag_node = TAG_SCENE.instantiate()
 	tag_node.name = "Tag"
 	add_child(tag_node)
-	tag_gem = tag_node.get_node("Gem")
-	tag_beam = tag_node.get_node("Beam")
-	tag_gem.material_override = Mats.glow(Mats.TAG_COLOR)
-	tag_beam.material_override = Mats.glow(Mats.TAG_COLOR, 0.25)
+	tag_gem = tag_node.get_node("Mesh")
+	tag_beam = tag_node.get_node("Beacon")
+	tag_light = tag_node.get_node("Light")
+	# The Tag's colour can be customized: the glow and the beacon follow it.
+	var gem_mat: StandardMaterial3D = tag_gem.material_override.duplicate()
+	gem_mat.albedo_color = Mats.TAG_COLOR
+	gem_mat.emission = Mats.TAG_COLOR
+	tag_gem.material_override = gem_mat
+	var beacon_mat: StandardMaterial3D = tag_beam.material_override.duplicate()
+	beacon_mat.albedo_color = Color(Mats.TAG_COLOR, beacon_mat.albedo_color.a)
+	tag_beam.material_override = beacon_mat
+	tag_light.light_color = Mats.TAG_COLOR
 	tag_node.visible = false
 
 
@@ -315,8 +152,7 @@ func local_player() -> Player:
 
 
 func on_round_begin(_obj: int) -> void:
-	for p in pings.duplicate():
-		_remove_ping(p)
+	pings.clear()
 	for p in _projectiles:
 		p.node.queue_free()
 	_projectiles.clear()
@@ -329,9 +165,12 @@ func on_round_begin(_obj: int) -> void:
 
 
 func update_tag() -> void:
-	var show_tag: bool = Game.holder == 0 and Game.objective >= 0 and Game.phase in [Game.Phase.PREROUND, Game.Phase.RUSH, Game.Phase.DROPPED]
-	tag_node.visible = show_tag
-	if show_tag:
+	var on_ground: bool = Game.holder == 0 and Game.objective >= 0 and Game.phase in [Game.Phase.PREROUND, Game.Phase.RUSH, Game.Phase.DROPPED]
+	var carrier: Player = players.get(Game.holder)
+	tag_node.visible = on_ground or (carrier != null and carrier.alive)
+	if carrier:
+		tag_node.global_position = carrier.global_position + Vector3.UP * (TAG_BACK_HEIGHT - TAG_MESH_HEIGHT) + carrier.global_basis.z * TAG_BACK_OFFSET
+	elif on_ground:
 		tag_node.global_position = Game.tag_pos
 
 
@@ -498,6 +337,21 @@ func door_rpc(idx: int, target: float, fast: bool) -> void:
 	Sfx.play_at("door", d.global_position + Vector3(0, 1.2, 0), -2.0 if fast else -8.0, 40.0, 0.8 if fast else 1.0)
 
 
+## [door index, angle] of every open door, for someone joining mid-match.
+func open_doors() -> Array:
+	var out := []
+	for d: Door in builder.doors:
+		if d.is_open():
+			out.append([d.idx, d.target])
+	return out
+
+
+func apply_open_doors(doors: Array) -> void:
+	for pair: Array in doors:
+		if int(pair[0]) >= 0 and int(pair[0]) < builder.doors.size():
+			builder.doors[int(pair[0])].set_target(clampf(float(pair[1]), -Door.OPEN_ANGLE, Door.OPEN_ANGLE), true)
+
+
 ## Sent with Net.to_all.
 func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
 	# Only real weapons, a handful of tracers, from where the shooter actually is.
@@ -574,7 +428,6 @@ func _fx_projectile(owner_id: int, start: Vector3, vel: Vector3, victim: int) ->
 # ================================================================ per-frame
 
 func _process(delta: float) -> void:
-	_update_time_of_day(delta)
 	_update_tag_visual(delta)
 	_update_projectiles(delta)
 	_update_grenades(delta)
@@ -594,7 +447,7 @@ func add_grenade(gid: int, shooter: int, start: Vector3, vel: Vector3) -> void:
 
 func _update_grenades(delta: float) -> void:
 	var host := multiplayer.is_server()
-	var stats: WeaponStats = Weapons.DATA.gl
+	var stats: LauncherStats = Weapons.DATA.gl
 	var space := get_world_3d().direct_space_state
 	for gid: int in _grenades.keys():
 		var g: Dictionary = _grenades[gid]
@@ -602,7 +455,10 @@ func _update_grenades(delta: float) -> void:
 		var old: Vector3 = g.pos
 		g.vel += Vector3.DOWN * stats.grenade_gravity * delta
 		var nxt: Vector3 = old + g.vel * delta
-		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(old, nxt, MapBuilder.MASK_WORLD))
+		# Inside something counts as a hit too: a ray starting there would otherwise see nothing and fly on through.
+		var ray := PhysicsRayQueryParameters3D.create(old, nxt, MapBuilder.MASK_WORLD | MapBuilder.L_BOUNCE)
+		ray.hit_from_inside = true
+		var hit := space.intersect_ray(ray)
 		if not hit.is_empty():
 			nxt = hit.position + hit.normal * 0.1  # just off the surface, so walls don't block its own blast
 			g.vel = Vector3.ZERO
@@ -619,7 +475,7 @@ func _enemy_near_grenade(shooter: int, pos: Vector3, radius: float) -> bool:
 	var team := Net.team_of(shooter)
 	for p: Player in players.values():
 		if p.alive and p.team != team:
-			var c: Vector3 = p.global_position + Vector3(0, clampf(pos.y - p.global_position.y, Player.RADIUS, Player.STAND_H - Player.RADIUS), 0)
+			var c: Vector3 = p.body_point_near(pos)
 			if c.distance_to(pos) - Player.RADIUS <= radius:
 				return true
 	return false
@@ -636,9 +492,9 @@ func grenade_blast(gid: int, pos: Vector3) -> void:
 	fx.global_position = pos
 	var size: float = Weapons.DATA.gl.blast_radius
 	var t := fx.create_tween()
-	t.tween_property(fx, "scale", Vector3.ONE * size, 0.12).from(Vector3.ONE * size * 0.3)
-	t.tween_property(fx, "scale", Vector3.ONE * size * 1.1, 0.2)
-	t.parallel().tween_method(func(a: float) -> void: _fade_fx(fx, a), 0.0, 1.0, 0.2)
+	# Grows to the blast's exact reach and stays there: a player it touches is a player it hit.
+	t.tween_property(fx, "scale", Vector3.ONE * size, 0.08).from(Vector3.ONE * size * 0.3)
+	t.tween_method(func(a: float) -> void: _fade_fx(fx, a), 0.0, 1.0, 0.25)
 	t.tween_callback(fx.queue_free)
 
 
@@ -655,13 +511,30 @@ func add_afterimage(p: Player) -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Addons.T.warp_afterimage_color
+	mat.albedo_color = Addons.WARP.afterimage_color
 	add_child(copy)
 	copy.global_transform = p.body_root.global_transform
 	_style_copy(copy, mat, null)
 	var t := copy.create_tween()
-	t.tween_property(mat, "albedo_color:a", 0.0, Addons.T.warp_afterimage_time)
+	t.tween_property(mat, "albedo_color:a", 0.0, Addons.WARP.afterimage_time)
 	t.tween_callback(copy.queue_free)
+
+
+## Warp's trail: a streak from where the warper was to where they went.
+func add_warp_trail(from: Vector3, to: Vector3) -> void:
+	var length := from.distance_to(to)
+	if length < 0.5:
+		return
+	var trail: MeshInstance3D = WARP_TRAIL_SCENE.instantiate()
+	add_child(trail)
+	var along := Basis.looking_at(to - from) * Basis(Vector3.RIGHT, PI * 0.5)
+	trail.global_transform = Transform3D(along, (from + to) * 0.5 + Vector3.UP).scaled_local(Vector3(1, length, 1))
+	var mat: StandardMaterial3D = trail.material_override.duplicate()  # each trail fades on its own
+	mat.albedo_color = Addons.WARP.afterimage_color
+	trail.material_override = mat
+	var t := trail.create_tween()
+	t.tween_property(mat, "albedo_color:a", 0.0, Addons.WARP.afterimage_time)
+	t.tween_callback(trail.queue_free)
 
 
 func _style_copy(n: Node, override_mat: Material, overlay: Material) -> void:
@@ -679,10 +552,10 @@ func _style_copy(n: Node, override_mat: Material, overlay: Material) -> void:
 func uav_pulse(origin: Vector3, last: bool) -> void:
 	var p := _remote_sender() if _is_remote_call() else local_player()
 	var lp := local_player()
-	if p == null or lp == null or p.team != lp.team or p.addon != "uav" or not p.alive or not origin.is_finite():
+	if p == null or lp == null or p.team != lp.team or p.active != "uav" or not p.alive or not origin.is_finite():
 		return
 	var now := Time.get_ticks_msec() / 1000.0
-	if now - float(_uav_pulse_at.get(p.peer_id, -100.0)) < Addons.T.uav_pulse_interval * 0.5:
+	if now - float(_uav_pulse_at.get(p.peer_id, -100.0)) < Addons.UAV.pulse_interval * 0.5:
 		return  # faster than a real UAV pulses
 	_uav_pulse_at[p.peer_id] = now
 	_clear_uav_stills()  # outlines last until the next pulse is sent
@@ -695,7 +568,7 @@ func _update_uav(delta: float) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
 	for i in range(_uav_pulses.size() - 1, -1, -1):
 		var pulse: Dictionary = _uav_pulses[i]
-		pulse.r += Addons.T.uav_pulse_speed * delta
+		pulse.r += Addons.UAV.pulse_speed * delta
 		for id: int in players:
 			var e: Player = players[id]
 			if lp == null or e.team == lp.team or not e.alive or pulse.done.has(id):
@@ -704,7 +577,7 @@ func _update_uav(delta: float) -> void:
 			if Vector2(d.x, d.z).length() <= pulse.r:
 				pulse.done[id] = true
 				_uav_reveal(e, pulse.last)
-		if pulse.r >= Addons.T.uav_max_radius:
+		if pulse.r >= Addons.UAV.max_radius:
 			_uav_pulses.remove_at(i)
 	for id: int in _uav_stills.keys():
 		var until: float = _uav_stills[id].until
@@ -720,7 +593,7 @@ func _uav_reveal(e: Player, last: bool) -> void:
 	add_child(copy)
 	copy.global_transform = e.body_root.global_transform
 	_style_copy(copy, null, Player.SCAN_OUTLINE)
-	var until: float = Time.get_ticks_msec() / 1000.0 + Addons.T.uav_last_linger if last else -1.0
+	var until: float = Time.get_ticks_msec() / 1000.0 + Addons.UAV.last_linger if last else -1.0
 	_uav_stills[e.peer_id] = {"node": copy, "pos": e.global_position, "until": until}
 
 
@@ -747,9 +620,23 @@ func _update_tag_visual(delta: float) -> void:
 			mat = TAG_HIGHLIGHT.duplicate()
 			(mat as StandardMaterial3D).albedo_color = Color(Mats.TAG_COLOR, 0.8)
 		tag_gem.material_overlay = mat
-	if tag_node.visible:
+	if not tag_node.visible:
+		return
+	var carrier: Player = players.get(Game.holder)
+	if carrier:
+		# Worn on the back like a backpack (the wearer doesn't see it), fading with a Hider.
+		tag_gem.visible = not carrier.is_local
+		tag_gem.position.y = TAG_MESH_HEIGHT
+		tag_gem.global_rotation = carrier.global_rotation
+		tag_gem.transparency = carrier._body_alpha
+		tag_light.light_energy = TAG_LIGHT_ENERGY * (1.0 - carrier._body_alpha)
+		tag_beam.visible = false
+	else:
+		tag_gem.visible = true
 		tag_gem.rotation.y += delta * 2.0
-		tag_gem.position.y = 1.0 + sin(Time.get_ticks_msec() * 0.003) * 0.15
+		tag_gem.position.y = TAG_MESH_HEIGHT + sin(Time.get_ticks_msec() * 0.003) * 0.15
+		tag_gem.transparency = 0.0
+		tag_light.light_energy = TAG_LIGHT_ENERGY
 		tag_beam.visible = Game.phase in [Game.Phase.PREROUND, Game.Phase.RUSH, Game.Phase.DROPPED]
 
 
@@ -835,7 +722,7 @@ func _ribbon(a: Vector3, b: Vector3, w: float, col: Color, cam_pos: Vector3) -> 
 
 ## A UAV pulse's growing ring, fading as it reaches its full size.
 func _uav_ring(pulse: Dictionary, cam_pos: Vector3) -> void:
-	var col := Color(1.0, 0.25, 0.2, 0.7 * (1.0 - pulse.r / Addons.T.uav_max_radius))
+	var col := Color(1.0, 0.25, 0.2, 0.7 * (1.0 - pulse.r / Addons.UAV.max_radius))
 	var c: Vector3 = pulse.origin + Vector3(0, 0.3, 0)
 	for i in UAV_RING_SEGMENTS:
 		var a := TAU * i / UAV_RING_SEGMENTS
@@ -909,61 +796,42 @@ func request_spray(pos: Vector3, normal: Vector3, up: Vector3) -> void:
 # ================================================================ pings
 
 @rpc("any_peer", "call_local", "reliable")
-func request_ping(pos: Vector3, kind: String) -> void:
+func request_ping(pos: Vector3) -> void:
 	if not multiplayer.is_server():
 		return
 	var id: int = Net.sender()
-	if not PING_KINDS.has(kind) or not pos.is_finite() or not Game.is_alive(id) or not players.has(id):
+	if not pos.is_finite() or not Game.is_alive(id) or not players.has(id):
 		return
 	if players[id].global_position.distance_to(pos) > Player.PING_RANGE + 5.0:
 		return
 	var now := Time.get_ticks_msec() / 1000.0
-	var recent: Array = _ping_times.get(id, [])
-	recent = recent.filter(func(t: float) -> bool: return now - t < PING_BURST_TIME)
-	if recent.size() >= PING_BURST + (1 if kind == "danger" else 0):
-		return  # one extra slot so a double tap's danger ping still gets through
+	if float(_ping_locks.get(id, 0.0)) > now:
+		_ping_refused.rpc_id(id, float(_ping_locks[id]) - now)
+		return
+	var recent: Array = _ping_times.get(id, []).filter(func(t: float) -> bool: return now - t < PING_BURST_TIME)
+	if recent.size() >= PING_BURST:
+		_ping_locks[id] = now + PING_COOLDOWN
+		_ping_times[id] = []
+		_ping_refused.rpc_id(id, PING_COOLDOWN)
+		return
 	recent.append(now)
 	_ping_times[id] = recent
 	var team := Net.team_of(id)
 	for pid in Net.players:
 		if Net.team_of(pid) == team:
-			_show_ping.rpc_id(pid, id, pos, kind)
+			_show_ping.rpc_id(pid, pos)
 
 
 @rpc("authority", "call_local", "reliable")
-func _show_ping(owner_id: int, pos: Vector3, kind: String) -> void:
-	_prune_pings()
-	# A danger ping (double tap) replaces the ping its owner just placed.
-	var mine := pings.filter(func(p: Array) -> bool: return p[0] == owner_id)
-	if kind == "danger" and not mine.is_empty():
-		var last: Array = mine[-1]
-		if (last[2] as PingMarker).age < 0.6:
-			_remove_ping(last)
-			mine.pop_back()
-	while mine.size() >= PINGS_PER_PLAYER:
-		_remove_ping(mine.pop_front())
-	var info: Array = PING_KINDS.get(kind, PING_KINDS.spot)
-	var col := PING_SPOT
-	if kind == "enemy" or kind == "danger":
-		col = PING_DANGER
-	elif kind == "tag":
-		col = Mats.TAG_COLOR
-	var m: PingMarker = PING_SCENE.instantiate()
-	m.setup(col, info[0], info[1])
-	add_child(m)
-	m.global_position = pos
-	pings.append([owner_id, kind, m])
-	Sfx.play("ping_danger" if col == PING_DANGER else "ping", -6.0)
+func _show_ping(pos: Vector3) -> void:
+	pings.append({"pos": pos, "until": Time.get_ticks_msec() / 1000.0 + PING_SECONDS})
+	Sfx.play("ping", -4.0)
 
 
-func _remove_ping(p: Array) -> void:
-	if is_instance_valid(p[2]):
-		(p[2] as PingMarker).queue_free()
-	pings.erase(p)
+@rpc("authority", "call_local", "reliable")
+func _ping_refused(seconds: float) -> void:
+	Game.announce.emit("Ping on cooldown: %d s" % ceili(seconds), UiKit.MUTED)
 
-
-func _prune_pings() -> void:
-	pings = pings.filter(func(p: Array) -> bool: return is_instance_valid(p[2]) and not (p[2] as Node).is_queued_for_deletion())
 
 
 ## A player's spray was cleared (they left): remove the one they placed.

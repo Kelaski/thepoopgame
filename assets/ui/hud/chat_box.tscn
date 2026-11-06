@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud/chat_box.gd" id="1_cjiru"]
+
+[node name="Chat" type="Control" unique_id=487563429]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("1_cjiru")
+
+[node name="Column" type="VBoxContainer" parent="." unique_id=898742441]
+custom_minimum_size = Vector2(540, 0)
+layout_mode = 0
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -160.0
+offset_right = 24.0
+offset_bottom = -160.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Log" type="VBoxContainer" parent="Column" unique_id=1892746121]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="SuggestPanel" type="PanelContainer" parent="Column" unique_id=1388630511]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+
+[node name="SuggestBox" type="VBoxContainer" parent="Column/SuggestPanel" unique_id=1080341019]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="InputRow" type="HBoxContainer" parent="Column" unique_id=1449688037]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Prefix" type="Label" parent="Column/InputRow" unique_id=1526066810]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HudAccentLabel"
+theme_override_font_sizes/font_size = 16
+text = "ALL:"
+
+[node name="Edit" type="LineEdit" parent="Column/InputRow" unique_id=484524356]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Type a message, or / for commands"
+context_menu_enabled = false
+
+[connection signal="text_changed" from="Column/InputRow/Edit" to="." method="_on_text_changed"]
+[connection signal="text_submitted" from="Column/InputRow/Edit" to="." method="_on_submit"]

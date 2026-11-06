@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/lobby_row.gd" id="e1"]
+
+
+[node name="LobbyRow" type="PanelContainer"]
+script = ExtResource("e1")
+clip_contents = true
+custom_minimum_size = Vector2(460, 58)
+
+[node name="Line" type="HBoxContainer" parent="."]
+theme_override_constants/separation = 10
+
+[node name="Text" type="VBoxContainer" parent="Line"]
+theme_override_constants/separation = 0
+size_flags_horizontal = 3
+
+[node name="PlayerName" type="Label" parent="Line/Text"]
+unique_name_in_owner = true
+clip_text = true
+text_overrun_behavior = 3
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+
+[node name="Loadout" type="Label" parent="Line/Text"]
+unique_name_in_owner = true
+clip_text = true
+text_overrun_behavior = 3
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.68, 0.7, 0.75, 1)
+
+[node name="Ping" type="Label" parent="Line"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+horizontal_alignment = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 15
+theme_override_colors/font_color = Color(0.68, 0.7, 0.75, 1)

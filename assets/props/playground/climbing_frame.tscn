@@ -1,0 +1,304 @@
+[gd_scene format=3]
+
+[sub_resource type="CylinderMesh" id="r1"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="r2"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.18, 0.68, 0.66, 1)
+roughness = 0.85
+
+[sub_resource type="CylinderMesh" id="r3"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r4"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="BoxMesh" id="r5"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="StandardMaterial3D" id="r6"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.98, 0.78, 0.2, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="r7"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="StandardMaterial3D" id="r8"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.98, 0.56, 0.16, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="r9"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="CylinderMesh" id="r10"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r11"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r12"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="BoxMesh" id="r13"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="BoxMesh" id="r14"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="BoxMesh" id="r15"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="CylinderMesh" id="r16"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r17"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r18"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 2
+radial_segments = 14
+rings = 1
+
+[sub_resource type="BoxMesh" id="r19"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="BoxMesh" id="r20"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="BoxMesh" id="r21"]
+size = Vector3(0.05, 0.05, 2.25)
+
+[sub_resource type="BoxMesh" id="r22"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r23"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r24"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r25"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r26"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r27"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r28"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r29"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxMesh" id="r30"]
+size = Vector3(2.25, 0.05, 0.05)
+
+[sub_resource type="BoxShape3D" id="r31"]
+size = Vector3(2.25, 2, 0.08)
+
+[sub_resource type="BoxShape3D" id="r32"]
+size = Vector3(2.25, 2, 0.08)
+
+[sub_resource type="BoxShape3D" id="r33"]
+size = Vector3(0.08, 2, 2.25)
+
+[sub_resource type="BoxShape3D" id="r34"]
+size = Vector3(0.08, 2, 2.25)
+
+[node name="ClimbingFrame" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_mask = 0
+
+[node name="Part1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -1.1000, 1.0000, -1.1000)
+mesh = SubResource("r1")
+material_override = SubResource("r2")
+
+[node name="Part2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -1.1000, 1.0000, 0.0000)
+mesh = SubResource("r3")
+material_override = SubResource("r2")
+
+[node name="Part3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -1.1000, 1.0000, 1.1000)
+mesh = SubResource("r4")
+material_override = SubResource("r2")
+
+[node name="Part4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -1.1000, 0.6500, 0.0000)
+mesh = SubResource("r5")
+material_override = SubResource("r6")
+
+[node name="Part5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -1.1000, 1.3000, 0.0000)
+mesh = SubResource("r7")
+material_override = SubResource("r8")
+
+[node name="Part6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -1.1000, 1.9500, 0.0000)
+mesh = SubResource("r9")
+material_override = SubResource("r8")
+
+[node name="Part7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.0000, -1.1000)
+mesh = SubResource("r10")
+material_override = SubResource("r2")
+
+[node name="Part8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.0000, 0.0000)
+mesh = SubResource("r11")
+material_override = SubResource("r2")
+
+[node name="Part9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.0000, 1.1000)
+mesh = SubResource("r12")
+material_override = SubResource("r2")
+
+[node name="Part10" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 0.6500, 0.0000)
+mesh = SubResource("r13")
+material_override = SubResource("r6")
+
+[node name="Part11" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.3000, 0.0000)
+mesh = SubResource("r14")
+material_override = SubResource("r8")
+
+[node name="Part12" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.9500, 0.0000)
+mesh = SubResource("r15")
+material_override = SubResource("r8")
+
+[node name="Part13" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 1.1000, 1.0000, -1.1000)
+mesh = SubResource("r16")
+material_override = SubResource("r2")
+
+[node name="Part14" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 1.1000, 1.0000, 0.0000)
+mesh = SubResource("r17")
+material_override = SubResource("r2")
+
+[node name="Part15" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 1.1000, 1.0000, 1.1000)
+mesh = SubResource("r18")
+material_override = SubResource("r2")
+
+[node name="Part16" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 1.1000, 0.6500, 0.0000)
+mesh = SubResource("r19")
+material_override = SubResource("r6")
+
+[node name="Part17" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 1.1000, 1.3000, 0.0000)
+mesh = SubResource("r20")
+material_override = SubResource("r8")
+
+[node name="Part18" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 1.1000, 1.9500, 0.0000)
+mesh = SubResource("r21")
+material_override = SubResource("r8")
+
+[node name="Part19" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 0.6500, -1.1000)
+mesh = SubResource("r22")
+material_override = SubResource("r8")
+
+[node name="Part20" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.3000, -1.1000)
+mesh = SubResource("r23")
+material_override = SubResource("r6")
+
+[node name="Part21" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.9500, -1.1000)
+mesh = SubResource("r24")
+material_override = SubResource("r6")
+
+[node name="Part22" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 0.6500, 0.0000)
+mesh = SubResource("r25")
+material_override = SubResource("r8")
+
+[node name="Part23" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.3000, 0.0000)
+mesh = SubResource("r26")
+material_override = SubResource("r6")
+
+[node name="Part24" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.9500, 0.0000)
+mesh = SubResource("r27")
+material_override = SubResource("r6")
+
+[node name="Part25" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 0.6500, 1.1000)
+mesh = SubResource("r28")
+material_override = SubResource("r8")
+
+[node name="Part26" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.3000, 1.1000)
+mesh = SubResource("r29")
+material_override = SubResource("r6")
+
+[node name="Part27" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.9500, 1.1000)
+mesh = SubResource("r30")
+material_override = SubResource("r6")
+
+[node name="Shape28" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.0000, -1.1000)
+shape = SubResource("r31")
+
+[node name="Shape29" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.0000, 1.0000, 1.1000)
+shape = SubResource("r32")
+
+[node name="Shape30" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -1.1000, 1.0000, 0.0000)
+shape = SubResource("r33")
+
+[node name="Shape31" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 1.1000, 1.0000, 0.0000)
+shape = SubResource("r34")

@@ -17,20 +17,20 @@ const DEFAULT_MAX_HP := 100.0  # before a player has a weapon
 
 ## Text for the loadout screen, built from the tuned numbers.
 static func describe(id: String) -> String:
-	var w: WeaponStats = DATA.get(id)
+	var w = DATA.get(id)
 	if w == null:
 		return ""
 	match id:
 		"ar":
-			return "%.0f / %.0f head dmg (less past %.0fm). %.1f rounds/s, %d rounds. Best at mid range." % [w.body, w.head, w.falloff, w.rps, w.mag]
+			return "%.0f dmg, %.0f headshot. Best at mid range." % [w.body, w.head]
 		"shotgun":
-			return "%d pellets, %.0f dmg each up close. %.1f shots/s. Loads %.1fs per shell; firing stops the reload." % [w.pellets, w.pellet_near, w.rps, w.reload_per_round]
+			return "%d pellets, %.0f dmg each up close. Firing stops the reload." % [w.pellets, w.pellet_near]
 		"sniper":
-			return "%.0f dmg, headshots kill. Pierces a wall and every player in line. One round: it reloads after every shot." % w.dmg
+			return "%.0f dmg, headshots kill. Pierces a wall and players. One round." % w.dmg
 		"gl":
-			return "%d rounds, %.1fs between shots, %.1fs per shell. Arcing grenades do %.0f dmg and launch anyone nearby. The faster you move, the further they fly. They never hurt you or your team." % [w.mag, 1.0 / w.rps, w.reload_per_round, w.dmg]
+			return "Arcing grenades: %.0f dmg, and they launch anyone nearby. Never hurt your team." % w.dmg
 		"bat":
-			return "%.0f dmg, more the faster you're moving. %.0f HP, +%.0f%% speed. Kills launch the victim's gun." % [w.dmg, w.max_hp, (w.speed_mult - 1.0) * 100.0]
+			return "%.0f dmg, more the faster you move. %.0f HP, +%.0f%% speed." % [w.dmg, w.max_hp, (w.speed_mult - 1.0) * 100.0]
 	return ""
 
 
@@ -60,7 +60,7 @@ static func display_name(id: String) -> String:
 
 
 static func shotgun_pellet_damage(dist: float) -> float:
-	var w: WeaponStats = DATA.shotgun
+	var w: ShotgunStats = DATA.shotgun
 	if dist <= w.pellet_near_dist:
 		return w.pellet_near
 	return w.pellet_mid if dist <= w.pellet_mid_dist else w.pellet_far

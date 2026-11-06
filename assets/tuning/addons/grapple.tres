@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="GrappleAddon" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/addons/grapple.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Grapple"
+reach = 27.0
+cd = 6.5
+miss_cd = 1.0
+hook_speed = 110.0
+pull = 42.0
+steer = 14.0
+max_speed = 22.0
+max_time = 2.5
+arrive = 2.0
+end_pop = 6.5
+yank = 11.0

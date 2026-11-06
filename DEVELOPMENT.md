@@ -6,6 +6,8 @@ Tag Rush is built in **Godot 4.7** with GDScript. Its one plugin is [GodotSteam]
 
 ## Running from source
 
+Run every test at once, each with a time limit: `powershell -File tests/run_all.ps1`. It takes well under a minute. The commands below run one on its own.
+
 1. Install [Godot 4.7 or newer](https://godotengine.org/download) (standard build, not .NET). The project file is saved with 4.7; older 4.x editors warn when opening it.
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** (Run Project).
@@ -27,7 +29,9 @@ When Steam starts the game from an invite, it passes `+connect_lobby <id>`, and 
 
 **Safety checks** (`tests/checks.tscn`) cover the hit rate limit, the movement speed filter and the spray size check, with no network needed: `godot --headless --path . res://tests/checks.tscn` (exits 0 on a pass).
 
-**City test** (`tests/city.tscn`) generates 20 random cities per map size and checks that no building overlaps another, stands on a road or crosses the fence, that every building faces a street, and that spawn zones and Tag spots are outside buildings. It also times a full build of a large city: `godot --headless --path . res://tests/city.tscn`.
+**City test** (`tests/city.tscn`) builds every map once, plans 30 random cities of each size against the layout rules, and checks that spawn zones are open and that the ground and fence hold.
+
+**Movement test** (`tests/movement.tscn`) checks repeat wall jumps, the arc on landing, and grenades starting inside walls.
 
 **Rounds test** (`tests/rounds.tscn`) plays 10 rounds and checks that no team starts where it did last round, the Tag spot moves, and spawn zones stay apart: `godot --headless --path . res://tests/rounds.tscn -- --host --port=27203 --autostart=1 --size=small` (add `--classic` for the Classic city).
 
@@ -119,7 +123,7 @@ Open these in the Godot editor. Changes show up in game the next time a match lo
 - **`assets/models/door.tscn`:** the door, with the hinge at the origin, built for a 1.7 × 2.45 m doorway.
   - In game, `Panel` is stretched to each doorway, the collision `Shape` is resized, and other parts under `Body` (the `Knob`) move to match.
   - The panel takes each building's door colour.
-- **`assets/models/tag.tscn`:** the Tag: `Gem` and `Beam`. They're tinted with the Tag colour from Customization.
+- **`assets/models/tag.tscn`:** the Tag: `Gem` and `Beam`. They're tinted with the Tag colour from Settings → Colours.
   - The ring shows the pickup radius (1.7 m, `Game.PICKUP_RADIUS`), so change both together.
 - **`assets/models/spray_decal.tscn`:** the spray decal. Its material is `assets/materials/spray_decal.tres`, and each player's image and aspect ratio are filled in at runtime.
 - **Thrown gun:** the gun a killing bat swing launches is now the victim's actual weapon model.
@@ -127,86 +131,42 @@ Open these in the Godot editor. Changes show up in game the next time a match lo
 
 ## Editing props
 
-Every prop and piece of furniture on the map is a template scene:
-- `assets/props/vehicles/`: car, taxi, van, bus.
-- `assets/props/street/`: lamp, trees, benches, bins, hydrant, mailbox, bus shelter, kiosk, dumpster.
-- `assets/props/nature/`: tree crown, trunk, bush.
-- `assets/props/park/`, `arena/`, `water/`: the basketball court, playground, bleachers, scoreboard, tanks and pumps, plus the park's fountain, flower beds, picnic umbrellas and ground pieces:
-  - `lawn`: a 1 m square stretched to the park.
-  - `path`: 1 m long, stretched to each path.
-  - `plaza`, `sandpit` and `pond`: the pond is scaled with the park.
-- `assets/props/crane/`: footing, mast, braces, the crane top, hook and loads, and `beam`, the stretched piece used for cables, jibs and bridge decks.
-- `assets/furniture/`: 43 items, from desks and beds to slot machines, including the store checkout, reception desk and cinema screen.
-- `assets/furniture/decor/`: 30 interior decor pieces: ceiling lights, wall decor, floor pieces, a rug and the exit sign.
-Edit them in the Godot editor. The next match uses your changes.
+Every prop and piece of furniture is a template scene in `assets/props/` or `assets/furniture/`. Open one, change it in the editor and save.
 
-**How they're used:** the map places thousands of these, so they aren't added as nodes. When a map loads, each scene is read once and stamped into the same batched meshes and collision as before, so performance doesn't change (`scripts/map/prefabs.gd`). That puts some limits on what a template can contain:
-- **Meshes:** `BoxMesh`, `CylinderMesh`, `SphereMesh` and `PrismMesh` parts. A part's colour is its material's albedo colour.
-- **Collision:** `CollisionShape3D` boxes, cylinders and convex shapes (for slopes like the skate ramps) inside a `StaticBody3D`. The body's collision layer decides how a shape collides:
-  - `Collision` (layer 2): walls and furniture. Phantom can pass through, and the sniper can pierce one.
-  - `FloorCollision` (layer 1): floors.
-  - `SolidCollision` (layer 16): solid ground.
-  - `BounceCollision` (layer 32): a bounce pad, like the umbrella and awning tops.
-  - A part with no shape is decoration you can walk through.
-- **Metadata** (shown in the Inspector under Metadata):
-  - `slot`: a colour filled in by the game, such as `body` on cars, `leaf` on tree crowns, `main` on sofas and tables, or `blanket` on beds. `slot_darken` / `slot_lighten` shade it.
-  - `slot_choices`: a list of colours. One is picked at random for each placement, as with kiosk awnings, arcade cabinets and books.
-  - `batch`: `static` or `detail`. Detail parts are hidden beyond 140 m, like the furniture.
-  - `night_only` (on an `OmniLight3D`): the light only shines in the evening and at night, like the street lamps.
-  - `glow`: true for parts that light up (bulbs, screens, neon, headlights). They're drawn unshaded and bright enough to bloom.
-  - `material`: draw the part with a named material from `assets/materials/` (`<name>.tres`) instead of the plain toon one. The part's colour tints it.
-- **Lights:** an `OmniLight3D` in a template becomes a real light wherever the piece is placed. Its colour, energy and range are used, and shadows stay off. The lamp scenes in `assets/furniture/decor/` have one each.
-- **Placement:**
-  - Props are placed on the ground at their origin.
-  - Street props face their local +Z away from the road.
-  - **Furniture** is placed by each building's layout in `scripts/map/interiors.gd` (`_lay_*`). Its footprint comes from the scene's meshes, so a bigger model automatically gets more room.
-  - **Decor:** wall pieces have their origin on the wall face at floor level and stick out along +Z into the room. Floor pieces against a wall have their back at Z = 0. Ceiling lights hang down from their origin on the ceiling. The rug is centred on its origin.
-  - Which pieces each building type gets is the `THEME_DECOR` table in `scripts/map/interiors.gd`.
-  - Some pieces are stretched to fit: the crane mast is built 10 m tall, a tree trunk 1 m tall, and a water pipe and `beam` 1 m long.
-- **Code-side randomness:** sizes such as crates, bushes and tree heights are still random in code.
+**How they're used:** the map places thousands of these, so they aren't added as nodes. `scripts/map/prop_library.gd` reads each scene once into plain mesh and collision data, and `Clutter` and `GeoBatch` bake them into one mesh per material. `Clutter.IMPORTS` lists the scenes the map uses.
 
-The parts are named `Part0`, `Part1` and so on, in build order. Rename them freely. Only the meshes, shapes, colours and metadata matter.
+- **Meshes:** the parts' colours and their glow flag are kept. Everything is drawn with `assets/world/toon_world.gdshader`.
+- **Collision:** `CollisionShape3D` boxes, cylinders and spheres (round shapes become boxes). Every shape becomes a wall, or a bounce pad if its body is on layer 32.
 
 ## Tuning
 
 Every weapon and addon number is a named field you can edit in Godot's Inspector. Double-click a file in the FileSystem dock, change a value and save: hover over a field to see what it does.
 
-- **Weapons:** `assets/tuning/weapons/*.tres`, one file per weapon (`scripts/data/weapon_stats.gd` lists the fields). Grenade flight is under the Grenade section of `grenade_launcher.tres`: `launch_speed`, `shooter_speed_scale`, `grenade_gravity` and so on. The sniper's loudness is under Sound in `sniper.tres`.
-- **Addons:** `assets/tuning/addons.tres`, with one section per addon (`scripts/data/addon_tuning.gd` lists the fields).
+- **Weapons:** `assets/tuning/weapons/*.tres`, one file per weapon (the fields are in `scripts/data/weapon_stats.gd` and `scripts/data/weapons/`). Grenade flight is under the Grenade section of `grenade_launcher.tres`: `launch_speed`, `shooter_speed_scale`, `grenade_gravity` and so on. The sniper's loudness is under Sound in `sniper.tres`.
+- **Addons:** `assets/tuning/addons/*.tres`, one file per addon. Its script in `scripts/addons/` lists the fields and holds what the addon does.
 
 The loadout descriptions are built from these values, so they stay correct. If you raise a weapon's damage, raise its `max_damage` too: the host refuses anything above it. In multiplayer, the host's values decide damage and everyone's own copy decides their own movement and timers, so all players need the same build.
 
-## Editing buildings
+## Editing maps
 
-Buildings are put together from the pieces in `assets/building/`. Each piece's colours come from the building's style through colour slots: `wall`, `trim`, or `color` for floors, stairs and interior walls.
+`ClassicMap` and `ProcGen` plan a map (`MapLayout`), `MapBuilder` builds it, and `Level` is what the rest of the game reads. The same kind and seed give the same map on every peer. Structural numbers (storey heights, doors, windows, how many of everything) are in `assets/tuning/map_rules.tres`. Buildings are generated as boxes by `scripts/map/building_builder.gd`, and level colours and patterns are in the `TABLE` in `scripts/map/map_mats.gd` (`MapMats`).
 
-**Wall modules:** these are 2 m wide (local X, centred), 4 m tall from their base and 0.3 m thick.
-- `wall_solid`: a plain wall.
-- `wall_window_small`, `wall_window_wide`, `wall_window_tall`: the three window styles. Each building uses one of them.
-- `wall_door`: a 1.7 × 2.45 m gap that a door fills in game.
-- `wall_filler`: 1 m tall, stretched on top of the module for storeys taller than 4 m.
-- `corner_post`, `trim_band`, `parapet`: corners, the band along each storey, and the roof edge.
+**Collision layers:** floors 1, walls and furniture 2, player 4, doors 8, ground and boundary 16, bounce pads 32, sky cap 64. Phantom passes walls and doors but not floors, and drops through floors but not the ground, so the ground must stay on 16.
 
-**Floors and stairs:**
-- `floor_slab` and `floor_finish`: 1 × 1 m pieces, stretched to each floor slab and the ground-floor finish.
-- `stair_segment`: one step of the ramp, rising 0.5 m over 0.8 m and 2.85 m wide (one lane). A storey is its height ÷ 0.5 segments. If you change its width, change `STAIR_W` to match (two lanes plus 0.1 m).
-- `stair_divider` and `rail_section`: the wall between the two stair lanes and the railing round the stair hole.
-
-**Interior walls:** `wall_interior` (a 1 × 1 m piece, stretched) and `wall_interior_door` (the door jambs of a 2 m partition module).
-
-You can reshape the inside of a module freely: move the jambs, change the window shape, or add trim. Keep its outer size, because the pieces are placed edge to edge. The grid size, storey module height and stair step are constants at the top of `scripts/map/map_builder.gd` (`MODULE`, `MODULE_H`, `STAIR_RUN`, `STAIR_RISE`). Building pieces are always drawn, unlike furniture, which fades out beyond 140 m.
+**Doors** are this game's `Door` (`assets/models/door.tscn`), hung from the plan's doorway centres. **Lighting** is `assets/world/sky_env.tscn` with presets in `assets/tuning/times/`.
 
 ## Editing the UI
 
-Every screen is a scene in `assets/ui/`:
-- **Menus:** `main_menu`, `join_menu`, `lobby`, `pause_menu`, `settings_menu`, `customize_hub`, `colors_menu`, `crosshair_editor`, `music_menu`, `spray_menu` and `skybox_menu`.
+Every screen is a scene under `assets/ui/` (`menu/`, `hud/`, `rows/`), with its script in the same place under `scripts/ui/`:
+- **Menus:** `main_menu`, `server_browser`, `lobby`, `pause_menu`, `settings_menu` (which holds `colors_menu`, `crosshair_editor`, `music_menu` and `spray_menu` as tabs), `music_bar` and `viewmodel_preview`.
+- **Menu theme:** `MenuKit` (`scripts/ui/menu_kit.gd`), set on each screen by `main.gd`. Menus are laid out for 1920 x 1080 and scaled to the 1600 x 900 canvas. The HUD keeps `UiKit`'s theme.
 - **In-match:** `hud`, `chat_box` and `loadout_panel`.
 - **Smaller pieces:** `crosshair`, `minimap`, `damage_indicator`, `connecting` and `version_label`.
 
 **What's where:**
 - **Layout:** each scene holds the layout. Its script (`scripts/ui/`) holds the behaviour and finds nodes by their unique name (`%Name`), so keep the names the scripts use. You can move, resize, restyle or reorder anything else.
 - **Buttons:** they're wired to the script's methods as saved signal connections (Node → Signals in the editor).
-- **Colours:** labels use the theme type variations from `UiKit.make_theme()`, so the colours in Customize → Colours reach every screen:
+- **Colours:** labels use the theme type variations from `UiKit.make_theme()`, so the colours in Settings → Colours reach every screen:
   - `TitleLabel`, `AccentLabel` and `MutedLabel` for menus.
   - `HudLabel`, `HudAccentLabel` and `HudMutedLabel` for outlined HUD text.
   - `MenuBackground` for menu backdrops.
@@ -221,35 +181,40 @@ Every screen is a scene in `assets/ui/`:
 
 ```
 project.godot
-scenes/main.tscn            # root scene (just runs scripts/main.gd)
 scripts/
   main.gd                   # screen flow, overlays, mouse capture, cmdline flags
   autoload/settings.gd      # settings + rebindable input map (user://settings.cfg)
   autoload/sfx.gd           # procedural sounds
   autoload/net.gd           # Steam lobbies (host/join/invites), roster, team/loadout requests
-  autoload/game.gd          # server-authoritative Tag game mode
+  autoload/game.gd          # the Tag game mode, in layers, each adding one job:
+                            #   game_state.gd (what everyone knows), game_addons.gd (host checks on addons),
+                            #   game_damage.gd (hits, kills, grenades), game.gd (rounds, joining, commands)
   data/weapons.gd           # weapon stats
-  data/addons.gd            # which addons are active / passive, and their descriptions (the numbers are in assets/tuning/addons.tres)
-  data/addon_tuning.gd      # every addon number, shown in the Inspector
-  data/weapon_stats.gd      # every weapon number, shown in the Inspector
+  data/addons.gd            # which addons are active / passive, and their descriptions (each addon is in addons/)
+  addons/*.gd               # one per addon: its numbers (shown in the Inspector) and what it does
+  data/weapon_stats.gd, data/weapons/   # weapon numbers, shown in the Inspector
   data/game_version.gd      # version number (major.minor.patch)
-  map/map_data.gd           # classic layout transcribed from the sketch, map sizes
-  map/city_gen.gd           # random city layouts (one per match, from a seed): recursive splits into
-                            #   blocks with avenues / T-junction streets, street-wall lots in whole wall modules
-  map/map_builder.gd        # procedural city: streets, building shells, roofs, park, cranes, spawn points
-  map/interiors.gd          # inside the buildings: ceiling lights, wall decor and each type's furniture layout
-  map/prefabs.gd            # reads prop / furniture scenes and batches them into the map
-  world/world.gd            # environment, players, Tag, FX, trails, heartbeat, respawn search
+  map/level.gd              # a built map, as the game reads it; the map list
+  map/map_layout.gd         # the plan of a map; classic_map.gd and proc_gen.gd make one
+  map/map_builder.gd        # the 3D level: ground, roads, buildings, parks, props, cranes, fence
+  map/building_builder.gd   # buildings; interiors.gd furnishes them, park_builder.gd builds parks
+  map/geo_batch.gd          # batched meshes and collision; prop_library.gd and clutter.gd place props
+  map/skyline.gd            # the distant city
+  world/world.gd            # players, Tag, FX, heartbeat, respawn search
+  world/sky_env.gd          # sun, sky, fog and ambient light; time of day
   world/door.gd             # hinged doors
   world/mats.gd             # shared materials / team colours
-  player/player.gd          # FPS controller, weapons, addons, netcode
+  player/player.gd          # the player, in layers, each adding one job:
+                            #   player_state.gd, player_movement.gd, player_net.gd, player_addons.gd,
+                            #   player_weapons.gd, player.gd (setup, drawing, the tick)
   player/weapon_model.gd    # weapon scene root: muzzle, glint point, first/third-person setup
+  ui/menu/, ui/hud/, ui/rows/   # behaviour for the screens in assets/ui
 assets/models/              # player, weapon, door, Tag, spray decal, muzzle flash and glint scenes
 assets/materials/           # shared materials (.tres)
 assets/props/, assets/furniture/   # map prop and furniture template scenes
-assets/building/            # modular building pieces
-assets/ui/                  # every menu, the HUD and reusable setting rows (rows/)
-  ui/*.gd                   # behaviour for the screens in assets/ui (menus, lobby, settings, HUD, minimap, crosshair)
+assets/world/               # the sky and light, street and interior lights, skyline and map shaders
+assets/ui/                  # every menu (menu/), the HUD (hud/) and reusable setting rows (rows/)
+assets/main.tscn            # the scene the game starts from (just runs scripts/main.gd)
 ```
 
 ## Design choices

@@ -1,0 +1,188 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="dark_steel"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2, 0.21, 0.24, 1)
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="grey"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.55, 0.57, 0.6, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="pad_black"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.12, 0.12, 0.14, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="plastic"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.28, 0.3, 0.34, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="plate"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.13, 0.13, 0.15, 1)
+roughness = 0.45
+
+[sub_resource type="StandardMaterial3D" id="rubber"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.09, 0.09, 0.1, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="screen"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.45, 0.85, 1, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="steel"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.62, 0.65, 0.68, 1)
+roughness = 0.45
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(0.5, 0.05, 0.07)
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.07, 0.07, 1)
+
+[sub_resource type="CylinderMesh" id="mesh2"]
+top_radius = 0.25
+bottom_radius = 0.25
+height = 0.05
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="mesh3"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.07
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.09, 0.3, 0.42)
+
+[sub_resource type="BoxMesh" id="mesh5"]
+size = Vector3(0.05, 0.62, 0.05)
+
+[sub_resource type="BoxMesh" id="mesh6"]
+size = Vector3(0.22, 0.06, 0.28)
+
+[sub_resource type="BoxMesh" id="mesh7"]
+size = Vector3(0.05, 0.7, 0.05)
+
+[sub_resource type="BoxMesh" id="mesh8"]
+size = Vector3(0.46, 0.04, 0.04)
+
+[sub_resource type="BoxMesh" id="mesh9"]
+size = Vector3(0.2, 0.13, 0.05)
+
+[sub_resource type="BoxMesh" id="mesh10"]
+size = Vector3(0.14, 0.08, 0.01)
+
+[sub_resource type="CylinderMesh" id="mesh11"]
+top_radius = 0.09
+bottom_radius = 0.09
+height = 0.03
+radial_segments = 12
+rings = 1
+
+[sub_resource type="BoxMesh" id="mesh12"]
+size = Vector3(0.1, 0.03, 0.08)
+
+[sub_resource type="BoxShape3D" id="shape0"]
+size = Vector3(0.5, 1.2, 1.1)
+
+[node name="ExerciseBike" type="Node3D"]
+
+[node name="BaseFront" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, -0.5)
+mesh = SubResource("mesh0")
+material_override = SubResource("dark_steel")
+
+[node name="BaseBack" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0.5)
+mesh = SubResource("mesh0")
+material_override = SubResource("dark_steel")
+
+[node name="Spine" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.17, 0)
+mesh = SubResource("mesh1")
+material_override = SubResource("dark_steel")
+
+[node name="Flywheel" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0.34, -0.3)
+mesh = SubResource("mesh2")
+material_override = SubResource("plate")
+
+[node name="FlywheelHub" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0.34, -0.3)
+mesh = SubResource("mesh3")
+material_override = SubResource("steel")
+
+[node name="WheelCover" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -0.3)
+mesh = SubResource("mesh4")
+material_override = SubResource("grey")
+
+[node name="SeatPost" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.97815, 0.20791, 0, -0.20791, 0.97815, 0, 0.5, 0.32)
+mesh = SubResource("mesh5")
+material_override = SubResource("steel")
+
+[node name="Seat" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.84, 0.38)
+mesh = SubResource("mesh6")
+material_override = SubResource("pad_black")
+
+[node name="BarPost" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9703, 0.24192, 0, -0.24192, 0.9703, 0, 0.72, -0.34)
+mesh = SubResource("mesh7")
+material_override = SubResource("dark_steel")
+
+[node name="Handlebar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.08, -0.42)
+mesh = SubResource("mesh8")
+material_override = SubResource("rubber")
+
+[node name="Console" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.90631, -0.42262, 0, 0.42262, 0.90631, 0, 1.17, -0.44)
+mesh = SubResource("mesh9")
+material_override = SubResource("plastic")
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.90631, -0.42262, 0, 0.42262, 0.90631, 0, 1.175, -0.415)
+mesh = SubResource("mesh10")
+material_override = SubResource("screen")
+metadata/glow = true
+
+[node name="Crank" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0.34, 0.02)
+mesh = SubResource("mesh11")
+material_override = SubResource("steel")
+
+[node name="PedalL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 0.26, 0.02)
+mesh = SubResource("mesh12")
+material_override = SubResource("rubber")
+
+[node name="PedalR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, 0.42, 0.02)
+mesh = SubResource("mesh12")
+material_override = SubResource("rubber")
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_mask = 0
+
+[node name="Shape0" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("shape0")

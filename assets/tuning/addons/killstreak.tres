@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="KillstreakAddon" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/addons/killstreak.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Killstreak"
+speed = 0.04
+reload = 0.05
+regen_delay_per_kill = 1.0
+max_stacks = 5

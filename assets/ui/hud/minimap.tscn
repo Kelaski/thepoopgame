@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud/minimap.gd" id="1_e8gim"]
+
+[node name="Minimap" type="Control" unique_id=667029074]
+custom_minimum_size = Vector2(240, 204)
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("1_e8gim")

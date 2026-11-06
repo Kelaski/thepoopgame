@@ -46,8 +46,7 @@ func _ready() -> void:
 	streams["tick"] = _tone(1000.0, 0.03, 0.35)
 	streams["count"] = _beep(196.0, 0.3, 0.55)
 	streams["go"] = _go(rng)
-	streams["ping"] = _bell(1760.0, 0.35, 0.4)
-	streams["ping_danger"] = _chirp(1500.0, 950.0, 0.22, 0.45)
+	streams["ping"] = _notes([1320.0, 1980.0], [0.16, 0.14], 0.5, 0.0)
 	streams["hurt"] = _thud(rng, 0.15, 60.0)
 	streams["warp"] = _chirp(1600.0, 260.0, 0.22, 0.45)
 	streams["rocket"] = _whoosh(rng, 0.55)
@@ -71,8 +70,9 @@ func _ready() -> void:
 		pl.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED
 		add_child(pl)
 		_loud.append(pl)
-	_render_thread = Thread.new()
-	_render_thread.start(_render_all_songs)
+	if DisplayServer.get_name() != "headless":
+		_render_thread = Thread.new()
+		_render_thread.start(_render_all_songs)
 
 
 func _exit_tree() -> void:
@@ -365,7 +365,12 @@ var _music_active := false
 var _builtin_left := -1.0
 
 
-## Starts match music using the player's music settings (built-in songs, their
+## True once the built-in songs have rendered, so starting music won't stall.
+func songs_ready() -> bool:
+	return _render_thread == null or not _render_thread.is_alive()
+
+
+## Starts the music (it runs from launch, through menus and matches) using the player's music settings (built-in songs, their
 ## custom playlist, or both; optionally shuffled).
 func start_music() -> void:
 	_ensure_music_player()
@@ -379,19 +384,6 @@ func start_music() -> void:
 	_next_track()
 	_music_tween = create_tween()
 	_music_tween.tween_property(_music, "volume_db", -4.0, 1.5)
-
-
-func stop_music() -> void:
-	_music_active = false
-	_builtin_left = -1.0
-	if _music == null or not _music.playing:
-		return
-	_music.stream_paused = false
-	if _music_tween:
-		_music_tween.kill()
-	_music_tween = create_tween()
-	_music_tween.tween_property(_music, "volume_db", -40.0, 0.8)
-	_music_tween.tween_callback(_music.stop)
 
 
 # ---------------------------------------------------- player controls (pause menu)

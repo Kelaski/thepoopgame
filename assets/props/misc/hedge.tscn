@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+
+[sub_resource type="StandardMaterial3D" id="r1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2, 0.48, 0.24, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="r2"]
+size = Vector3(3, 1, 0.9)
+
+[sub_resource type="BoxShape3D" id="r3"]
+size = Vector3(3, 1, 0.9)
+
+[node name="Hedge" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_mask = 0
+
+[node name="Hedge1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, 0.5, 0)
+mesh = SubResource("r2")
+material_override = SubResource("r1")
+
+[node name="Hedge1" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, 0.5, 0)
+shape = SubResource("r3")

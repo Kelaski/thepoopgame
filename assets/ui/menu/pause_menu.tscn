@@ -1,0 +1,53 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu/pause_menu.gd" id="script"]
+[ext_resource type="PackedScene" path="res://assets/ui/menu/music_bar.tscn" id="e1"]
+
+
+[node name="PauseMenu" type="ColorRect"]
+script = ExtResource("script")
+color = Color(0, 0, 0, 0.45)
+anchor_right = 1
+anchor_bottom = 1
+
+[node name="Center" type="CenterContainer" parent="."]
+mouse_filter = 2
+anchor_right = 1
+anchor_bottom = 1
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(380, 0)
+
+[node name="Box" type="VBoxContainer" parent="Center/Panel"]
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Center/Panel/Box" groups=["accent"]]
+text = "PAUSED"
+theme_override_font_sizes/font_size = 38
+
+[node name="Resume" type="Button" parent="Center/Panel/Box"]
+unique_name_in_owner = true
+text = "Resume"
+
+[node name="Settings" type="Button" parent="Center/Panel/Box"]
+unique_name_in_owner = true
+text = "Settings"
+
+[node name="Music" type="Button" parent="Center/Panel/Box"]
+unique_name_in_owner = true
+text = "Music player"
+
+[node name="EndMatch" type="Button" parent="Center/Panel/Box"]
+unique_name_in_owner = true
+text = "End Match"
+
+[node name="Leave" type="Button" parent="Center/Panel/Box"]
+unique_name_in_owner = true
+text = "Leave game"
+
+[node name="MusicBar" parent="." instance=ExtResource("e1")]
+unique_name_in_owner = true
+offset_left = 20
+offset_top = -170
+offset_right = 440
+offset_bottom = -44

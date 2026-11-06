@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/map/far_ground.gd" id="e1"]
+
+[sub_resource type="PlaneMesh" id="r1"]
+size = Vector2(6000, 6000)
+
+[node name="FarGround" type="MeshInstance3D"]
+script = ExtResource("e1")
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, -0.01, 0)
+mesh = SubResource("r1")
+cast_shadow = 0
+

@@ -1,18 +1,14 @@
 class_name UserImages
-## Player-supplied images (spray, custom crosshair, custom sniper scope, skybox).
+## Player-supplied images (spray, custom crosshair, custom sniper scope).
 ## Imported images are decoded, converted to RGBA, downscaled and re-saved as PNG
 ## in user://, so only clean PNG data is ever stored, shown or sent to others.
 
 const SPRAY := "user://spray.png"
 const CROSSHAIR := "user://crosshair.png"
 const SCOPE := "user://scope.png"
-const SKYBOX := "user://skybox.png"
-const SKYBOX_MAX := 4096
 const SPRAY_MAX_BYTES := 65536
 const PNG_MAGIC := [137, 80, 78, 71, 13, 10, 26, 10]
 const EXTENSIONS := ["png", "jpg", "jpeg", "webp", "bmp", "tga", "svg"]
-# Skyboxes may also be HDR panoramas (converted to 8-bit on import).
-const SKY_EXTENSIONS := ["png", "jpg", "jpeg", "webp", "bmp", "tga", "hdr", "exr"]
 
 static var _cache := {}
 
@@ -26,9 +22,8 @@ static func file_filters(exts: Array = EXTENSIONS) -> PackedStringArray:
 
 ## Imports src into dest, downscaled to fit max_size. Returns an error message or "".
 static func import_image(src: String, dest: String, max_size: int) -> String:
-	var allowed: Array = SKY_EXTENSIONS if dest == SKYBOX else EXTENSIONS
-	if not (src.get_extension().to_lower() in allowed):
-		return "Unsupported image type. Use %s." % ", ".join(PackedStringArray(allowed)).to_upper()
+	if not (src.get_extension().to_lower() in EXTENSIONS):
+		return "Unsupported image type. Use %s." % ", ".join(PackedStringArray(EXTENSIONS)).to_upper()
 	var img := Image.load_from_file(src)
 	if img == null or img.is_empty():
 		return "Could not read that image."

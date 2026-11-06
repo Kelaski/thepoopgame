@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="TimeOfDay" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/time_of_day.gd" id="s"]
+
+[resource]
+script = ExtResource("s")
+display_name = "Day"
+sun_color = Color(1, 0.9, 0.72, 1)
+sun_energy = 0.76
+sun_pitch_deg = -58.0
+sun_yaw_deg = 35.0
+sky_top = Color(0.26, 0.56, 0.96, 1)
+sky_horizon = Color(0.98, 0.9, 0.74, 1)
+ground_color = Color(0.46, 0.68, 0.34, 1)
+ambient_color = Color(1, 0.92, 0.8, 1)
+ambient_energy = 0.46
+fog_color = Color(0.98, 0.9, 0.76, 1)
+fog_density = 0.0006
+night = 0.0

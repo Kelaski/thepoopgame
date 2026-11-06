@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/map/skyline.gd" id="script"]
+[ext_resource type="Shader" path="res://assets/world/skyline.gdshader" id="shader"]
+
+[sub_resource type="ShaderMaterial" id="material"]
+resource_local_to_scene = true
+shader = ExtResource("shader")
+
+[sub_resource type="BoxMesh" id="box"]
+material = SubResource("material")
+
+[sub_resource type="MultiMesh" id="towers"]
+resource_local_to_scene = true
+transform_format = 1
+use_colors = true
+mesh = SubResource("box")
+
+[node name="Skyline" type="MultiMeshInstance3D" groups=["skyline"]]
+cast_shadow = 0
+multimesh = SubResource("towers")
+script = ExtResource("script")

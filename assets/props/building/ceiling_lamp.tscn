@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+
+[sub_resource type="BoxMesh" id="r1"]
+size = Vector3(1.2, 0.1, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="r2"]
+albedo_color = Color(1, 0.9, 0.66, 1)
+
+[node name="CeilingLamp" type="Node3D"]
+
+[node name="Fixture" type="MeshInstance3D" parent="."]
+mesh = SubResource("r1")
+material_override = SubResource("r2")
+metadata/glow = true

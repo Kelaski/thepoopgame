@@ -3,7 +3,7 @@ class_name Mats
 ## Sharing materials keeps draw-state changes (and memory) low.
 
 const TEAM_NAMES := ["Red", "Blue"]
-# Live colours (customizable in Customize Colours). Call refresh() after changes.
+# Live colours (Settings > Colours). Call refresh() after changes.
 static var TEAM_COLORS := [Color("c0453a"), Color("4f7fae")]
 static var TAG_COLOR := Color("ffd23f")
 
@@ -63,18 +63,6 @@ static func glow(color: Color, alpha := 1.0, no_depth := false) -> StandardMater
 	return m
 
 
-## Material for glowing MultiMesh parts: unshaded, the (over-bright) instance
-## colour is drawn as is so it blooms.
-static func vertex_glow() -> StandardMaterial3D:
-	if _cache.has("vglow"):
-		return _cache["vglow"]
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.vertex_color_use_as_albedo = true
-	_cache["vglow"] = m
-	return m
-
-
 ## A material from assets/materials/ by name (for prefab parts with a
 ## "material" meta). Falls back to the plain toon material.
 static func named(name: String) -> Material:
@@ -83,20 +71,6 @@ static func named(name: String) -> Material:
 		return _cache[key]
 	var path := "res://assets/materials/%s.tres" % name
 	var m: Material = load(path) if ResourceLoader.exists(path) else vertex_toon()
-	_cache[key] = m
-	return m
-
-
-static func vertex_unshaded(no_depth := false) -> StandardMaterial3D:
-	var key := "vun_%s" % no_depth
-	if _cache.has(key):
-		return _cache[key]
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.vertex_color_use_as_albedo = true
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.no_depth_test = no_depth
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_cache[key] = m
 	return m
 

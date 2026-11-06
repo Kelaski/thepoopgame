@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+
+
+[node name="StreetLight" type="OmniLight3D" groups=["street_lights"]]
+omni_range = 14
+light_energy = 1.4
+light_color = Color(1, 0.78, 0.48, 1)
+

@@ -11,7 +11,8 @@ signal changed
 signal colors_changed
 signal music_changed
 
-const PATH := "user://settings.cfg"
+const REAL_PATH := "user://settings.cfg"
+const TEST_PATH := "user://settings_test.cfg"  # tests never touch (or depend on) your saved settings
 
 # Rebindable actions, in the order the Keybinds tab lists them: [action, label].
 # Their default keys / buttons are set in Project Settings > Input Map.
@@ -24,11 +25,13 @@ const ACTIONS := [
 	["crouch", "Crouch / Slide"],
 	["crouch_only", "Crouch"],
 	["addon", "Use Active Addon"],
+	["music_player", "Music player"],
+	["pause", "Pause"],
 	["interact", "Interact / Doors"],
 	["fire", "Fire"],
 	["aim", "Aim Down Sights"],
 	["reload", "Reload"],
-	["ping", "Ping (double tap: danger)"],
+	["ping", "Ping"],
 	["scoreboard", "Scoreboard"],
 	["loadout", "Loadout Menu (while dead)"],
 	["spray", "Spray"],
@@ -36,14 +39,14 @@ const ACTIONS := [
 ]
 
 const DEFAULTS := {
-	"player_name": "Player",
-	"custom_name": false,  # the player typed their own name; otherwise it follows their Steam name
 	"lobby_privacy": 0,  # who can join lobbies you host: Net.Privacy (public / friends / invite only)
 	"weapon": "ar",
-	"map_size": "large",  # last map size chosen when hosting
-	"map_random": true,   # host: a new random city every match (false = the classic city)
-	"addon": "grapple",     # active addon (Addons.ACTIVE)
-	"addon2": "trackstar",  # passive addon (Addons.PASSIVE)
+	"map_size": "medium",  # last map chosen when hosting (Level.SIZE_ORDER)
+	"viewmodel_x": 0.0,    # held gun offset: left / right
+	"viewmodel_y": 0.0,    # down / up
+	"viewmodel_z": 0.0,    # forward / back
+	"active": "grapple",     # active addon (Addons.ACTIVE)
+	"passive": "trackstar",  # passive addon (Addons.PASSIVE)
 	# Controls
 	"sensitivity": 0.10,
 	"ads_sens_mult": 0.85,
@@ -53,16 +56,19 @@ const DEFAULTS := {
 	# Video
 	"fov": 100.0,
 	"brightness": 1.0,
-	"fullscreen": false,
+	"window_mode": 0,  # 0 windowed, 1 borderless, 2 fullscreen
+	"ads_fov_offset": 0.0,
 	"vsync": true,
 	"max_fps": 144,
 	"render_scale": 1.0,
 	"shadows": true,
-	"shadow_quality": 2,  # 0 low, 1 medium, 2 high, 3 ultra (see World.SHADOW_QUALITY)
-	"interior_lights": 2,  # 0 off, 1 low (every other lamp, shorter reach), 2 high
+	"shadow_quality": 3,  # 0 low, 1 medium, 2 high, 3 ultra (see SkyEnv.SHADOW_QUALITY)
+	"interior_lights": 2,  # 0 off, 1 low (every other lamp), 2 high
 	"bloom": true,
-	"msaa": 0,
-	"view_distance": 260.0,
+	"ssao": true,
+	"outlines": false,  # ink lines round everything
+	"msaa": 2,
+	"view_distance": 2200.0,
 	"show_fps": true,
 	"show_speed": true,  # speedometer above the health bar
 	# Audio
@@ -100,10 +106,6 @@ const DEFAULTS := {
 	"xh_image_scale": 1.0,
 	"scope_custom": false,
 	"scope_scale": 1.0,
-	# Custom skybox (equirectangular panorama in user://skybox.png)
-	"sky_custom": false,
-	"sky_rotation": 0.0,
-	"sky_energy": 1.0,
 	"hitmarker_sound": true,
 }
 
@@ -112,11 +114,19 @@ const DEFAULTS := {
 const BINDS_VERSION := 3
 const OLD_DEFAULT_BINDS := {
 	2: {"addon": ["k", KEY_F]},
-	3: {"addon": ["k", KEY_SHIFT], "interact": ["k", KEY_E]},  # 0.21.0: primary addon on E, doors on F
+	3: {"addon": ["k", KEY_SHIFT], "interact": ["k", KEY_E]},  # 0.21.0: active addon on E, doors on F
 }
 # Raising this wipes everyone's saved settings and binds back to the defaults once
 # (1: 0.18.0, when leaning was removed and Interact moved back to E).
 const RESET_VERSION := 1
+const VIDEO_VERSION := 1
+## Quality presets (Settings > Video). Ultra is the default: nothing held back.
+const VIDEO_PRESETS := {
+	"Low": {"render_scale": 0.75, "view_distance": 900.0, "shadows": true, "shadow_quality": 0, "msaa": 0, "interior_lights": 0, "ssao": false, "bloom": false},
+	"Medium": {"render_scale": 1.0, "view_distance": 1400.0, "shadows": true, "shadow_quality": 1, "msaa": 1, "interior_lights": 1, "ssao": false, "bloom": true},
+	"High": {"render_scale": 1.0, "view_distance": 2200.0, "shadows": true, "shadow_quality": 2, "msaa": 1, "interior_lights": 2, "ssao": true, "bloom": true},
+	"Ultra": {"render_scale": 1.0, "view_distance": 2200.0, "shadows": true, "shadow_quality": 3, "msaa": 2, "interior_lights": 2, "ssao": true, "bloom": true},
+}
 
 const MOUSE_NAMES := {
 	MOUSE_BUTTON_LEFT: "Mouse Left",
@@ -132,7 +142,7 @@ var values := {}
 var binds := {}  # action -> [kind ("k" key / "m" mouse button), code]: what's shown in Keybinds
 var _default_events := {}  # action -> the Input Map's events (from project.godot)
 var _default_binds := {}   # action -> [kind, code] of the Input Map's first key / button
-var _last_fullscreen = null
+var _last_window_mode := -1
 
 
 func _ready() -> void:
@@ -195,15 +205,19 @@ func s(key: String, v, save_now := true) -> void:
 	changed.emit()
 
 
+func _path() -> String:
+	return TEST_PATH if " ".join(OS.get_cmdline_args()).contains("res://tests/") else REAL_PATH
+
+
 func load_settings() -> void:
 	values = DEFAULTS.duplicate(true)
 	binds.clear()
 	for a in ACTIONS:
 		binds[a[0]] = default_bind(a[0])
 	var cf := ConfigFile.new()
-	if cf.load(PATH) == OK and int(cf.get_value("meta", "reset_version", 0)) < RESET_VERSION:
+	if cf.load(_path()) == OK and int(cf.get_value("meta", "reset_version", 0)) < RESET_VERSION:
 		save_settings.call_deferred()  # an update reset everything: start from the defaults
-	elif cf.load(PATH) == OK:
+	elif cf.load(_path()) == OK:
 		for k in DEFAULTS.keys():
 			if cf.has_section_key("settings", k):
 				values[k] = cf.get_value("settings", k)
@@ -213,23 +227,42 @@ func load_settings() -> void:
 				if b is Array and b.size() == 2:
 					binds[a[0]] = b
 		_migrate_binds(int(cf.get_value("meta", "binds_version", 1)))
+		# Saved before these keys were renamed.
+		values["active"] = cf.get_value("settings", "addon", values.active) if not cf.has_section_key("settings", "active") else values.active
+		values["passive"] = cf.get_value("settings", "addon2", values.passive) if not cf.has_section_key("settings", "passive") else values.passive
 		_migrate_addons()
+		if int(cf.get_value("meta", "video_version", 0)) < VIDEO_VERSION:
+			# The look changed with the new maps: everyone starts on the top settings.
+			values.merge(VIDEO_PRESETS.Ultra, true)
+			if cf.get_value("settings", "fullscreen", false):
+				values["window_mode"] = 2
+			save_settings.call_deferred()
 		if int(values.get("max_fps", 144)) <= 0:
 			values["max_fps"] = 500  # the old "Unlimited"; the FPS cap is a 30-500 slider now
 	_apply_binds()
 
 
-## Before 0.21.0 there was one addon slot: a saved secondary addon moves to the
-## secondary slot, and anything that isn't an addon any more goes back to the default.
+## Where the player moved their held gun to (hip pose only).
+func apply_preset(preset: String) -> void:
+	values.merge(VIDEO_PRESETS[preset], true)
+	s("render_scale", values.render_scale)
+
+
+func viewmodel_offset() -> Vector3:
+	return Vector3(float(g("viewmodel_x")), float(g("viewmodel_y")), float(g("viewmodel_z")))
+
+
+## Old saved addons move to whichever slot they now belong in; anything that isn't an addon
+## any more goes back to the default.
 func _migrate_addons() -> void:
-	var saved := [str(values.addon), str(values.addon2)]
-	values["addon"] = Addons.DEFAULT_ACTIVE
-	values["addon2"] = Addons.DEFAULT_PASSIVE
-	for old: String in saved:  # an old primary may now be passive, and the other way round
+	var saved := [str(values.active), str(values.passive)]
+	values["active"] = Addons.DEFAULT_ACTIVE
+	values["passive"] = Addons.DEFAULT_PASSIVE
+	for old: String in saved:  # an old active addon may now be passive, and the other way round
 		var id: String = Addons.RENAMED.get(old, old)
 		match Addons.slot_of(id):
-			0: values["addon"] = id
-			1: values["addon2"] = id
+			0: values["active"] = id
+			1: values["passive"] = id
 	if not Weapons.DATA.has(str(values.weapon)):
 		values["weapon"] = "ar"  # the SMG is gone
 
@@ -253,7 +286,8 @@ func save_settings() -> void:
 		cf.set_value("binds", a, binds[a])
 	cf.set_value("meta", "binds_version", BINDS_VERSION)
 	cf.set_value("meta", "reset_version", RESET_VERSION)
-	cf.save(PATH)
+	cf.set_value("meta", "video_version", VIDEO_VERSION)
+	cf.save(_path())
 
 
 func set_bind(action: String, kind: String, code: int) -> void:
@@ -370,10 +404,10 @@ func bind_text(action: String) -> String:
 
 func apply_all() -> void:
 	if DisplayServer.get_name() != "headless":
-		var fs: bool = g("fullscreen")
-		if _last_fullscreen != fs:
-			_last_fullscreen = fs
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fs else DisplayServer.WINDOW_MODE_WINDOWED)
+		var wm := int(g("window_mode"))
+		if _last_window_mode != wm:
+			_last_window_mode = wm
+			DisplayServer.window_set_mode([DisplayServer.WINDOW_MODE_WINDOWED, DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN][clampi(wm, 0, 2)])
 		# Only when it changes: setting it rebuilds the swap chain (a hitch on every slider step).
 		var vs := DisplayServer.VSYNC_ENABLED if g("vsync") else DisplayServer.VSYNC_DISABLED
 		if DisplayServer.window_get_vsync_mode() != vs:

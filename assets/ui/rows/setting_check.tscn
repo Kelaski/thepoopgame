@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/setting_check.gd" id="1_ml7pc"]
+[ext_resource type="Script" path="res://scripts/ui/rows/setting_check.gd" id="1_ml7pc"]
 
 [node name="SettingCheck" type="HBoxContainer" unique_id=1090346451]
 theme_override_constants/separation = 12

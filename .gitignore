@@ -3,3 +3,4 @@
 export/
 builds/
 *.tmp
+_tmp/

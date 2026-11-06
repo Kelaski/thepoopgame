@@ -1,0 +1,67 @@
+[gd_scene format=3]
+
+
+[sub_resource type="StandardMaterial3D" id="r1"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2, 0.58, 0.36, 1)
+roughness = 0.85
+
+[sub_resource type="CylinderMesh" id="r2"]
+top_radius = 0.025
+bottom_radius = 0.025
+height = 1
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r3"]
+top_radius = 0.025
+bottom_radius = 0.025
+height = 1.2
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="r4"]
+top_radius = 0.025
+bottom_radius = 0.025
+height = 0.84
+radial_segments = 12
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="r5"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.36, 0.23, 0.14, 1)
+roughness = 0.85
+
+[sub_resource type="CylinderMesh" id="r6"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.22
+radial_segments = 12
+rings = 1
+
+[node name="Reeds" type="Node3D"]
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_mask = 0
+
+[node name="Green1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, -0.2, 0.5, 0)
+mesh = SubResource("r2")
+material_override = SubResource("r1")
+
+[node name="Green2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.1, 0.6, 0.1)
+mesh = SubResource("r3")
+material_override = SubResource("r1")
+
+[node name="Green3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.2, 0.42, -0.14)
+mesh = SubResource("r4")
+material_override = SubResource("r1")
+
+[node name="WoodDark4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.1, 1.2, 0.1)
+mesh = SubResource("r6")
+material_override = SubResource("r5")

@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/setting_slider.gd" id="1_ei6jl"]
+[ext_resource type="Script" path="res://scripts/ui/rows/setting_slider.gd" id="1_ei6jl"]
 
 [node name="SettingSlider" type="HBoxContainer" unique_id=1323810527]
 theme_override_constants/separation = 12
