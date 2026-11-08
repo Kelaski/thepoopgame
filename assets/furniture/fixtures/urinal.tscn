@@ -1,0 +1,123 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_porc"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9569, 0.9569, 0.9412, 1)
+roughness = 0.25
+
+[sub_resource type="BoxMesh" id="m1"]
+size = Vector3(0.4205, 0.5805, 0.1405)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_o71f3"]
+size = Vector3(0.4205, 0.7007, 0.261)
+
+[sub_resource type="BoxMesh" id="m2"]
+size = Vector3(0.3007, 0.7007, 0.1408)
+
+[sub_resource type="BoxMesh" id="m3"]
+size = Vector3(0.301, 0.581, 0.261)
+
+[sub_resource type="StandardMaterial3D" id="mat_dark"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.1647, 0.1725, 0.1922, 1)
+roughness = 0.6
+
+[sub_resource type="SphereMesh" id="m4"]
+radius = 1.0
+height = 2.0
+radial_segments = 10
+rings = 3
+
+[sub_resource type="StandardMaterial3D" id="mat_chrome"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.7843, 0.8078, 0.8235, 1)
+roughness = 0.2
+
+[sub_resource type="CylinderMesh" id="m5"]
+top_radius = 0.02
+bottom_radius = 0.02
+height = 0.22
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="m6"]
+size = Vector3(0.0813, 0.0612, 0.0612)
+
+[sub_resource type="CylinderMesh" id="m7"]
+top_radius = 0.03
+bottom_radius = 0.03
+height = 0.2
+radial_segments = 8
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="mat_panel"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.4353, 0.5608, 0.6588, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m8"]
+size = Vector3(0.0315, 1.1015, 0.5515)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wkhnt"]
+size = Vector3(0.0315, 1.1015, 0.5515)
+
+[node name="Urinal" type="Node3D" unique_id=473005503]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06275, 0, -0.29262498)
+
+[node name="Bowl" type="MeshInstance3D" parent="." unique_id=1673714011]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0.14)
+material_override = SubResource("mat_porc")
+mesh = SubResource("m1")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Bowl" unique_id=1963385195]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Bowl/StaticBody3D" unique_id=1420308876]
+shape = SubResource("BoxShape3D_o71f3")
+
+[node name="Bowl2" type="MeshInstance3D" parent="." unique_id=394880761]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0.14)
+material_override = SubResource("mat_porc")
+mesh = SubResource("m2")
+
+[node name="Bowl3" type="MeshInstance3D" parent="." unique_id=312805568]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0.14)
+material_override = SubResource("mat_porc")
+mesh = SubResource("m3")
+
+[node name="dark1" type="MeshInstance3D" parent="." unique_id=1304448782]
+transform = Transform3D(0.12, 0, 0, 0, 0.02, 0, 0, 0, 0.06, 0, 0.7, 0.25)
+material_override = SubResource("mat_dark")
+mesh = SubResource("m4")
+
+[node name="chrome1" type="MeshInstance3D" parent="." unique_id=293439074]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.32, 0.06)
+material_override = SubResource("mat_chrome")
+mesh = SubResource("m5")
+
+[node name="chrome2" type="MeshInstance3D" parent="." unique_id=2136865783]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0.08)
+material_override = SubResource("mat_chrome")
+mesh = SubResource("m6")
+
+[node name="chrome3" type="MeshInstance3D" parent="." unique_id=1653593387]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0.05)
+material_override = SubResource("mat_chrome")
+mesh = SubResource("m7")
+
+[node name="Divider" type="MeshInstance3D" parent="." unique_id=1577141661]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 1.1, 0.3)
+material_override = SubResource("mat_panel")
+mesh = SubResource("m8")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Divider" unique_id=788136470]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Divider/StaticBody3D" unique_id=1039053640]
+shape = SubResource("BoxShape3D_wkhnt")

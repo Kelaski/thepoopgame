@@ -1,0 +1,135 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/door.gd" id="1_0fucj"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_3xnsl"]
+resource_local_to_scene = true
+size = Vector3(1.0, 2.45, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="mat_panel"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3569, 0.4196, 0.4549, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="mat_dark"]
+transparency = 1
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0, 0, 0, 0.16)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="mat_brass"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.8392, 0.6588, 0.2275, 1)
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="mat_frame"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2275, 0.2471, 0.2667, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6039, 0.6392, 0.6588, 1)
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="m1"]
+size = Vector3(1.0005, 2.4505, 0.0805)
+
+[sub_resource type="BoxMesh" id="m2"]
+size = Vector3(0.7008, 0.8508, 0.0907)
+
+[sub_resource type="BoxMesh" id="m3"]
+size = Vector3(0.701, 1.051, 0.091)
+
+[sub_resource type="BoxMesh" id="m4"]
+size = Vector3(0.8812, 0.1613, 0.0892)
+
+[sub_resource type="CylinderMesh" id="m5"]
+top_radius = 0.03
+bottom_radius = 0.03
+height = 0.2
+radial_segments = 12
+rings = 1
+
+[sub_resource type="SphereMesh" id="m6"]
+radius = 1.0
+height = 2.0
+radial_segments = 12
+rings = 6
+
+[sub_resource type="BoxMesh" id="m7"]
+size = Vector3(0.0915, 0.2215, 0.0875)
+
+[sub_resource type="CylinderMesh" id="m8"]
+top_radius = 0.022
+bottom_radius = 0.022
+height = 0.14
+radial_segments = 8
+rings = 1
+
+[node name="DoorNarrow" type="Node3D"]
+script = ExtResource("1_0fucj")
+design_w = 1.0
+
+[node name="Body" type="AnimatableBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.225, 0)
+collision_layer = 8
+collision_mask = 0
+sync_to_physics = false
+
+[node name="Shape" type="CollisionShape3D" parent="Body"]
+shape = SubResource("BoxShape3D_3xnsl")
+
+[node name="Panel" type="MeshInstance3D" parent="Body"]
+mesh = SubResource("m1")
+material_override = SubResource("mat_panel")
+
+[node name="Recess" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.545, 0)
+mesh = SubResource("m2")
+material_override = SubResource("mat_dark")
+
+[node name="Recess2" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.495, 0)
+mesh = SubResource("m3")
+material_override = SubResource("mat_dark")
+
+[node name="Kick" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.105, 0)
+mesh = SubResource("m4")
+material_override = SubResource("mat_steel")
+
+[node name="Spindle" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.38, -0.1, 0)
+mesh = SubResource("m5")
+material_override = SubResource("mat_brass")
+
+[node name="Knob" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(0.045, 0, 0, 0, 0.045, 0, 0, 0, 0.03, 0.38, -0.1, -0.1)
+mesh = SubResource("m6")
+material_override = SubResource("mat_brass")
+
+[node name="Knob2" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(0.045, 0, 0, 0, 0.045, 0, 0, 0, 0.03, 0.38, -0.1, 0.1)
+mesh = SubResource("m6")
+material_override = SubResource("mat_brass")
+
+[node name="Plate" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.38, -0.1, 0)
+mesh = SubResource("m7")
+material_override = SubResource("mat_frame")
+
+[node name="Hinge" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, -0.875, 0)
+mesh = SubResource("m8")
+material_override = SubResource("mat_steel")
+
+[node name="Hinge2" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.875, 0)
+mesh = SubResource("m8")
+material_override = SubResource("mat_steel")

@@ -4,13 +4,14 @@ extends Node3D
 ## sprinting into it. State changes are broadcast by World.door_rpc so every peer
 ## sees the same thing.
 ##
-## The scene is built for a DESIGN_W x DESIGN_H doorway with the hinge at the
+## The scene is built for a design_w x DESIGN_H doorway with the hinge at the
 ## origin. setup() stretches it to the actual doorway: the Panel is scaled, the
 ## collision Shape resized, and the other parts (the knob) moved to match.
 
 const OPEN_ANGLE := 100.0
-const DESIGN_W := 1.7
 const DESIGN_H := 2.45
+## The doorway width this scene is built for; it only stretches the last few centimetres.
+@export var design_w := 1.7
 
 var idx := 0
 var target := 0.0
@@ -29,7 +30,7 @@ func setup(i: int, hinge: Vector3, yaw: float, w: float, h: float, col: Color) -
 	position = hinge
 	rotation.y = yaw
 	var b: AnimatableBody3D = get_node("Body")  # setup runs before _ready
-	var k := Vector3(w / DESIGN_W, h / DESIGN_H, 1.0)
+	var k := Vector3(w / design_w, h / DESIGN_H, 1.0)
 	b.position *= k
 	for c in b.get_children():
 		if c is CollisionShape3D and c.shape is BoxShape3D:

@@ -125,7 +125,7 @@ func _try_fire() -> void:
 	Sfx.play(weapon, -3.0, randf_range(0.95, 1.05))
 	if weapon != "bat":
 		var muzzle := vm_muzzle.global_position if vm_muzzle else origin
-		Game.world.add_tracers(muzzle, ends, weapon)
+		Game.world.add_tracers(muzzle, ends)
 		Net.to_all(Game.world, "fx_shot", [global_position + Vector3(0, 1.25, 0), ends, weapon], true)  # reliable: a hit must never be silent
 	else:
 		Net.to_all(Game.world, "fx_shot", [global_position + Vector3(0, 1.25, 0), PackedVector3Array(), weapon], true)
@@ -187,7 +187,8 @@ func _hitscan(from: Vector3, dir: Vector3, max_dist: float, wall_pierce: int, pi
 			Game.world.add_impact(r.position)
 			start = r2.position + dir * 0.02
 			continue
-		Game.world.add_impact(r.position)
+		if weapon == "bat":  # a gun's tracer makes its own sparks when it lands
+			Game.world.add_impact(r.position)
 		return {"hits": hits, "end": r.position}
 	return {"hits": hits, "end": end}
 

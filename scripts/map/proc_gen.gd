@@ -4,12 +4,12 @@ class_name ProcGen
 
 ## Which themes can appear, with the floor range and floor height the Classic map gives them.
 const PRESETS := [
-	["warehouse", "Warehouse", 1, 2, 6.0], ["school", "School", 2, 3, 4.0], ["theater", "Theater", 1, 2, 5.0],
-	["bank", "Bank", 1, 2, 4.5], ["diner", "Diner", 1, 1, 4.5], ["arcade", "Arcade", 1, 2, 4.0],
-	["club", "Nightclub", 1, 2, 4.5], ["bar", "Bar", 1, 1, 4.0], ["apartments", "Apartments", 3, 5, 3.6],
-	["mall", "Mall", 2, 3, 5.0], ["motel", "Motel", 1, 2, 3.8], ["tenement", "Tenements", 2, 4, 3.6],
-	["office", "Office", 3, 5, 3.8], ["casino", "Casino", 2, 5, 4.5], ["water", "Water Works", 1, 1, 7.0],
-	["library", "Library", 1, 2, 4.5], ["gym", "Gym", 1, 2, 5.0],
+	["warehouse", "Warehouse", 1, 3, 6.0], ["school", "School", 2, 4, 4.0], ["theater", "Theater", 1, 3, 5.0],
+	["bank", "Bank", 1, 3, 4.5], ["diner", "Diner", 1, 1, 4.5], ["arcade", "Arcade", 1, 3, 4.0],
+	["club", "Nightclub", 1, 3, 4.5], ["bar", "Bar", 1, 1, 4.0], ["apartments", "Apartments", 3, 7, 3.6],
+	["mall", "Mall", 2, 4, 5.0], ["motel", "Motel", 1, 3, 3.8], ["tenement", "Tenements", 2, 5, 3.6],
+	["office", "Office", 3, 7, 3.8], ["casino", "Casino", 2, 7, 4.5], ["water", "Water Works", 1, 1, 7.0],
+	["library", "Library", 1, 3, 4.5], ["gym", "Gym", 1, 3, 5.0],
 ]
 const SMALL_THEMES := ["diner", "bar", "arcade", "bank", "library", "motel", "tenement"]
 const BIG_THEMES := ["warehouse", "gym", "mall", "casino", "office", "school", "water", "theater", "apartments", "club"]
@@ -158,9 +158,10 @@ static func _carve_park(block: Rect2, rules: MapRules, rng: RandomNumberGenerato
 ## Too small a quarter simply goes without.
 static func _park_plan(rect: Rect2, park_name: String, rng: RandomNumberGenerator) -> Dictionary:
 	const PATH_CLEARANCE := 2.0
-	const EDGE_CLEARANCE := 1.6
 	const MIN_FEATURE := 3.0
-	var quarter_size := rect.size * 0.5 - Vector2.ONE * (PATH_CLEARANCE + EDGE_CLEARANCE)
+	# Big parks have a loop path near the edge, so their features sit inside it.
+	var edge_clearance := ParkBuilder.LOOP_INSET + ParkBuilder.LOOP_WIDTH if minf(rect.size.x, rect.size.y) >= ParkBuilder.LOOP_MIN_SIZE else 1.6
+	var quarter_size := rect.size * 0.5 - Vector2.ONE * (PATH_CLEARANCE + edge_clearance)
 	var c := rect.get_center()
 	var corners := [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]
 	_shuffle(corners, rng)
@@ -172,7 +173,10 @@ static func _park_plan(rect: Rect2, park_name: String, rng: RandomNumberGenerato
 	var pond: Rect2 = quarter.call(corners[0])
 	if pond.has_area():
 		pond = pond.grow_individual(0.0, 0.0, -pond.size.x * rng.randf_range(0.1, 0.4), -pond.size.y * rng.randf_range(0.1, 0.4))
-	return {"name": park_name, "rect": rect, "pond": pond, "playground": quarter.call(corners[1])}
+	var court: Rect2 = quarter.call(corners[2])
+	if court.size.x < ParkBuilder.COURT_MIN.x and court.size.y < ParkBuilder.COURT_MIN.x or minf(court.size.x, court.size.y) < ParkBuilder.COURT_MIN.y:
+		court = Rect2()
+	return {"name": park_name, "rect": rect, "pond": pond, "playground": quarter.call(corners[1]), "court": court}
 
 
 static func _split_blocks(rect: Rect2, rules: MapRules, rng: RandomNumberGenerator, layout: MapLayout, out: Array[Rect2]) -> void:
@@ -259,7 +263,45 @@ static func _building_for(lot: Rect2, id: int, rng: RandomNumberGenerator, rules
 		if p[0] == theme:
 			preset = p
 	var floors := mini(rng.randi_range(preset[2], preset[3]), rules.max_floors)
-	return {"id": id, "name": "%s %d" % [preset[1], id], "theme": theme, "rect": lot, "floors": floors, "floor_h": fit_storey(lot, preset[4] * rules.floor_height_scale, rules)}
+	var h := fit_storey(lot, preset[4] * rules.floor_height_scale, rules)
+	return {"id": id, "name": "%s %d" % [preset[1], id], "theme": theme, "rect": lot, "floors": floors, "floor_h": h, "floor_hs": storey_heights(theme, floors, lot, h, rules)}
+
+
+## Each storey's height, ground first. Big halls get a taller ground floor (RoomPlans.TALL_GROUND).
+static func storey_heights(theme: String, floors: int, rect: Rect2, h: float, rules: MapRules) -> Array:
+	var out := []
+	for level in floors:
+		out.append(h)
+	if RoomPlans.TALL_GROUND.has(theme):
+		out[0] = maxf(h, fit_storey(rect, RoomPlans.TALL_GROUND[theme] * rules.floor_height_scale, rules))
+	return out
+
+
+## A building's storey heights, ground first.
+static func storeys(b: Dictionary) -> Array:
+	if b.has("floor_hs"):
+		return b.floor_hs
+	var out := []
+	for level in b.floors:
+		out.append(b.floor_h)
+	return out
+
+
+## Height of the roof.
+static func height(b: Dictionary) -> float:
+	var total := 0.0
+	for h: float in storeys(b):
+		total += h
+	return total
+
+
+## Height of a storey's floor.
+static func level_y(b: Dictionary, level: int) -> float:
+	var y := 0.0
+	var hs := storeys(b)
+	for i in mini(level, hs.size()):
+		y += hs[i]
+	return y
 
 
 ## A storey height whose ramp still fits this footprint at a comfortable slope.
@@ -325,8 +367,8 @@ const BEAM_THICKNESS := 0.12
 static func bridge_points(a: Dictionary, b: Dictionary, rules: MapRules) -> Array:
 	var ra: Rect2 = a.rect
 	var rb: Rect2 = b.rect
-	var ya: float = a.floors * a.floor_h + rules.parapet_height + BEAM_THICKNESS + 0.01
-	var yb: float = b.floors * b.floor_h + rules.parapet_height + BEAM_THICKNESS + 0.01
+	var ya: float = height(a) + rules.parapet_height + BEAM_THICKNESS + 0.01
+	var yb: float = height(b) + rules.parapet_height + BEAM_THICKNESS + 0.01
 	var from := Vector2.ZERO  # on a's outer face
 	var to := Vector2.ZERO    # on b's outer face
 	var overlap_x := minf(ra.end.x, rb.end.x) - maxf(ra.position.x, rb.position.x)
@@ -364,7 +406,7 @@ static func bridge_is_clear(layout: MapLayout, a: Dictionary, b: Dictionary, rul
 		return false
 	var low: float = minf(ends[0].y, ends[1].y) - 1.0
 	for other in layout.buildings:
-		if other.id == a.id or other.id == b.id or other.floors * other.floor_h + rules.parapet_height < low:
+		if other.id == a.id or other.id == b.id or height(other) + rules.parapet_height < low:
 			continue
 		if MapLayout._segment_hits_rect(Vector2(ends[0].x, ends[0].z), Vector2(ends[1].x, ends[1].z), (other.rect as Rect2).grow(0.5)):
 			return false

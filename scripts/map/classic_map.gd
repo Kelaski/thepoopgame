@@ -55,6 +55,8 @@ static func build(rules: MapRules) -> MapLayout:
 	layout.bounds = Rect2(-SKETCH_SIZE * 0.5 * s, SKETCH_SIZE * s)
 	for z in ZONES:
 		layout.buildings.append({"id": z[0], "name": z[1], "theme": z[2], "rect": _rect(z[3], s), "floors": z[4], "floor_h": ProcGen.fit_storey(_rect(z[3], s), z[5] * rules.floor_height_scale, rules)})
+		var b: Dictionary = layout.buildings[-1]
+		b["floor_hs"] = ProcGen.storey_heights(b.theme, b.floors, b.rect, b.floor_h, rules)
 	layout.parks.append({"name": PARK.name, "rect": _rect(PARK.rect, s), "pond": _rect(PARK.pond, s), "playground": _rect(PARK.playground, s)})
 	for road in ROADS:
 		var pts := PackedVector2Array()

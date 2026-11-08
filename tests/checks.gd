@@ -41,6 +41,28 @@ func _ready() -> void:
 	_check_unzip()
 
 	# Addons: every one is in exactly one slot; an old single-slot save moves over.
+	_check(PropLibrary._indices([null, null, null, null, null, null, null, null, null, null, null, null, null], 3) == PackedInt32Array([0, 1, 2]), "a mesh with no index list still draws")
+	# Mesh collision made in the editor has to survive baking into the level.
+	var trimesh := ConcavePolygonShape3D.new()
+	trimesh.set_faces(PackedVector3Array([Vector3.ZERO, Vector3.RIGHT, Vector3.UP]))
+	var prop_out := {"shapes": [], "meshes": [], "hulls": [], "half": Vector2.ZERO}
+	PropLibrary._add_shape(trimesh, Transform3D(Basis.IDENTITY * 2.0, Vector3(1, 0, 0)), prop_out, GeoMask.WALL)
+	var mesh_batch := GeoBatch.new()
+	mesh_batch.add_mesh_shape(prop_out.meshes[0][0], Transform3D.IDENTITY, GeoMask.WALL)
+	var mesh_root := Node3D.new()
+	add_child(mesh_root)
+	mesh_batch.bake(mesh_root, "MeshTest")
+	var mesh_body: StaticBody3D = mesh_root.find_children("*", "StaticBody3D", true, false)[0]
+	_check(mesh_body.shape_owner_get_shape(mesh_body.get_shape_owners()[0], 0).get_faces()[1] == Vector3(3, 0, 0), "a mesh shape in a prop keeps its form in the level")
+	mesh_root.queue_free()
+	var bus_stop: Dictionary = PropLibrary.get_prop("res://assets/props/street/bus_shelter.tscn")
+	_check(bus_stop.parts.any(func(p): return p.see_through and p.color.a < 1.0), "glass in a prop stays see-through")
+	# Every room a building can have is furnished, from props the map knows.
+	for prefab: String in Interiors.prefabs():
+		_check(Clutter.IMPORTS.has(prefab), "room prop %s exists" % prefab)
+	for theme: String in RoomPlans.PROGRAMS:
+		for kind: String in _program_kinds(RoomPlans.PROGRAMS[theme]):
+			_check(RoomPlans.ROOMS.has(kind) and (Interiors.PLANS.has(kind) or RoomPlans.room(kind).has("parts")), "%s room %s has a plan" % [theme, kind])
 	var listed := {}
 	for groups: Dictionary in [Addons.ACTIVE, Addons.PASSIVE]:
 		for sub: String in groups:
@@ -270,3 +292,22 @@ func _check_unzip() -> void:
 	_check(exe == "game.exe" and FileAccess.file_exists(out.path_join("sub/data.txt")), "update unpacked, game found")
 	_check(not FileAccess.file_exists(root.path_join("evil.txt")), "update entry outside its folder refused")
 	UpdateScreen._remove_tree(root)
+
+
+## Every room kind a building's program names, parts of homes included.
+func _program_kinds(program: Dictionary) -> Array:
+	var out := []
+	if program.has("hall"):
+		out.append(program.hall)
+	for key: String in ["floors", "zones"]:
+		for f in program.get(key, []):
+			if f is Dictionary:
+				out.append_array(f.once + f.fill)
+			else:
+				for band: Array in f:
+					for cell: Array in band[1]:
+						out.append(cell[0])
+	for kind: String in out.duplicate():
+		for part: Array in RoomPlans.room(kind).get("parts", []):
+			out.append(part[0])
+	return out

@@ -7,7 +7,7 @@ var map_seed := 0
 var bounds := Rect2()
 ## {points: PackedVector2Array, width: float}
 var roads: Array = []
-## {id, name, theme, rect: Rect2, floors: int, floor_h: float}
+## {id, name, theme, rect: Rect2, floors: int, floor_h: float, floor_hs: storey heights, ground first}
 var buildings: Array = []
 ## {name, rect: Rect2, pond: Rect2, playground: Rect2}
 var parks: Array = []
@@ -59,7 +59,7 @@ func raise_objectives(rng: RandomNumberGenerator) -> void:
 		for b in buildings:
 			if (b.rect as Rect2).has_point(o.pos):
 				var top: int = b.floors if BuildingBuilder.has_roof_access(b.theme, b.floors) else b.floors - 1
-				o["y"] = rng.randi_range(0, top) * float(b.floor_h)
+				o["y"] = ProcGen.level_y(b, rng.randi_range(0, top))
 
 
 ## Wider open ground around the map: moves the edges out by a share of its size, in total, split between
@@ -109,8 +109,8 @@ func validate() -> Array[String]:
 		var a: Rect2 = buildings[i].rect
 		if not bounds.encloses(a):
 			problems.append("Building %d leaves the map" % buildings[i].id)
-		if buildings[i].floors > 5:
-			problems.append("Building %d is over 5 stories" % buildings[i].id)
+		if buildings[i].floors > Level.RULES.max_floors:
+			problems.append("Building %d is over %d stories" % [buildings[i].id, Level.RULES.max_floors])
 		for j in range(i + 1, buildings.size()):
 			if a.intersects(buildings[j].rect):
 				problems.append("Buildings %d and %d overlap" % [buildings[i].id, buildings[j].id])

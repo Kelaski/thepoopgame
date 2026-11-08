@@ -110,8 +110,8 @@ Tag Rush plays fast. Moving forward is always a sprint, and every move keeps you
 - **Four maps:** Classic, or a random city in Small, Medium or Large, chosen by the host in the lobby.
 - **Streets that meet properly:** roads with kerbs and dashes, crossings and stop signs where they join, and bends, not just a grid.
 - **Rounds move around:** each round both teams start somewhere new, out of each other's sight where the map allows and about the same distance from the Tag, and the Tag appears in a different spot. Inside a building it can be on any floor, so look up.
-- **Every building can be explored**, with stairs up to an open roof, and each is furnished for what it is: gyms, casinos, schools, offices, diners, apartments and more.
-- **Parks** with ponds, playgrounds, paths, benches and hedges.
+- **Every building can be explored**, up to seven floors high, with stairs up to an open roof. Each has the rooms it would really have, furnished for what they are: classrooms and a cafeteria in schools, homes with their own bedroom and bathroom in apartments, a cinema behind the snack counter, restrooms, offices, kitchens and more.
+- **Parks** with tree-lined paths, ponds with a dock, playgrounds, basketball courts, benches and hedges.
 - **Busy streets and rooftops:** parked cars, lamps that light up at night, water towers, air conditioning units and antennas.
 - **Rooftop routes:** tower cranes hold beams between rooftops.
 - **Beyond the fence:** roads run off across open grass, towards a lit-up city skyline all around the map.

@@ -1,40 +1,119 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://c13irlqb2l3aq"]
 
-
-[sub_resource type="StandardMaterial3D" id="r1"]
+[sub_resource type="StandardMaterial3D" id="mat_cap"]
 diffuse_mode = 3
 specular_mode = 1
-albedo_color = Color(0.27, 0.29, 0.34, 1)
-roughness = 0.85
+albedo_color = Color(0.1804, 0.1961, 0.2196, 1)
+roughness = 0.6
 
-[sub_resource type="CylinderMesh" id="r2"]
-top_radius = 0.04
-bottom_radius = 0.04
-height = 3
-radial_segments = 12
+[sub_resource type="CylinderMesh" id="m1"]
+top_radius = 0.045
+bottom_radius = 0.06
+height = 0.06
+radial_segments = 10
 rings = 1
 
-[sub_resource type="StandardMaterial3D" id="r3"]
+[sub_resource type="StandardMaterial3D" id="mat_post"]
 diffuse_mode = 3
 specular_mode = 1
-albedo_color = Color(0.1, 0.46, 0.28, 1)
-roughness = 0.85
+albedo_color = Color(0.2706, 0.2902, 0.3412, 1)
+roughness = 0.6
 
-[sub_resource type="BoxMesh" id="r4"]
-size = Vector3(1.6, 0.28, 0.05)
+[sub_resource type="CylinderMesh" id="m2"]
+top_radius = 0.036
+bottom_radius = 0.036
+height = 2.789082
+radial_segments = 10
+rings = 1
 
-[sub_resource type="BoxShape3D" id="r5"]
-size = Vector3(1.6, 0.28, 0.05)
+[sub_resource type="CylinderMesh" id="m3"]
+top_radius = 0.03
+bottom_radius = 0.036
+height = 0.06
+radial_segments = 10
+rings = 1
 
-[node name="StreetSign" type="Node3D"]
+[sub_resource type="StandardMaterial3D" id="mat_green"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.102, 0.4588, 0.2784, 1)
+roughness = 0.6
 
-[node name="MetalDark1" type="MeshInstance3D" parent="."]
-transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, 1.5, 0)
-mesh = SubResource("r2")
-material_override = SubResource("r1")
+[sub_resource type="BoxMesh" id="m4"]
+size = Vector3(1.6005, 0.2365, 0.0065)
 
-[node name="SignGreen2" type="MeshInstance3D" parent="."]
-transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0, 3, 0)
-mesh = SubResource("r4")
-material_override = SubResource("r3")
+[sub_resource type="BoxMesh" id="m5"]
+size = Vector3(1.5768, 0.2607, 0.0067)
 
+[sub_resource type="BoxMesh" id="m6"]
+size = Vector3(1.577, 0.237, 0.031)
+
+[sub_resource type="StandardMaterial3D" id="mat_white"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.9569, 0.9569, 0.9333, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m13"]
+size = Vector3(1.5228, 0.0107, 0.0047)
+
+[sub_resource type="BoxMesh" id="m14"]
+size = Vector3(1.523, 0.011, 0.005)
+
+[sub_resource type="BoxMesh" id="m21"]
+size = Vector3(1.5248, 0.0128, 0.0067)
+
+[sub_resource type="BoxMesh" id="m22"]
+size = Vector3(1.525, 0.013, 0.007)
+
+[node name="StreetSign" type="Node3D" unique_id=905903078]
+
+[node name="cap1" type="MeshInstance3D" parent="." unique_id=135981454]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+material_override = SubResource("mat_cap")
+mesh = SubResource("m1")
+
+[node name="Post" type="MeshInstance3D" parent="." unique_id=1248432931]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.414541, 0)
+material_override = SubResource("mat_post")
+mesh = SubResource("m2")
+
+[node name="cap2" type="MeshInstance3D" parent="." unique_id=830332236]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.832537, 0)
+material_override = SubResource("mat_cap")
+mesh = SubResource("m3")
+
+[node name="Sign" type="MeshInstance3D" parent="." unique_id=1971976619]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.94, 0)
+material_override = SubResource("mat_green")
+mesh = SubResource("m4")
+
+[node name="Sign2" type="MeshInstance3D" parent="." unique_id=411264331]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.94, 0)
+material_override = SubResource("mat_green")
+mesh = SubResource("m5")
+
+[node name="Sign3" type="MeshInstance3D" parent="." unique_id=1664623822]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.94, 0)
+material_override = SubResource("mat_green")
+mesh = SubResource("m6")
+
+[node name="white7" type="MeshInstance3D" parent="." unique_id=1545909821]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, -0.016)
+material_override = SubResource("mat_white")
+mesh = SubResource("m13")
+
+[node name="white8" type="MeshInstance3D" parent="." unique_id=724438008]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.83, -0.016)
+material_override = SubResource("mat_white")
+mesh = SubResource("m14")
+
+[node name="white15" type="MeshInstance3D" parent="." unique_id=583659820]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0.016)
+material_override = SubResource("mat_white")
+mesh = SubResource("m21")
+
+[node name="white16" type="MeshInstance3D" parent="." unique_id=1180584319]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.83, 0.016)
+material_override = SubResource("mat_white")
+mesh = SubResource("m22")

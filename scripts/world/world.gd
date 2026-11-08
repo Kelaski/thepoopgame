@@ -4,7 +4,10 @@ extends Node3D
 ## Lives at /root/Main/World on every peer so RPC paths match.
 
 const HEARTBEAT_RANGE := 25.0
-const TRACER_LIFE := 0.07
+const TRACER_SPEED := 320.0
+const TRACER_LENGTH := 7.0
+const TRACER_SCENE := preload("res://assets/models/tracer.tscn")
+const IMPACT_SCENE := preload("res://assets/models/impact.tscn")
 
 const PLAYER_SCENE := preload("res://assets/models/player.tscn")
 const TAG_SCENE := preload("res://assets/models/tag.tscn")
@@ -21,7 +24,7 @@ const PING_COOLDOWN := 15.0     # ...puts you on this cooldown
 const DOOR_REACH := 9.0         # a remote player must be this close to move a door
 const MAX_SHOT_TRACERS := 16    # shotgun pellets are 13
 const MAX_PROJECTILES := 12
-const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # bullet tracers + impacts
+const FX_TRACERS_MAT := preload("res://assets/materials/fx_tracers.tres")  # UAV rings and Interlink lines
 const GRENADE_SCENE := preload("res://assets/models/grenade.tscn")
 const WARP_TRAIL_SCENE := preload("res://assets/models/warp_trail.tscn")
 const EXPLOSION_SCENE := preload("res://assets/models/explosion.tscn")
@@ -44,8 +47,6 @@ var _tag_highlit := false  # the countdown's see-through-walls highlight is on
 
 var _fx_mesh: ImmediateMesh
 var _fx_inst: MeshInstance3D
-var _tracers: Array = []   # [from, to, life, color]
-var _impacts: Array = []   # [pos, life]
 
 var _grenades := {}        # id -> {owner, pos, vel, life, node}
 var _uav_pulses := []      # [{origin, r, last, done}]: pulses from your team, still growing
@@ -379,20 +380,41 @@ func fx_shot(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
 		Sfx.play_loud(weapon, origin, stats.sound_near_db, stats.sound_far_db, stats.sound_fade_distance)
 	else:
 		Sfx.play_at(weapon, origin, 0.0, FX_SHOT_HEARING, randf_range(0.95, 1.05))
-	add_tracers(p.tp_muzzle_pos(origin), ends, weapon)  # from their gun, not the middle of their body
+	add_tracers(p.tp_muzzle_pos(origin), ends)  # from their gun, not the middle of their body
 
 
-func add_tracers(origin: Vector3, ends: PackedVector3Array, weapon: String) -> void:
-	var col := Color(1.0, 0.92, 0.6, 0.9)
-	if weapon == "sniper":
-		col = Color(1.0, 1.0, 1.0, 1.0)
+func add_tracers(origin: Vector3, ends: PackedVector3Array) -> void:
 	for e in ends:
-		_tracers.append([origin, e, TRACER_LIFE * (2.5 if weapon == "sniper" else 1.0), col])
+		_add_tracer(origin, e)
+
+
+## A streak that flies from the barrel along the bullet's path, and sparks where it lands.
+## Only the look: the shot itself was traced from the eye.
+func _add_tracer(from: Vector3, to: Vector3) -> void:
+	var mi: MeshInstance3D = TRACER_SCENE.instantiate()
+	add_child(mi)
+	var total := from.distance_to(to)
+	var fly := func(travelled: float) -> void:
+		var tail := from.move_toward(to, maxf(travelled - TRACER_LENGTH, 0.0))
+		var head := from.move_toward(to, travelled)
+		var length := tail.distance_to(head)
+		mi.visible = length >= 0.05
+		if mi.visible:
+			mi.global_transform = Transform3D(Basis.looking_at(head - tail), (tail + head) * 0.5).scaled_local(Vector3(1, 1, length))
+	fly.call(minf(TRACER_LENGTH, total))
+	var tween := mi.create_tween()
+	tween.tween_method(fly, minf(TRACER_LENGTH, total), total, total / TRACER_SPEED)
+	tween.tween_callback(func() -> void:
+		mi.queue_free()
+		add_impact(to))
 
 
 func add_impact(pos: Vector3) -> void:
-	if _impacts.size() < 64:
-		_impacts.append([pos, 0.25])
+	var sparks: CPUParticles3D = IMPACT_SCENE.instantiate()
+	add_child(sparks)
+	sparks.global_position = pos
+	sparks.finished.connect(sparks.queue_free)
+	sparks.emitting = true
 
 
 ## Bat finisher: the victim's gun flies where the batter is looking.
@@ -678,25 +700,11 @@ func _update_projectiles(delta: float) -> void:
 
 func _draw_fx(delta: float) -> void:
 	_fx_mesh.clear_surfaces()
-	for i in range(_tracers.size() - 1, -1, -1):
-		_tracers[i][2] -= delta
-		if _tracers[i][2] <= 0.0:
-			_tracers.remove_at(i)
-	for i in range(_impacts.size() - 1, -1, -1):
-		_impacts[i][1] -= delta
-		if _impacts[i][1] <= 0.0:
-			_impacts.remove_at(i)
-	if _tracers.is_empty() and _impacts.is_empty() and _uav_pulses.is_empty() and Game.links.is_empty():
+	if _uav_pulses.is_empty() and Game.links.is_empty():
 		return
 	var cam := get_viewport().get_camera_3d()
 	var cam_pos := cam.global_position if cam else Vector3.ZERO
 	_fx_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
-	for t: Array in _tracers:
-		_ribbon(t[0], t[1], 0.035, t[3], cam_pos)
-	for im: Array in _impacts:
-		var p: Vector3 = im[0]
-		var s := 0.12
-		_ribbon(p - Vector3(0, s, 0), p + Vector3(0, s, 0), s, Color(0.95, 0.85, 0.6, im[1] * 3.0), cam_pos)
 	for pulse: Dictionary in _uav_pulses:
 		_uav_ring(pulse, cam_pos)
 	_draw_links(cam_pos)

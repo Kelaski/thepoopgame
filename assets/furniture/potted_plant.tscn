@@ -1,57 +1,528 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dh3wnttn8t757"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x3tql"]
+[sub_resource type="StandardMaterial3D" id="mat_saucer"]
 diffuse_mode = 3
 specular_mode = 1
-albedo_color = Color(0.627451, 0.32156864, 0.1764706, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
+albedo_color = Color(0.5412, 0.2706, 0.149, 1)
+roughness = 0.6
 
-[sub_resource type="CylinderMesh" id="CylinderMesh_m2e5v"]
-top_radius = 0.3
-bottom_radius = 0.3
-height = 0.6
-radial_segments = 10
+[sub_resource type="CylinderMesh" id="m1"]
+top_radius = 0.27
+bottom_radius = 0.25
+height = 0.03
+radial_segments = 18
 rings = 1
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v0vhk"]
+[sub_resource type="StandardMaterial3D" id="mat_pot"]
 diffuse_mode = 3
 specular_mode = 1
-albedo_color = Color(0.2901961, 0.5411765, 0.22745098, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
+albedo_color = Color(0.6275, 0.3216, 0.1765, 1)
+roughness = 0.6
 
-[sub_resource type="SphereMesh" id="SphereMesh_fvpbw"]
-radius = 0.55
-height = 0.935
-radial_segments = 10
-rings = 5
+[sub_resource type="CylinderMesh" id="m2"]
+top_radius = 0.27
+bottom_radius = 0.2
+height = 0.52
+radial_segments = 18
+rings = 1
 
-[sub_resource type="CylinderShape3D" id="CylinderShape3D_onome"]
-height = 0.6
-radius = 0.3
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_x3tql"]
+data = PackedVector3Array(0, 0.26, 0.26999998, 0.0923, 0.26, 0.2537, 0, 0, 0.235, 0.0923, 0.26, 0.2537, 0.0804, 0, 0.2208, 0, 0, 0.235, 0.0923, 0.26, 0.2537, 0.17359999, 0.26, 0.2068, 0.0804, 0, 0.2208, 0.17359999, 0.26, 0.2068, 0.1511, 0, 0.17999999, 0.0804, 0, 0.2208, 0.17359999, 0.26, 0.2068, 0.2338, 0.26, 0.13499999, 0.1511, 0, 0.17999999, 0.2338, 0.26, 0.13499999, 0.20349999, 0, 0.1175, 0.1511, 0, 0.17999999, 0.2338, 0.26, 0.13499999, 0.2659, 0.26, 0.0469, 0.20349999, 0, 0.1175, 0.2659, 0.26, 0.0469, 0.2314, 0, 0.040799998, 0.20349999, 0, 0.1175, 0.2659, 0.26, 0.0469, 0.2659, 0.26, -0.0469, 0.2314, 0, 0.040799998, 0.2659, 0.26, -0.0469, 0.2314, 0, -0.040799998, 0.2314, 0, 0.040799998, 0.2659, 0.26, -0.0469, 0.2338, 0.26, -0.13499999, 0.2314, 0, -0.040799998, 0.2338, 0.26, -0.13499999, 0.20349999, 0, -0.1175, 0.2314, 0, -0.040799998, 0.2338, 0.26, -0.13499999, 0.17359999, 0.26, -0.2068, 0.20349999, 0, -0.1175, 0.17359999, 0.26, -0.2068, 0.1511, 0, -0.17999999, 0.20349999, 0, -0.1175, 0.17359999, 0.26, -0.2068, 0.0923, 0.26, -0.2537, 0.1511, 0, -0.17999999, 0.0923, 0.26, -0.2537, 0.0804, 0, -0.2208, 0.1511, 0, -0.17999999, 0.0923, 0.26, -0.2537, 0, 0.26, -0.26999998, 0.0804, 0, -0.2208, 0, 0.26, -0.26999998, 0, 0, -0.235, 0.0804, 0, -0.2208, 0, 0.26, -0.26999998, -0.0923, 0.26, -0.2537, 0, 0, -0.235, -0.0923, 0.26, -0.2537, -0.0804, 0, -0.2208, 0, 0, -0.235, -0.0923, 0.26, -0.2537, -0.17359999, 0.26, -0.2068, -0.0804, 0, -0.2208, -0.17359999, 0.26, -0.2068, -0.1511, 0, -0.17999999, -0.0804, 0, -0.2208, -0.17359999, 0.26, -0.2068, -0.2338, 0.26, -0.13499999, -0.1511, 0, -0.17999999, -0.2338, 0.26, -0.13499999, -0.20349999, 0, -0.1175, -0.1511, 0, -0.17999999, -0.2338, 0.26, -0.13499999, -0.2659, 0.26, -0.0469, -0.20349999, 0, -0.1175, -0.2659, 0.26, -0.0469, -0.2314, 0, -0.040799998, -0.20349999, 0, -0.1175, -0.2659, 0.26, -0.0469, -0.2659, 0.26, 0.0469, -0.2314, 0, -0.040799998, -0.2659, 0.26, 0.0469, -0.2314, 0, 0.040799998, -0.2314, 0, -0.040799998, -0.2659, 0.26, 0.0469, -0.2338, 0.26, 0.13499999, -0.2314, 0, 0.040799998, -0.2338, 0.26, 0.13499999, -0.20349999, 0, 0.1175, -0.2314, 0, 0.040799998, -0.2338, 0.26, 0.13499999, -0.17359999, 0.26, 0.2068, -0.20349999, 0, 0.1175, -0.17359999, 0.26, 0.2068, -0.1511, 0, 0.17999999, -0.20349999, 0, 0.1175, -0.17359999, 0.26, 0.2068, -0.0923, 0.26, 0.2537, -0.1511, 0, 0.17999999, -0.0923, 0.26, 0.2537, -0.0804, 0, 0.2208, -0.1511, 0, 0.17999999, -0.0923, 0.26, 0.2537, 0, 0.26, 0.26999998, -0.0804, 0, 0.2208, 0, 0.26, 0.26999998, 0, 0, 0.235, -0.0804, 0, 0.2208, 0, 0, 0.235, 0.0804, 0, 0.2208, 0, -0.26, 0.19999999, 0.0804, 0, 0.2208, 0.068399996, -0.26, 0.18789999, 0, -0.26, 0.19999999, 0.0804, 0, 0.2208, 0.1511, 0, 0.17999999, 0.068399996, -0.26, 0.18789999, 0.1511, 0, 0.17999999, 0.1286, -0.26, 0.1532, 0.068399996, -0.26, 0.18789999, 0.1511, 0, 0.17999999, 0.20349999, 0, 0.1175, 0.1286, -0.26, 0.1532, 0.20349999, 0, 0.1175, 0.1732, -0.26, 0.099999994, 0.1286, -0.26, 0.1532, 0.20349999, 0, 0.1175, 0.2314, 0, 0.040799998, 0.1732, -0.26, 0.099999994, 0.2314, 0, 0.040799998, 0.197, -0.26, 0.0347, 0.1732, -0.26, 0.099999994, 0.2314, 0, 0.040799998, 0.2314, 0, -0.040799998, 0.197, -0.26, 0.0347, 0.2314, 0, -0.040799998, 0.197, -0.26, -0.0347, 0.197, -0.26, 0.0347, 0.2314, 0, -0.040799998, 0.20349999, 0, -0.1175, 0.197, -0.26, -0.0347, 0.20349999, 0, -0.1175, 0.1732, -0.26, -0.099999994, 0.197, -0.26, -0.0347, 0.20349999, 0, -0.1175, 0.1511, 0, -0.17999999, 0.1732, -0.26, -0.099999994, 0.1511, 0, -0.17999999, 0.1286, -0.26, -0.1532, 0.1732, -0.26, -0.099999994, 0.1511, 0, -0.17999999, 0.0804, 0, -0.2208, 0.1286, -0.26, -0.1532, 0.0804, 0, -0.2208, 0.068399996, -0.26, -0.18789999, 0.1286, -0.26, -0.1532, 0.0804, 0, -0.2208, 0, 0, -0.235, 0.068399996, -0.26, -0.18789999, 0, 0, -0.235, 0, -0.26, -0.19999999, 0.068399996, -0.26, -0.18789999, 0, 0, -0.235, -0.0804, 0, -0.2208, 0, -0.26, -0.19999999, -0.0804, 0, -0.2208, -0.068399996, -0.26, -0.18789999, 0, -0.26, -0.19999999, -0.0804, 0, -0.2208, -0.1511, 0, -0.17999999, -0.068399996, -0.26, -0.18789999, -0.1511, 0, -0.17999999, -0.1286, -0.26, -0.1532, -0.068399996, -0.26, -0.18789999, -0.1511, 0, -0.17999999, -0.20349999, 0, -0.1175, -0.1286, -0.26, -0.1532, -0.20349999, 0, -0.1175, -0.1732, -0.26, -0.099999994, -0.1286, -0.26, -0.1532, -0.20349999, 0, -0.1175, -0.2314, 0, -0.040799998, -0.1732, -0.26, -0.099999994, -0.2314, 0, -0.040799998, -0.197, -0.26, -0.0347, -0.1732, -0.26, -0.099999994, -0.2314, 0, -0.040799998, -0.2314, 0, 0.040799998, -0.197, -0.26, -0.0347, -0.2314, 0, 0.040799998, -0.197, -0.26, 0.0347, -0.197, -0.26, -0.0347, -0.2314, 0, 0.040799998, -0.20349999, 0, 0.1175, -0.197, -0.26, 0.0347, -0.20349999, 0, 0.1175, -0.1732, -0.26, 0.099999994, -0.197, -0.26, 0.0347, -0.20349999, 0, 0.1175, -0.1511, 0, 0.17999999, -0.1732, -0.26, 0.099999994, -0.1511, 0, 0.17999999, -0.1286, -0.26, 0.1532, -0.1732, -0.26, 0.099999994, -0.1511, 0, 0.17999999, -0.0804, 0, 0.2208, -0.1286, -0.26, 0.1532, -0.0804, 0, 0.2208, -0.068399996, -0.26, 0.18789999, -0.1286, -0.26, 0.1532, -0.0804, 0, 0.2208, 0, 0, 0.235, -0.068399996, -0.26, 0.18789999, 0, 0, 0.235, 0, -0.26, 0.19999999, -0.068399996, -0.26, 0.18789999, 0, 0.26, 0, 0.0923, 0.26, 0.2537, 0, 0.26, 0.26999998, 0, 0.26, 0, 0.17359999, 0.26, 0.2068, 0.0923, 0.26, 0.2537, 0, 0.26, 0, 0.2338, 0.26, 0.13499999, 0.17359999, 0.26, 0.2068, 0, 0.26, 0, 0.2659, 0.26, 0.0469, 0.2338, 0.26, 0.13499999, 0, 0.26, 0, 0.2659, 0.26, -0.0469, 0.2659, 0.26, 0.0469, 0, 0.26, 0, 0.2338, 0.26, -0.13499999, 0.2659, 0.26, -0.0469, 0, 0.26, 0, 0.17359999, 0.26, -0.2068, 0.2338, 0.26, -0.13499999, 0, 0.26, 0, 0.0923, 0.26, -0.2537, 0.17359999, 0.26, -0.2068, 0, 0.26, 0, 0, 0.26, -0.26999998, 0.0923, 0.26, -0.2537, 0, 0.26, 0, -0.0923, 0.26, -0.2537, 0, 0.26, -0.26999998, 0, 0.26, 0, -0.17359999, 0.26, -0.2068, -0.0923, 0.26, -0.2537, 0, 0.26, 0, -0.2338, 0.26, -0.13499999, -0.17359999, 0.26, -0.2068, 0, 0.26, 0, -0.2659, 0.26, -0.0469, -0.2338, 0.26, -0.13499999, 0, 0.26, 0, -0.2659, 0.26, 0.0469, -0.2659, 0.26, -0.0469, 0, 0.26, 0, -0.2338, 0.26, 0.13499999, -0.2659, 0.26, 0.0469, 0, 0.26, 0, -0.17359999, 0.26, 0.2068, -0.2338, 0.26, 0.13499999, 0, 0.26, 0, -0.0923, 0.26, 0.2537, -0.17359999, 0.26, 0.2068, 0, 0.26, 0, 0, 0.26, 0.26999998, -0.0923, 0.26, 0.2537, 0, -0.26, 0, 0, -0.26, 0.19999999, 0.068399996, -0.26, 0.18789999, 0, -0.26, 0, 0.068399996, -0.26, 0.18789999, 0.1286, -0.26, 0.1532, 0, -0.26, 0, 0.1286, -0.26, 0.1532, 0.1732, -0.26, 0.099999994, 0, -0.26, 0, 0.1732, -0.26, 0.099999994, 0.197, -0.26, 0.0347, 0, -0.26, 0, 0.197, -0.26, 0.0347, 0.197, -0.26, -0.0347, 0, -0.26, 0, 0.197, -0.26, -0.0347, 0.1732, -0.26, -0.099999994, 0, -0.26, 0, 0.1732, -0.26, -0.099999994, 0.1286, -0.26, -0.1532, 0, -0.26, 0, 0.1286, -0.26, -0.1532, 0.068399996, -0.26, -0.18789999, 0, -0.26, 0, 0.068399996, -0.26, -0.18789999, 0, -0.26, -0.19999999, 0, -0.26, 0, 0, -0.26, -0.19999999, -0.068399996, -0.26, -0.18789999, 0, -0.26, 0, -0.068399996, -0.26, -0.18789999, -0.1286, -0.26, -0.1532, 0, -0.26, 0, -0.1286, -0.26, -0.1532, -0.1732, -0.26, -0.099999994, 0, -0.26, 0, -0.1732, -0.26, -0.099999994, -0.197, -0.26, -0.0347, 0, -0.26, 0, -0.197, -0.26, -0.0347, -0.197, -0.26, 0.0347, 0, -0.26, 0, -0.197, -0.26, 0.0347, -0.1732, -0.26, 0.099999994, 0, -0.26, 0, -0.1732, -0.26, 0.099999994, -0.1286, -0.26, 0.1532, 0, -0.26, 0, -0.1286, -0.26, 0.1532, -0.068399996, -0.26, 0.18789999, 0, -0.26, 0, -0.068399996, -0.26, 0.18789999, 0, -0.26, 0.19999999)
+
+[sub_resource type="StandardMaterial3D" id="mat_pot2"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5412, 0.2706, 0.149, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="m3"]
+top_radius = 0.285
+bottom_radius = 0.285
+height = 0.06
+radial_segments = 18
+rings = 1
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_m2e5v"]
+height = 0.06
+radius = 0.285
+
+[sub_resource type="StandardMaterial3D" id="mat_soil"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2275, 0.1647, 0.1098, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="m4"]
+top_radius = 0.25
+bottom_radius = 0.25
+height = 0.012
+radial_segments = 16
+rings = 1
+
+[sub_resource type="StandardMaterial3D" id="mat_stem"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3569, 0.2471, 0.149, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="m5"]
+top_radius = 0.022
+bottom_radius = 0.035
+height = 0.46
+radial_segments = 8
+rings = 1
+
+[sub_resource type="BoxMesh" id="m6"]
+size = Vector3(0.012, 0.4276, 0.012)
+
+[sub_resource type="StandardMaterial3D" id="mat_leaf"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2902, 0.5412, 0.2275, 1)
+roughness = 0.6
+
+[sub_resource type="SphereMesh" id="m7"]
+radius = 1.0
+height = 2.0
+radial_segments = 8
+rings = 4
+
+[sub_resource type="BoxMesh" id="m8"]
+size = Vector3(0.012, 0.4152, 0.012)
+
+[sub_resource type="StandardMaterial3D" id="mat_leaf2"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2275, 0.4549, 0.1882, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m9"]
+size = Vector3(0.012, 0.4029, 0.012)
+
+[sub_resource type="StandardMaterial3D" id="mat_leaf3"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3529, 0.6275, 0.2824, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m10"]
+size = Vector3(0.012, 0.3907, 0.012)
+
+[sub_resource type="BoxMesh" id="m11"]
+size = Vector3(0.012, 0.3786, 0.012)
+
+[sub_resource type="BoxMesh" id="m12"]
+size = Vector3(0.012, 0.3666, 0.012)
+
+[sub_resource type="BoxMesh" id="m13"]
+size = Vector3(0.012, 0.3546, 0.012)
+
+[sub_resource type="BoxMesh" id="m14"]
+size = Vector3(0.012, 0.3428, 0.012)
+
+[sub_resource type="BoxMesh" id="m15"]
+size = Vector3(0.012, 0.3311, 0.012)
+
+[sub_resource type="BoxMesh" id="m16"]
+size = Vector3(0.012, 0.3195, 0.012)
+
+[sub_resource type="BoxMesh" id="m17"]
+size = Vector3(0.012, 0.3081, 0.012)
+
+[sub_resource type="BoxMesh" id="m18"]
+size = Vector3(0.012, 0.2968, 0.012)
+
+[sub_resource type="BoxMesh" id="m19"]
+size = Vector3(0.012, 0.2857, 0.012)
+
+[sub_resource type="BoxMesh" id="m20"]
+size = Vector3(0.012, 0.2748, 0.012)
+
+[sub_resource type="BoxMesh" id="m21"]
+size = Vector3(0.012, 0.2642, 0.012)
+
+[sub_resource type="BoxMesh" id="m22"]
+size = Vector3(0.012, 0.2538, 0.012)
+
+[sub_resource type="BoxMesh" id="m23"]
+size = Vector3(0.012, 0.2437, 0.012)
+
+[sub_resource type="BoxMesh" id="m24"]
+size = Vector3(0.012, 0.2339, 0.012)
+
+[sub_resource type="BoxMesh" id="m25"]
+size = Vector3(0.012, 0.2245, 0.012)
+
+[sub_resource type="BoxMesh" id="m26"]
+size = Vector3(0.012, 0.2155, 0.012)
+
+[sub_resource type="BoxMesh" id="m27"]
+size = Vector3(0.012, 0.207, 0.012)
+
+[sub_resource type="BoxMesh" id="m28"]
+size = Vector3(0.012, 0.1991, 0.012)
+
+[sub_resource type="BoxMesh" id="m29"]
+size = Vector3(0.012, 0.1917, 0.012)
+
+[sub_resource type="BoxMesh" id="m30"]
+size = Vector3(0.012, 0.185, 0.012)
+
+[sub_resource type="BoxMesh" id="m31"]
+size = Vector3(0.012, 0.1791, 0.012)
+
+[sub_resource type="BoxMesh" id="m32"]
+size = Vector3(0.012, 0.174, 0.012)
+
+[sub_resource type="BoxMesh" id="m33"]
+size = Vector3(0.012, 0.1698, 0.012)
+
+[sub_resource type="BoxMesh" id="m34"]
+size = Vector3(0.012, 0.1666, 0.012)
+
+[sub_resource type="BoxMesh" id="m35"]
+size = Vector3(0.012, 0.1644, 0.012)
+
+[sub_resource type="BoxMesh" id="m36"]
+size = Vector3(0.012, 0.1633, 0.012)
 
 [node name="PottedPlant" type="Node3D" unique_id=102031975]
 
-[node name="Part0" type="MeshInstance3D" parent="." unique_id=1474474593]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
-material_override = SubResource("StandardMaterial3D_x3tql")
-mesh = SubResource("CylinderMesh_m2e5v")
+[node name="saucer1" type="MeshInstance3D" parent="." unique_id=497857162]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, 0)
+material_override = SubResource("mat_saucer")
+mesh = SubResource("m1")
 
-[node name="Part1" type="MeshInstance3D" parent="." unique_id=1738290137]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-material_override = SubResource("StandardMaterial3D_v0vhk")
-mesh = SubResource("SphereMesh_fvpbw")
-metadata/batch = "static"
+[node name="Pot" type="MeshInstance3D" parent="." unique_id=446212358]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.29, 0)
+material_override = SubResource("mat_pot")
+mesh = SubResource("m2")
 
-[node name="Collision" type="StaticBody3D" parent="." unique_id=85530200]
+[node name="StaticBody3D" type="StaticBody3D" parent="Pot" unique_id=593616554]
 collision_layer = 2
 collision_mask = 0
 
-[node name="Shape0" type="CollisionShape3D" parent="Collision" unique_id=906136312]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
-shape = SubResource("CylinderShape3D_onome")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Pot/StaticBody3D" unique_id=1014370789]
+shape = SubResource("ConcavePolygonShape3D_x3tql")
+
+[node name="pot21" type="MeshInstance3D" parent="." unique_id=686485576]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+material_override = SubResource("mat_pot2")
+mesh = SubResource("m3")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="pot21" unique_id=1679461113]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="pot21/StaticBody3D" unique_id=1784838185]
+shape = SubResource("CylinderShape3D_m2e5v")
+
+[node name="soil1" type="MeshInstance3D" parent="." unique_id=299631693]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.585, 0)
+material_override = SubResource("mat_soil")
+mesh = SubResource("m4")
+
+[node name="stem1" type="MeshInstance3D" parent="." unique_id=639935045]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m5")
+
+[node name="stem2" type="MeshInstance3D" parent="." unique_id=1325397169]
+transform = Transform3D(-0.1871, 0.9823, 0, -0.9823, -0.1871, 0, 0, 0, 1, 0.21, 0.66, 0)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m6")
+
+[node name="leaf1" type="MeshInstance3D" parent="." unique_id=1148927882]
+transform = Transform3D(0.1236, -0.0093, 0, 0.0396, 0.0281, 0.0117, -0.0067, -0.0048, 0.069, 0.42, 0.62, 0)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem3" type="MeshInstance3D" parent="." unique_id=613417761]
+transform = Transform3D(-0.2343, -0.726, 0.6465, 0.9722, -0.175, 0.1558, 0, 0.665, 0.7468, -0.1507, 0.6803, 0.1381)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m8")
+
+[node name="leaf21" type="MeshInstance3D" parent="." unique_id=1527916835]
+transform = Transform3D(-0.0947, 0.0044, -0.0469, 0.0398, 0.0283, -0.009, 0.0797, -0.009, -0.0512, -0.3014, 0.644, 0.2761)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem4" type="MeshInstance3D" parent="." unique_id=1881220950]
+transform = Transform3D(0, 0.0863, 0.9963, -0.9867, -0.1621, 0.0141, 0.1628, -0.983, 0.0852, 0.0174, 0.7007, -0.198)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m9")
+
+[node name="leaf31" type="MeshInstance3D" parent="." unique_id=1855627249]
+transform = Transform3D(0.0159, 0.0028, 0.0692, 0.0398, 0.0283, -0.009, -0.1227, 0.0096, 0.0061, 0.0348, 0.668, -0.3961)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem5" type="MeshInstance3D" parent="." unique_id=2049686353]
+transform = Transform3D(-0.2396, 0.6016, -0.762, -0.9709, -0.1484, 0.188, 0, 0.7849, 0.6197, 0.1175, 0.721, 0.1533)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m10")
+
+[node name="leaf2" type="MeshInstance3D" parent="." unique_id=237580410]
+transform = Transform3D(0.0675, -0.0111, -0.0539, 0.039, 0.0277, -0.0169, 0.104, -0.0032, 0.0413, 0.2351, 0.692, 0.3067)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem6" type="MeshInstance3D" parent="." unique_id=921570930]
+transform = Transform3D(-0.1359, -0.9758, -0.1712, 0.9907, -0.1338, -0.0235, 0, -0.1728, 0.985, -0.1847, 0.7413, -0.0327)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m11")
+
+[node name="leaf22" type="MeshInstance3D" parent="." unique_id=1458487940]
+transform = Transform3D(-0.1233, 0.008, 0.0119, 0.0392, 0.0278, 0.0152, -0.0129, 0.0077, -0.0673, -0.3695, 0.716, -0.0654)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem7" type="MeshInstance3D" parent="." unique_id=1793848233]
+transform = Transform3D(-0.1397, 0.8379, 0.5276, -0.9902, -0.1182, -0.0744, 0, -0.5328, 0.8462, 0.1536, 0.7617, -0.0977)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m12")
+
+[node name="leaf32" type="MeshInstance3D" parent="." unique_id=1385836620]
+transform = Transform3D(0.1003, -0.0107, 0.0369, 0.0395, 0.028, 0.0131, -0.0727, 0.0005, 0.058, 0.3072, 0.74, -0.1953)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem8" type="MeshInstance3D" parent="." unique_id=544604569]
+transform = Transform3D(0, -0.2585, 0.966, 0.9945, -0.1015, -0.0272, 0.1051, 0.9607, 0.257, -0.0458, 0.782, 0.1703)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m13")
+
+[node name="leaf3" type="MeshInstance3D" parent="." unique_id=938891195]
+transform = Transform3D(-0.0227, 0.0091, -0.0656, 0.039, 0.0277, 0.0171, 0.1219, -0.0071, -0.0176, -0.0917, 0.764, 0.3407)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem9" type="MeshInstance3D" parent="." unique_id=139946033]
+transform = Transform3D(-0.1792, -0.4591, -0.8701, 0.9838, -0.0836, -0.1585, 0, -0.8845, 0.4666, -0.0787, 0.8023, -0.1516)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m14")
+
+[node name="leaf23" type="MeshInstance3D" parent="." unique_id=109374365]
+transform = Transform3D(-0.0638, -0.0006, 0.061, 0.0394, 0.028, 0.0133, -0.1062, 0.0107, -0.0317, -0.1574, 0.788, -0.3032)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem10" type="MeshInstance3D" parent="." unique_id=1117284023]
+transform = Transform3D(-0.0686, 0.9373, -0.3418, -0.9976, -0.0644, 0.0235, 0, 0.3426, 0.9395, 0.1552, 0.8227, 0.0567)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m15")
+
+[node name="leaf33" type="MeshInstance3D" parent="." unique_id=795711622]
+transform = Transform3D(0.1139, -0.0103, -0.0237, 0.0396, 0.0282, -0.0114, 0.0486, 0.0012, 0.0649, 0.3103, 0.812, 0.1134)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem11" type="MeshInstance3D" parent="." unique_id=1520570102]
+transform = Transform3D(-0.0474, -0.9236, 0.3805, 0.9989, -0.0438, 0.018, 0, 0.3809, 0.9246, -0.1475, 0.843, 0.0608)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m16")
+
+[node name="leaf4" type="MeshInstance3D" parent="." unique_id=801585562]
+transform = Transform3D(-0.1104, 0.0113, -0.0258, 0.0388, 0.0276, 0.0179, 0.0566, 0.0032, -0.0626, -0.2951, 0.836, 0.1217)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem12" type="MeshInstance3D" parent="." unique_id=1762382554]
+transform = Transform3D(0, 0.4241, 0.9056, -0.9997, -0.0216, 0.0101, 0.0239, -0.9054, 0.424, 0.0653, 0.8633, -0.1395)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m17")
+
+[node name="leaf24" type="MeshInstance3D" parent="." unique_id=1189992308]
+transform = Transform3D(0.0532, -0.0034, 0.0634, 0.0402, 0.0285, -0.0015, -0.1116, 0.0087, 0.0297, 0.1306, 0.86, -0.2789)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem13" type="MeshInstance3D" parent="." unique_id=1629366112]
+transform = Transform3D(0, 0.2989, 0.9543, 1, 0.0022, -0.0007, -0.0024, 0.9543, -0.2989, 0.0444, 0.8837, 0.1416)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m18")
+
+[node name="leaf34" type="MeshInstance3D" parent="." unique_id=1360184440]
+transform = Transform3D(0.0446, 0.0026, -0.0655, 0.0394, 0.028, 0.0139, 0.1156, -0.0105, 0.0205, 0.0887, 0.884, 0.2832)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem14" type="MeshInstance3D" parent="." unique_id=393408346]
+transform = Transform3D(0.0324, -0.8647, -0.5013, 0.9995, 0.028, 0.0162, 0, -0.5016, 0.8651, -0.1235, 0.904, -0.0717)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m19")
+
+[node name="leaf5" type="MeshInstance3D" parent="." unique_id=170414901]
+transform = Transform3D(-0.1098, 0.006, 0.0348, 0.0398, 0.0282, 0.01, -0.0571, 0.0082, -0.0599, -0.247, 0.908, -0.1433)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem15" type="MeshInstance3D" parent="." unique_id=1384013107]
+transform = Transform3D(0.0571, 0.9753, 0.2136, -0.9984, 0.0558, 0.0122, 0, -0.2139, 0.9769, 0.134, 0.9243, -0.0294)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m20")
+
+[node name="leaf25" type="MeshInstance3D" parent="." unique_id=1036184753]
+transform = Transform3D(0.1204, -0.0093, 0.015, 0.0401, 0.0285, 0.0033, -0.0284, 0.0007, 0.0683, 0.268, 0.932, -0.0588)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem16" type="MeshInstance3D" parent="." unique_id=1278853293]
+transform = Transform3D(0.148, -0.5734, 0.8058, 0.989, 0.0858, -0.1206, 0, 0.8148, 0.5798, -0.0757, 0.9447, 0.1076)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m21")
+
+[node name="leaf35" type="MeshInstance3D" parent="." unique_id=48148823]
+transform = Transform3D(-0.0788, -0.0001, -0.0557, 0.0391, 0.0277, -0.0163, 0.0957, -0.0114, -0.0392, -0.1515, 0.956, 0.2152)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem17" type="MeshInstance3D" parent="." unique_id=3550895]
+transform = Transform3D(0, -0.1271, 0.9919, -0.9929, 0.1182, 0.0151, -0.1192, -0.9848, -0.1262, -0.0161, 0.965, -0.125)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m22")
+
+[node name="leaf6" type="MeshInstance3D" parent="." unique_id=146980499]
+transform = Transform3D(-0.0128, 0.0033, 0.0692, 0.0401, 0.0285, -0.0053, -0.123, 0.0089, -0.0089, -0.0322, 0.98, -0.2499)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem18" type="MeshInstance3D" parent="." unique_id=1176571867]
+transform = Transform3D(0.1988, 0.7552, -0.6246, -0.98, 0.1532, -0.1267, 0, 0.6373, 0.7706, 0.092, 0.9853, 0.0776)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m23")
+
+[node name="leaf26" type="MeshInstance3D" parent="." unique_id=297726955]
+transform = Transform3D(0.1031, -0.001, -0.0426, 0.0379, 0.0269, 0.0233, 0.0695, -0.0132, 0.0505, 0.184, 1.004, 0.1553)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem19" type="MeshInstance3D" parent="." unique_id=151983064]
+transform = Transform3D(0.1911, -0.9808, 0.0392, 0.9816, 0.191, -0.0076, 0, 0.0399, 0.9992, -0.1147, 1.0057, 0.0047)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m24")
+
+[node name="leaf36" type="MeshInstance3D" parent="." unique_id=229528472]
+transform = Transform3D(-0.1233, 0.0094, -0.0028, 0.0397, 0.0282, 0.0109, 0.0113, 0.0041, -0.0691, -0.2294, 1.028, 0.0093)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem20" type="MeshInstance3D" parent="." unique_id=1106425198]
+transform = Transform3D(0.3182, 0.69, 0.6501, -0.948, 0.2316, 0.2182, 0, -0.6857, 0.7278, 0.0775, 1.026, -0.077)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m25")
+
+[node name="leaf7" type="MeshInstance3D" parent="." unique_id=220983251]
+transform = Transform3D(0.0808, -0.0115, 0.0479, 0.039, 0.0277, 0.0171, -0.0941, 0.0016, 0.0481, 0.1549, 1.052, -0.154)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem21" type="MeshInstance3D" parent="." unique_id=1949646572]
+transform = Transform3D(0, -0.0451, 0.999, 0.9613, 0.2753, 0.0124, -0.2756, 0.9603, 0.0433, -0.0049, 1.0463, 0.1035)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m26")
+
+[node name="leaf27" type="MeshInstance3D" parent="." unique_id=1253752716]
+transform = Transform3D(-0.0161, -0.0069, -0.0676, 0.0388, 0.0276, -0.0179, 0.123, -0.0096, -0.0032, -0.0097, 1.076, 0.207)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem22" type="MeshInstance3D" parent="." unique_id=1131679602]
+transform = Transform3D(0.4692, -0.606, -0.6423, 0.8831, 0.322, 0.3413, 0, -0.7273, 0.6863, -0.0627, 1.0667, -0.0753)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m27")
+
+[node name="leaf37" type="MeshInstance3D" parent="." unique_id=1122224811]
+transform = Transform3D(-0.0725, 0.0106, 0.0525, 0.0392, 0.0279, -0.015, -0.1005, 0.0032, -0.0438, -0.1255, 1.1, -0.1506)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem23" type="MeshInstance3D" parent="." unique_id=1299911158]
+transform = Transform3D(0.3747, 0.92, -0.1154, -0.9272, 0.3717, -0.0466, 0, 0.1245, 0.9922, 0.0916, 1.087, 0.0124)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m28")
+
+[node name="leaf8" type="MeshInstance3D" parent="." unique_id=1752597675]
+transform = Transform3D(0.1214, -0.01, -0.0092, 0.0393, 0.0279, -0.0148, 0.025, 0.0048, 0.0678, 0.1831, 1.124, 0.0248)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem24" type="MeshInstance3D" parent="." unique_id=41076171]
+transform = Transform3D(0.4955, -0.7437, 0.4487, 0.8686, 0.4243, -0.256, 0, 0.5166, 0.8562, -0.0713, 1.1073, 0.0495)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m29")
+
+[node name="leaf28" type="MeshInstance3D" parent="." unique_id=1998459638]
+transform = Transform3D(-0.1067, 0.0039, -0.0389, 0.0391, 0.0278, -0.0158, 0.0631, -0.0106, -0.056, -0.1426, 1.148, 0.099)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem25" type="MeshInstance3D" parent="." unique_id=228880896]
+transform = Transform3D(0.9274, 0.1934, 0.3204, -0.3742, 0.4792, 0.7939, 0, -0.8561, 0.5167, 0.0179, 1.1277, -0.0792)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m30")
+
+[node name="leaf38" type="MeshInstance3D" parent="." unique_id=740578100]
+transform = Transform3D(0.0339, 0.0027, 0.0673, 0.0396, 0.0281, -0.0119, -0.1191, 0.0101, 0.0152, 0.0358, 1.172, -0.1584)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem26" type="MeshInstance3D" parent="." unique_id=898627484]
+transform = Transform3D(0.7878, 0.4191, -0.4514, -0.6159, 0.536, -0.5773, 0, 0.7328, 0.6804, 0.0375, 1.148, 0.0656)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m31")
+
+[node name="leaf9" type="MeshInstance3D" parent="." unique_id=1254992349]
+transform = Transform3D(0.0506, -0.0122, -0.0578, 0.0382, 0.0271, -0.0216, 0.1135, -0.0037, 0.0331, 0.0751, 1.196, 0.1313)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem27" type="MeshInstance3D" parent="." unique_id=852472650]
+transform = Transform3D(0.6126, -0.7663, -0.1938, 0.7904, 0.5939, 0.1502, 0, -0.2452, 0.9695, -0.0667, 1.1683, -0.0213)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m32")
+
+[node name="leaf29" type="MeshInstance3D" parent="." unique_id=896225098]
+transform = Transform3D(-0.1153, 0.0106, 0.0209, 0.0393, 0.0279, -0.0143, -0.0455, -0.0027, -0.0653, -0.1333, 1.22, -0.0427)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem28" type="MeshInstance3D" parent="." unique_id=830731639]
+transform = Transform3D(0.6872, 0.6888, 0.2306, -0.7264, 0.6517, 0.2182, 0, -0.3175, 0.9483, 0.0585, 1.1887, -0.027)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m33")
+
+[node name="leaf39" type="MeshInstance3D" parent="." unique_id=358807895]
+transform = Transform3D(0.1094, -0.0104, 0.0289, 0.0396, 0.0281, 0.0118, -0.0579, -0.0005, 0.0627, 0.117, 1.244, -0.0539)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")
+
+[node name="stem29" type="MeshInstance3D" parent="." unique_id=926113130]
+transform = Transform3D(0.933, -0.2732, 0.2342, 0.3598, 0.7083, -0.6073, 0, 0.6509, 0.7592, -0.0228, 1.209, 0.0542)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m34")
+
+[node name="leaf10" type="MeshInstance3D" parent="." unique_id=89592907]
+transform = Transform3D(-0.0568, -0.0028, -0.0626, 0.039, 0.0277, -0.0169, 0.1102, -0.0112, -0.0263, -0.0455, 1.268, 0.1084)
+material_override = SubResource("mat_leaf")
+mesh = SubResource("m7")
+
+[node name="stem30" type="MeshInstance3D" parent="." unique_id=1101271307]
+transform = Transform3D(0.9613, -0.2184, -0.1678, 0.2754, 0.7623, 0.5856, 0, -0.6092, 0.793, -0.018, 1.2293, -0.0501)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m35")
+
+[node name="leaf210" type="MeshInstance3D" parent="." unique_id=693199977]
+transform = Transform3D(-0.0421, 0.0029, 0.0659, 0.0402, 0.0285, 0.0006, -0.1163, 0.0088, -0.0236, -0.0359, 1.292, -0.1002)
+material_override = SubResource("mat_leaf2")
+mesh = SubResource("m7")
+
+[node name="stem31" type="MeshInstance3D" parent="." unique_id=432157604]
+transform = Transform3D(0.8442, 0.5158, -0.1457, -0.536, 0.8125, -0.2295, 0, 0.2718, 0.9624, 0.0421, 1.2497, 0.0222)
+material_override = SubResource("mat_stem")
+mesh = SubResource("m36")
+
+[node name="leaf310" type="MeshInstance3D" parent="." unique_id=612328346]
+transform = Transform3D(0.1061, -0.0106, -0.0321, 0.0395, 0.0281, -0.0124, 0.0639, 0.0001, 0.0609, 0.0842, 1.316, 0.0444)
+material_override = SubResource("mat_leaf3")
+mesh = SubResource("m7")

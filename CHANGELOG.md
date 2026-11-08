@@ -7,6 +7,46 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.27.0
+
+### Added
+- **Real interiors:** every building has the rooms it would need, sized to fit. Schools have classrooms with desks facing a whiteboard, labs, a cafeteria, a library and a principal's office. Casinos have slots, card and roulette tables, a cashier and a lounge. Gyms have weights, cardio, a studio, locker rooms and a rest area. Motels have a lobby, laundry and guest rooms with their own bathrooms. Apartments have homes with a living room, bedroom and bathroom, and so on for every building.
+- **Restrooms** in shops, offices, schools, theatres and the rest: one closed room with a door and no windows, sinks by the door and stalls and urinals further in.
+- **Cinemas:** the auditorium is always its own room with a door, closed off from the snack counter, with no windows. Seats only go in when the screen does.
+- **Snack counters:** school cafeterias have a serving line with a sneeze guard, and food courts have food stalls with a lit menu board, instead of the cinema's counter.
+- **Decor:** pictures, posters, clocks, notice boards and whiteboards on the walls, kept clear of windows.
+- **New props:** toilet stalls, toilets, urinals, sinks, showers, cafeteria tables, a commercial kitchen, storage shelves, a fridge, bunk beds and wall decor.
+- **Taller halls:** theatres, gyms, malls, casinos and nightclubs have a taller ground floor, so a theatre's screen fits.
+- **Tracers and sparks:** a shot is now a short streak flying from the barrel, with a burst of sparks where it lands, for everyone's shots.
+- **New high-detail models:** every prop, piece of furniture and weapon, and the doors, were remade with far more detail. You can walk under tables and shoot through gaps.
+
+### Changed
+- **Homes:** in deep buildings the living room runs along the hall, with the bedroom and bathroom side by side behind it, each with its own door. Bathrooms are proper rooms, with the shower tucked into a corner.
+- **Motels:** the lobby, office, vending nook, laundry and restroom sit together at one end of the ground floor; every other room is a guest room.
+- **Wall-mounted TVs** in living rooms and lounges, at eye height, never hidden behind furniture.
+- **Bigger buildings:** buildings can be up to 30% taller (apartments, offices and casinos reach 7 floors) and 30% wider.
+- **Better parks:** big parks have a loop path lined with trees, every park has hedges along its edges, ponds are round with a stone rim, lily pads and a wooden dock, a spare corner can hold a basketball court, and entrances have a park map board and a bike rack. There's a drinking fountain by the plaza.
+- **New props:** a pond dock, lily pads with a duck, a drinking fountain and a park map board.
+- **Ways in:** apartments, offices, schools, motels and tenements are entered through their hall, not through someone's room.
+- **Smaller stairs:** narrower and a little steeper, with shorter landings and a narrower hall, leaving more room for rooms.
+- **Tidier rooms:** things spread through a room now sit on a grid, square to the walls, after the rows and lines are placed. Sofas, slot machines, arcade cabinets and vaults face into the room. Reception desks, tellers, checkouts, bars and counters stand out from the wall with room behind them for staff.
+
+### Fixed
+- **Missing walls and doorways:** walls no longer have gaps cut in them around a Tag spot (the spot moves into the room instead), every room off a hall has a real door, and a room whose wall the stairs took gets a door to its neighbour.
+- **Narrow doors:** doors between the rooms of a home are their own narrower model, so they fit their doorway.
+- **Doors swinging into walls:** doors are kept well clear of corners, and nothing is placed where a door swings or right in front of it, so a door can always open and be used again.
+- **Stairs you couldn't reach:** some buildings, like malls with a full row of shops, cut off the part of the floor with the stairs. Every part of every floor can now be reached from the street or the stairs.
+- **Park hedges** never appeared; they now line the park edges.
+- **Squeeze passages:** the floor left beside stairs or a room cut short is always a proper hallway, at least 2.6 m wide.
+- **Doorway chains:** the rooms of a home are joined by doors set at different points, not open arches all in a line.
+- **Empty libraries:** a library always has bookshelves, along its walls when rows don't fit.
+- **Stalls and screens missing:** the space kept clear around stairs and entrances no longer reaches through a wall and empties the room next door.
+- **Sign lettering** is centred on stop signs and street name signs, and long road names shrink to fit the sign.
+- **Picnic table and newspaper box:** removed an invisible block that stopped you beside the table, and moved the box's collision onto the box.
+- **Collision redone:** everything you can touch now has collision matching its shape, including trees, bushes and cones. Collision made in the editor works in matches, whatever its shape.
+- **Furniture placement:** pieces whose model sat off-centre (the nightstand was 1.3 m off) are centred, so they land where the room plan puts them.
+- **Floating models:** clothes racks, theatre seats, street trees and water pipes now reach the floor.
+
 ## 0.26.0: The Big Beautiful Bartdate
 
 ### Added
@@ -226,7 +266,7 @@ The current version is set in `scripts/data/game_version.gd` and shown on the ma
 ### Changed
 - **Top HUD** matches the bottom and takes up less room: the scores and clock sit flush in one smaller dark bar against the top of the screen, the team scores tinted with a team-coloured outer edge. The white bar along its bottom is a second clock: it shrinks as the round timer runs down (tinted with the holding team's colour, Tag-coloured in overtime).
 - **When you're the Runner** the status line just says **DEFEND YOURSELF**.
-- **Air strafing:** A and D gain speed on their own again while you turn with the mouse, and they no longer steer you so hard (holding D without turning used to swing you round 90° in under a second; now it's about 5°). W can still be held while you strafe.
+- **Air strafing:** A and D gain speed on their own again while you turn with the mouse, and they no longer steer you so hard (holding D without turning used to swing you round 90Ãƒâ€šÃ‚Â° in under a second; now it's about 5Ãƒâ€šÃ‚Â°). W can still be held while you strafe.
 - **Spiked Bat** is held upright off to the right in first person, out of the middle of the screen, a little smaller and lower so less of the handle shows, and its spikes no longer clip through the head (short spikes on each face).
 - **Minimap** no longer marks building doors, its streets stay inside the map's edge, and it sits on a dark backing like the HUD panels.
 - **README** is now a player guide (what the game is, how to play, weapons, addons, movement, customizing, hosting). The developer notes moved to DEVELOPMENT.md.
@@ -305,7 +345,7 @@ The current version is set in `scripts/data/game_version.gd` and shown on the ma
   - the restricted-area arcs are gone
 - **Benches** beside the basketball court (the team benches and any along the paths next to it) face the court.
 - **Fountain:** the water jets and the moving-water effect are gone. The bottom basin is now filled with water, which used to be hidden under its rim. The droplet spray stays.
-- **Picnic umbrellas** tilt 15°, so the low edge of the top is easier to land on.
+- **Picnic umbrellas** tilt 15Ãƒâ€šÃ‚Â°, so the low edge of the top is easier to land on.
 
 ## 0.17.1
 
@@ -459,13 +499,13 @@ The current version is set in `scripts/data/game_version.gd` and shown on the ma
   - Ping where you're aiming to put a marker there for you and your team. It shows its distance, through walls and on the minimap, with a sound.
   - Aim at an enemy to mark them with a red **ENEMY** ping, or at the Tag to mark it.
   - Double tap for a red **DANGER** ping.
-  - Pings fade after 4.5–6 s. Each player can have 3 at once, and new rounds clear them.
+  - Pings fade after 4.5ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“6 s. Each player can have 3 at once, and new rounds clear them.
 - **Toggle lean setting** (Settings > Controls, on by default).
 
 ### Changed
 - **Leaning works like Rainbow Six Siege:**
   - Tap Q / E to lean and stay leaned. Tap the same key to stand up, or the other one to swap sides. With Toggle lean off, you lean while holding the key.
-  - You lean from the waist: your head swings out in an arc, drops slightly and the view tilts 15°. Leaning eases in and out over about 0.2 s.
+  - You lean from the waist: your head swings out in an arc, drops slightly and the view tilts 15Ãƒâ€šÃ‚Â°. Leaning eases in and out over about 0.2 s.
   - You walk while leaned and can aim and shoot. Sliding or wall running stands you back up.
   - Other players see your body tilt so your head is where you're leaning.
 
@@ -495,7 +535,7 @@ The current version is set in `scripts/data/game_version.gd` and shown on the ma
 
 ### Changed
 - **Teammate names:** six times bigger, so they're easy to read at a distance.
-- **Names fade at the crosshair:** a teammate's name fades almost completely while you aim near it (within about 10°), and comes back as you look away. It never covers a fight.
+- **Names fade at the crosshair:** a teammate's name fades almost completely while you aim near it (within about 10Ãƒâ€šÃ‚Â°), and comes back as you look away. It never covers a fight.
 
 ## 0.12.0
 
@@ -546,9 +586,9 @@ The current version is set in `scripts/data/game_version.gd` and shown on the ma
 ## 0.9.1
 
 ### Changed
-- **Keybinds in the Input Map:** the default controls now live in Godot's own **Project Settings → Input Map** instead of a list in the code. Edit an action's key there to change its default.
+- **Keybinds in the Input Map:** the default controls now live in Godot's own **Project Settings ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Input Map** instead of a list in the code. Edit an action's key there to change its default.
 - **Extra inputs:** an action can have several inputs (such as a second key or a gamepad button), and they all work until a player rebinds that action.
-- **Rebinding unchanged:** rebinding in Settings → Keybinds works as before and is saved per player. **Reset Keybinds** restores the Input Map's inputs, and existing saved binds carry over.
+- **Rebinding unchanged:** rebinding in Settings ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Keybinds works as before and is saved per player. **Reset Keybinds** restores the Input Map's inputs, and existing saved binds carry over.
 
 ## 0.9.0
 
@@ -556,9 +596,9 @@ Last step of moving the game into editable scenes: the UI.
 
 ### Changed
 - **Every screen is a scene:** the menus, lobby, pause menu, settings, all the customization screens, the HUD, chat and loadout picker are now scenes in `assets/ui/`. Open them in Godot to move, resize or restyle anything.
-- **Signal connections:** buttons are wired to their actions as saved connections, so you can see them in the editor's Node → Signals tab.
+- **Signal connections:** buttons are wired to their actions as saved connections, so you can see them in the editor's Node ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Signals tab.
 - **Setting rows:** these are now reusable row scenes (`assets/ui/rows/`): slider, checkbox and dropdown. Set a row's setting name in the Inspector and it reads and saves that setting by itself. The settings menu, crosshair editor, skybox and music screens are built from them.
-- **Colours:** menu text and backdrops use theme styles (`TitleLabel`, `AccentLabel`, `MutedLabel`, `HudLabel` and so on), so your Customize → Colours choices apply to every screen.
+- **Colours:** menu text and backdrops use theme styles (`TitleLabel`, `AccentLabel`, `MutedLabel`, `HudLabel` and so on), so your Customize ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Colours choices apply to every screen.
 - **Music menu:** the built-in music option now says "Built-in songs" instead of "Built-in Tag Rush beat", since there are four songs now.
 - **FPS cap:** a saved "Unlimited" FPS cap from older versions now shows as 500 on the slider.
 
@@ -570,7 +610,7 @@ Fourth step of moving the game's models into editable scenes: buildings.
 - **Modular buildings:** buildings are now assembled from 16 pieces in `assets/building/`: wall modules (solid, three window styles, door), fillers, corner posts, trim bands, parapets, floor slabs, stair segments, stair dividers, rails and interior walls. Edit a piece and every building uses it.
 - **2 m grid:** every building snaps to it around its centre, so walls move by at most 0.5 m.
 - **Windows:** each building has one window style (small, wide or tall) in whole 2 m slots, instead of random widths. They're still kept off wall ends and away from doors, with long solid stretches for wall running.
-- **Stairs:** ramps are made of 0.8 m × 0.5 m segments at the same slope as before. A player-sized test body climbed the first flight in every multi-storey building on three test maps (34 stairwells).
+- **Stairs:** ramps are made of 0.8 m ÃƒÆ’Ã¢â‚¬â€ 0.5 m segments at the same slope as before. A player-sized test body climbed the first flight in every multi-storey building on three test maps (34 stairwells).
 - **Rooms:** apartment, motel, school and tenement rooms are now 6 m wide (three modules), with the door in the middle module.
 
 ## 0.7.0

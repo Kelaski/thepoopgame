@@ -114,6 +114,13 @@ func _check_addons() -> bool:
 	var jid: int = Net.players.keys().filter(func(i): return i != 1)[0]
 	var me: Player = Game.world.players[1]
 	var them: Player = Game.world.players[jid]
+	# A shot's tracer flies to where it lands, then leaves sparks there.
+	var from := me.global_position + Vector3.UP
+	Game.world.add_tracers(from, PackedVector3Array([from + Vector3(0, 0, -3)]))
+	await get_tree().create_timer(0.1).timeout
+	if Game.world.get_children().filter(func(n): return n is CPUParticles3D).is_empty():
+		_fail("no sparks from a tracer")
+		return false
 	Net.players[1].passive = "sharpshooter"
 	me.passive = "sharpshooter"
 	# Bubble: a hit on a Bubble drains it, not their health; the same hit lands without it.
@@ -145,9 +152,13 @@ func _check_addons() -> bool:
 	me.active = "magnet"
 	var team_was: int = Net.players[jid].team
 	Net.players[jid].team = Net.players[1].team
-	me.global_position = them.global_position + Vector3(6, 0, 0)
 	me.velocity = Vector3.ZERO
-	await get_tree().physics_frame
+	# Random maps: stand 6 m away on whichever side a wall doesn't block the view, as Magnet needs it.
+	for side: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
+		me.global_position = them.global_position + side * 6.0
+		await get_tree().physics_frame
+		if Game._teammate_ok(1, jid, Addons.MAGNET.reach):
+			break
 	var near_before := me.global_position.distance_to(them.global_position)
 	Game.request_magnet(jid)
 	await get_tree().create_timer(Addons.MAGNET.pull_time + 0.6).timeout

@@ -1,0 +1,101 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_frame"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3569, 0.2275, 0.1608, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m1"]
+size = Vector3(0.7205, 0.5205, 0.0405)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mgpih"]
+size = Vector3(0.7205, 0.5205, 0.0405)
+
+[sub_resource type="StandardMaterial3D" id="mat_mat"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.949, 0.9255, 0.8784, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m2"]
+size = Vector3(0.6208, 0.4207, 0.0047)
+
+[sub_resource type="StandardMaterial3D" id="mat_sky"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5608, 0.7843, 0.9098, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m3"]
+size = Vector3(0.501, 0.301, 0.005)
+
+[sub_resource type="StandardMaterial3D" id="mat_hill"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.3529, 0.6588, 0.2902, 1)
+roughness = 0.6
+
+[sub_resource type="SphereMesh" id="m4"]
+radius = 1.0
+height = 2.0
+radial_segments = 12
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="mat_hill2"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.2471, 0.5412, 0.2275, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="mat_sun"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.949, 0.7608, 0.1882, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="m5"]
+top_radius = 0.04
+bottom_radius = 0.04
+height = 0.003
+radial_segments = 10
+rings = 1
+
+[node name="PictureFrame" type="Node3D" unique_id=580764262]
+
+[node name="Frame" type="MeshInstance3D" parent="." unique_id=1758056327]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0.02)
+material_override = SubResource("mat_frame")
+mesh = SubResource("m1")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Frame" unique_id=1170719817]
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Frame/StaticBody3D" unique_id=1099952362]
+shape = SubResource("BoxShape3D_mgpih")
+
+[node name="mat1" type="MeshInstance3D" parent="." unique_id=1576988342]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0.042)
+material_override = SubResource("mat_mat")
+mesh = SubResource("m2")
+
+[node name="sky1" type="MeshInstance3D" parent="." unique_id=503406408]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.62, 0.045)
+material_override = SubResource("mat_sky")
+mesh = SubResource("m3")
+
+[node name="hill1" type="MeshInstance3D" parent="." unique_id=2043718253]
+transform = Transform3D(0.22, 0, 0, 0, 0.08, 0, 0, 0, 0.003, -0.08, 1.5, 0.047)
+material_override = SubResource("mat_hill")
+mesh = SubResource("m4")
+
+[node name="hill21" type="MeshInstance3D" parent="." unique_id=141745810]
+transform = Transform3D(0.16, 0, 0, 0, 0.06, 0, 0, 0, 0.003, 0.12, 1.5, 0.048)
+material_override = SubResource("mat_hill2")
+mesh = SubResource("m4")
+
+[node name="sun1" type="MeshInstance3D" parent="." unique_id=952019880]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.15, 1.68, 0.048)
+material_override = SubResource("mat_sun")
+mesh = SubResource("m5")

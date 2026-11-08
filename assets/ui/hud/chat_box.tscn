@@ -1,10 +1,10 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bs77lhw7yp2w3"]
 
-[ext_resource type="Script" path="res://scripts/ui/hud/chat_box.gd" id="1_cjiru"]
+[ext_resource type="Script" uid="uid://bbogmsogyin2s" path="res://scripts/ui/hud/chat_box.gd" id="1_cjiru"]
 
 [node name="Chat" type="Control" unique_id=487563429]
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2

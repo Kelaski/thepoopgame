@@ -1,11 +1,9 @@
-[gd_resource type="Resource" script_class="HiderAddon" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="HiderAddon" format=3 uid="uid://bbasphl3k5q6m"]
 
-[ext_resource type="Script" path="res://scripts/addons/hider.gd" id="1"]
+[ext_resource type="Script" uid="uid://dq7u727oa227u" path="res://scripts/addons/hider.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
+cd = 11.0
+moving_opacity = 0.15
 display_name = "Hider"
-time = 15.0
-cd = 12.0
-moving_opacity = 0.1
-still_opacity = 0.05

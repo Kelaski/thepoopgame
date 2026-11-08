@@ -1,93 +1,293 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://6eqyo126e4i0"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_9nk9t"]
+[sub_resource type="StandardMaterial3D" id="mat_body"]
 diffuse_mode = 3
 specular_mode = 1
 albedo_color = Color(0.1647, 0.1804, 0.2, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
+roughness = 0.6
 
-[sub_resource type="BoxMesh" id="BoxMesh_5u8cx"]
-size = Vector3(0.9, 1.5, 0.6)
+[sub_resource type="BoxMesh" id="m1"]
+size = Vector3(0.9005, 1.3205, 0.5605)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_bi263"]
-size = Vector3(0.9, 1.5, 0.6)
+[sub_resource type="BoxShape3D" id="BoxShape3D_u24ci"]
+size = Vector3(0.9215, 1.8468001, 0.6222)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qc86z"]
+[sub_resource type="BoxMesh" id="m2"]
+size = Vector3(0.8608, 1.3608, 0.5607)
+
+[sub_resource type="BoxMesh" id="m3"]
+size = Vector3(0.861, 1.321, 0.601)
+
+[sub_resource type="StandardMaterial3D" id="mat_base"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.0902, 0.0941, 0.1059, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m4"]
+size = Vector3(0.9213, 0.1013, 0.6212)
+
+[sub_resource type="StandardMaterial3D" id="mat_color"]
 diffuse_mode = 3
 specular_mode = 1
 albedo_color = Color(0.7529, 0.2706, 0.2275, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
+roughness = 0.6
 
-[sub_resource type="BoxMesh" id="BoxMesh_5ur6r"]
-size = Vector3(0.92, 0.3, 0.62)
+[sub_resource type="BoxMesh" id="m5"]
+size = Vector3(0.9215, 0.2615, 0.5815)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jaf8q"]
-shading_mode = 0
+[sub_resource type="BoxMesh" id="m6"]
+size = Vector3(0.8818, 0.3017, 0.5817)
+
+[sub_resource type="BoxMesh" id="m7"]
+size = Vector3(0.882, 0.262, 0.622)
+
+[sub_resource type="StandardMaterial3D" id="mat_stripe"]
+diffuse_mode = 3
+specular_mode = 1
 albedo_color = Color(1, 0.9529, 0.7843, 1)
+roughness = 0.6
+emission_enabled = true
+emission = Color(1, 0.9529, 0.7843, 1)
+emission_energy_multiplier = 1.8
 
-[sub_resource type="BoxMesh" id="BoxMesh_eu47i"]
-size = Vector3(0.12, 0.05, 0.62)
+[sub_resource type="BoxMesh" id="m8"]
+size = Vector3(0.1222, 0.0523, 0.6222)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pfh0j"]
-shading_mode = 0
-albedo_color = Color(0.5608, 0.8471, 1, 1)
+[sub_resource type="BoxMesh" id="m9"]
+size = Vector3(0.6025, 0.1025, 0.0085)
 
-[sub_resource type="BoxMesh" id="BoxMesh_ju3kv"]
-size = Vector3(0.6, 0.45, 0.04)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m3p2d"]
+[sub_resource type="StandardMaterial3D" id="mat_body2"]
 diffuse_mode = 3
 specular_mode = 1
 albedo_color = Color(0.1216, 0.1333, 0.149, 1)
-roughness = 0.85
-rim_enabled = true
-rim = 0.35
-rim_tint = 0.6
+roughness = 0.6
 
-[sub_resource type="BoxMesh" id="BoxMesh_uopxx"]
-size = Vector3(0.3, 0.04, 0.1)
+[sub_resource type="BoxMesh" id="m10"]
+size = Vector3(0.6828, 0.5428, 0.0227)
 
-[node name="TicketKiosk" type="Node3D"]
+[sub_resource type="StandardMaterial3D" id="mat_screen"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.5608, 0.8471, 1, 1)
+roughness = 0.6
+emission_enabled = true
+emission = Color(0.5608, 0.8471, 1, 1)
+emission_energy_multiplier = 1.3
 
-[node name="Part0" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
-material_override = SubResource("StandardMaterial3D_9nk9t")
-mesh = SubResource("BoxMesh_5u8cx")
+[sub_resource type="BoxMesh" id="m11"]
+size = Vector3(0.583, 0.443, 0.009)
 
-[node name="Part1" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.65, 0)
-material_override = SubResource("StandardMaterial3D_qc86z")
-mesh = SubResource("BoxMesh_5ur6r")
-metadata/slot = "color"
-metadata/slot_choices = PackedColorArray(0.7529, 0.2706, 0.2275, 1, 0.2471, 0.4353, 0.6588, 1, 0.4157, 0.1647, 0.3529, 1)
+[sub_resource type="StandardMaterial3D" id="mat_ui"]
+diffuse_mode = 3
+specular_mode = 1
+roughness = 0.6
+emission_enabled = true
+emission = Color(1, 1, 1, 1)
+emission_energy_multiplier = 1.1
 
-[node name="Part2" type="MeshInstance3D" parent="."]
-transform = Transform3D(5, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.82, 0)
-material_override = SubResource("StandardMaterial3D_jaf8q")
-mesh = SubResource("BoxMesh_eu47i")
-metadata/glow = true
+[sub_resource type="BoxMesh" id="m12"]
+size = Vector3(0.4032, 0.0433, 0.0053)
 
-[node name="Part3" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.9659, -0.2588, 0, 0.2588, 0.9659, 0, 1.15, 0.3)
-material_override = SubResource("StandardMaterial3D_pfh0j")
-mesh = SubResource("BoxMesh_ju3kv")
-metadata/glow = true
+[sub_resource type="BoxMesh" id="m13"]
+size = Vector3(0.1435, 0.0635, 0.0055)
 
-[node name="Part4" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0.31)
-material_override = SubResource("StandardMaterial3D_m3p2d")
-mesh = SubResource("BoxMesh_uopxx")
+[sub_resource type="BoxMesh" id="m14"]
+size = Vector3(0.1438, 0.0638, 0.0057)
 
-[node name="Collision" type="StaticBody3D" parent="."]
+[sub_resource type="BoxMesh" id="m15"]
+size = Vector3(0.144, 0.064, 0.006)
+
+[sub_resource type="BoxMesh" id="m16"]
+size = Vector3(0.1443, 0.0643, 0.0063)
+
+[sub_resource type="BoxMesh" id="m17"]
+size = Vector3(0.1445, 0.0645, 0.0065)
+
+[sub_resource type="BoxMesh" id="m18"]
+size = Vector3(0.1448, 0.0648, 0.0067)
+
+[sub_resource type="BoxMesh" id="m19"]
+size = Vector3(0.145, 0.065, 0.007)
+
+[sub_resource type="BoxMesh" id="m20"]
+size = Vector3(0.1453, 0.0653, 0.0073)
+
+[sub_resource type="BoxMesh" id="m21"]
+size = Vector3(0.1455, 0.0655, 0.0075)
+
+[sub_resource type="StandardMaterial3D" id="mat_slot"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.0784, 0.0863, 0.102, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m22"]
+size = Vector3(0.3057, 0.0457, 0.0258)
+
+[sub_resource type="StandardMaterial3D" id="mat_ticket"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.949, 0.9098, 0.7843, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="m23"]
+size = Vector3(0.106, 0.018, 0.036)
+
+[sub_resource type="StandardMaterial3D" id="mat_steel"]
+diffuse_mode = 3
+specular_mode = 1
+albedo_color = Color(0.6824, 0.7098, 0.7294, 1)
+roughness = 0.3
+
+[sub_resource type="BoxMesh" id="m24"]
+size = Vector3(0.3662, 0.0863, 0.0183)
+
+[sub_resource type="BoxMesh" id="m26"]
+size = Vector3(0.7067, 0.4068, 0.0128)
+
+[sub_resource type="BoxMesh" id="m27"]
+size = Vector3(0.327, 0.107, 0.013)
+
+[node name="TicketKiosk" type="Node3D" unique_id=1056079319]
+
+[node name="body1" type="MeshInstance3D" parent="." unique_id=1395050142]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.78, 0)
+material_override = SubResource("mat_body")
+mesh = SubResource("m1")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="body1" unique_id=885182024]
 collision_layer = 2
 collision_mask = 0
 
-[node name="Shape0" type="CollisionShape3D" parent="Collision"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
-shape = SubResource("BoxShape3D_bi263")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="body1/StaticBody3D" unique_id=640832440]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14275008, 0)
+shape = SubResource("BoxShape3D_u24ci")
+
+[node name="body2" type="MeshInstance3D" parent="." unique_id=578712260]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.78, 0)
+material_override = SubResource("mat_body")
+mesh = SubResource("m2")
+
+[node name="body3" type="MeshInstance3D" parent="." unique_id=1933975461]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.78, 0)
+material_override = SubResource("mat_body")
+mesh = SubResource("m3")
+
+[node name="base1" type="MeshInstance3D" parent="." unique_id=2087264192]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+material_override = SubResource("mat_base")
+mesh = SubResource("m4")
+
+[node name="Header" type="MeshInstance3D" parent="." unique_id=1733487148]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5986692, 0)
+material_override = SubResource("mat_color")
+mesh = SubResource("m5")
+metadata/slot = "color"
+
+[node name="Header2" type="MeshInstance3D" parent="." unique_id=561841485]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5986692, 0)
+material_override = SubResource("mat_color")
+mesh = SubResource("m6")
+metadata/slot = "color"
+
+[node name="Header3" type="MeshInstance3D" parent="." unique_id=1469256429]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5986692, 0)
+material_override = SubResource("mat_color")
+mesh = SubResource("m7")
+metadata/slot = "color"
+
+[node name="Light" type="MeshInstance3D" parent="." unique_id=1853589255]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7686692, 0)
+material_override = SubResource("mat_stripe")
+mesh = SubResource("m8")
+
+[node name="stripe1" type="MeshInstance3D" parent="." unique_id=1563376947]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5986692, 0.315)
+material_override = SubResource("mat_stripe")
+mesh = SubResource("m9")
+
+[node name="body21" type="MeshInstance3D" parent="." unique_id=1048779675]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0.3)
+material_override = SubResource("mat_body2")
+mesh = SubResource("m10")
+
+[node name="Screen" type="MeshInstance3D" parent="." unique_id=1402129482]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0.314)
+material_override = SubResource("mat_screen")
+mesh = SubResource("m11")
+
+[node name="ui1" type="MeshInstance3D" parent="." unique_id=134500570]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m12")
+
+[node name="ui2" type="MeshInstance3D" parent="." unique_id=1273179852]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.18, 1.19, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m13")
+
+[node name="ui3" type="MeshInstance3D" parent="." unique_id=702034787]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.19, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m14")
+
+[node name="ui4" type="MeshInstance3D" parent="." unique_id=1326985053]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, 1.19, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m15")
+
+[node name="ui5" type="MeshInstance3D" parent="." unique_id=1097940169]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.18, 1.1, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m16")
+
+[node name="ui6" type="MeshInstance3D" parent="." unique_id=1325792838]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m17")
+
+[node name="ui7" type="MeshInstance3D" parent="." unique_id=1944644329]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, 1.1, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m18")
+
+[node name="ui8" type="MeshInstance3D" parent="." unique_id=1555919095]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.18, 1.01, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m19")
+
+[node name="ui9" type="MeshInstance3D" parent="." unique_id=1340302846]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.01, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m20")
+
+[node name="ui10" type="MeshInstance3D" parent="." unique_id=1635684257]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, 1.01, 0.318)
+material_override = SubResource("mat_ui")
+mesh = SubResource("m21")
+
+[node name="TicketSlot" type="MeshInstance3D" parent="." unique_id=955084611]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0.31)
+material_override = SubResource("mat_slot")
+mesh = SubResource("m22")
+
+[node name="ticket1" type="MeshInstance3D" parent="." unique_id=1255935996]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.84, 0.33)
+material_override = SubResource("mat_ticket")
+mesh = SubResource("m23")
+
+[node name="steel1" type="MeshInstance3D" parent="." unique_id=1090522952]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0.305)
+material_override = SubResource("mat_steel")
+mesh = SubResource("m24")
+
+[node name="body22" type="MeshInstance3D" parent="." unique_id=29484212]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0.302)
+material_override = SubResource("mat_body2")
+mesh = SubResource("m26")
+
+[node name="slot2" type="MeshInstance3D" parent="." unique_id=433999972]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0.308)
+material_override = SubResource("mat_slot")
+mesh = SubResource("m27")

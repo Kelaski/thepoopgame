@@ -1,18 +1,10 @@
-[gd_resource type="Resource" script_class="LauncherStats" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="LauncherStats" format=3 uid="uid://b5jm5rqjooq01"]
 
-[ext_resource type="Script" path="res://scripts/data/weapons/launcher_stats.gd" id="1"]
+[ext_resource type="Script" uid="uid://8mkin4cpy4vn" path="res://scripts/data/weapons/launcher_stats.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
-name = "Grenade Launcher"
 dmg = 75.0
-max_damage = 75.0
-rps = 0.5
-zoom = 1.2
-max_range = 300.0
-kick = 3.0
-mag = 6
-reload_per_round = 1.2
 launch_speed = 25.0
 shooter_speed_scale = 1.0
 grenade_gravity = 9.8
@@ -21,3 +13,11 @@ blast_radius = 2.25
 knockback_speed = 12.0
 knockback_lift = 4.48
 max_life = 6.0
+name = "Grenade Launcher"
+max_damage = 75.0
+rps = 0.5
+zoom = 1.2
+max_range = 300.0
+kick = 3.0
+mag = 6
+reload_per_round = 1.2

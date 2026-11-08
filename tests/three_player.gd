@@ -22,7 +22,8 @@ func _ready() -> void:
 		return _done(false, "only %d players joined" % Net.players.size())
 	if multiplayer.is_server():
 		Game.server_start_match()
-	while Game.phase != Game.Phase.RUSH:
+	# A client's clock reads RUSH before its first match starts, so wait for its world too.
+	while Game.phase != Game.Phase.RUSH or Game.world == null or Game.world.players.size() < 3:
 		await get_tree().process_frame
 	await get_tree().create_timer(0.2).timeout
 	var b: Player = null
@@ -30,7 +31,7 @@ func _ready() -> void:
 		if Net.players[id].name == "B":
 			b = Game.world.players[id]
 	if role == "B":
-		for i in 120:  # 2 s at 4 m/s, up in the air so nothing is in the way
+		for i in 600:  # 10 s at 4 m/s, up in the air so nothing is in the way; long enough for A to catch it after a slow map load
 			await get_tree().physics_frame
 			b.global_position = Vector3(0, 60, 0) + Vector3(4.0 * i / 60.0, 0, 0)
 			b.velocity = Vector3.ZERO
@@ -38,7 +39,7 @@ func _ready() -> void:
 		get_tree().quit()
 		return
 	if role != "A":
-		await get_tree().create_timer(5.0).timeout
+		await get_tree().create_timer(14.0).timeout
 		get_tree().quit()
 		return
 	while b.global_position.y < 50.0:  # B has started its walk up in the air

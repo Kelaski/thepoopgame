@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="spark"]
+shading_mode = 0
+albedo_color = Color(1, 0.86, 0.5, 1)
+
+[sub_resource type="BoxMesh" id="bit"]
+material = SubResource("spark")
+size = Vector3(0.035, 0.035, 0.035)
+
+[node name="Impact" type="CPUParticles3D"]
+emitting = false
+amount = 10
+lifetime = 0.25
+one_shot = true
+explosiveness = 1.0
+mesh = SubResource("bit")
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 2.0
+initial_velocity_max = 5.0
+gravity = Vector3(0, -9, 0)
+cast_shadow = 0

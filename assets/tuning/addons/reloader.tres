@@ -1,8 +1,8 @@
-[gd_resource type="Resource" script_class="ReloaderAddon" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ReloaderAddon" format=3 uid="uid://c6lrhspeqxuvy"]
 
-[ext_resource type="Script" path="res://scripts/addons/reloader.gd" id="1"]
+[ext_resource type="Script" uid="uid://c4fo2b7ca14o1" path="res://scripts/addons/reloader.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
+cd = 3.5
 display_name = "Reload on Kill"
-cd = 3.0

@@ -3,6 +3,7 @@ class_name MapBuilder
 ## boundary fence, with grass, roads and a distant city beyond it.
 
 const DOOR_SCENE: PackedScene = preload("res://assets/models/door.tscn")
+const NARROW_DOOR_SCENE: PackedScene = preload("res://assets/models/door_narrow.tscn")
 # Collision layers (Player's movement masks are built from these).
 const L_FLOOR := 1   # interior floors and roofs (Phantom can drop through)
 const L_WALL := 2    # walls + furniture (Phantom can pass through; sniper can pierce one)
@@ -218,17 +219,22 @@ static func tree(geo: GeoBatch, p: Vector2, rng: RandomNumberGenerator) -> void:
 
 ## This game's hinged door in a rewrite doorway: the plan gives the doorway's centre, the door hangs from its hinge.
 static func _hang_door(root: Node3D, door: Dictionary) -> void:
-	var node: Door = DOOR_SCENE.instantiate()
+	var w: float = door.get("w", DOOR_WIDTH)
+	var node: Door = (NARROW_DOOR_SCENE if w < 1.3 else DOOR_SCENE).instantiate()
 	root.add_child(node)
-	var hinge: Vector3 = door.pos + (Vector3(-DOOR_WIDTH * 0.5, 0, 0) if door.along_x else Vector3(0, 0, DOOR_WIDTH * 0.5))
+	var hinge: Vector3 = door.pos + (Vector3(-w * 0.5, 0, 0) if door.along_x else Vector3(0, 0, w * 0.5))
 	var row: Array = MapMats.TABLE.get(door.paint, MapMats.TABLE["concrete"])
-	node.setup(doors.size(), hinge, 0.0 if door.along_x else PI * 0.5, DOOR_WIDTH, DOOR_HEIGHT, row[0])
+	node.setup(doors.size(), hinge, 0.0 if door.along_x else PI * 0.5, w, DOOR_HEIGHT, row[0])
 	doors.append(node)
 
 
-## Lettering floating just off a sign's face.
-static func _letter(root: Node3D, text: String, pos: Vector3, yaw: float, size: int, color: Color) -> void:
+## Lettering floating just off a sign's face, centred on `pos` and shrunk to fit `width` (m).
+static func _letter(root: Node3D, text: String, pos: Vector3, yaw: float, size: int, color: Color, width := 0.0) -> void:
 	var label: Label3D = LETTERING.instantiate()
+	var font := ThemeDB.fallback_font
+	var natural := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * label.pixel_size
+	if width > 0.0 and natural > width:
+		size = int(size * width / natural)
 	label.text = text
 	label.font_size = size
 	label.modulate = color
@@ -308,7 +314,7 @@ static func _crane(geo: GeoBatch, layout: MapLayout, from: Vector3, to: Vector3,
 	var top := maxf(from.y, to.y) + 6.0
 	for b in layout.buildings:
 		if (b.rect as Rect2).grow(jib_reach).has_point(Vector2(base.x, base.z)):
-			top = maxf(top, b.floors * b.floor_h + 3.0)
+			top = maxf(top, ProcGen.height(b) + 3.0)
 	top += index * 2.2
 	# Footing, mast (10 m tall in its scene, stretched to this crane) and a set of braces every 1.4 m.
 	Clutter.place(geo, "crane_footing", base, 0.0)
@@ -387,16 +393,16 @@ static func _junction_signs(geo: GeoBatch, layout: MapLayout, taken: Array[Rect2
 			else:
 				Clutter.place(geo, "stop_sign", Vector3(stop_at.x, 0, stop_at.y), angle / (PI * 0.5))
 				var face := stop_at + dir * 0.08
-				_letter(root, "STOP", Vector3(face.x, 2.42 * Clutter.PROP_SCALE, face.y), angle, 36, Color.WHITE)
+				_letter(root, "STOP", Vector3(face.x, 2.42 * Clutter.PROP_SCALE, face.y), angle, 36, Color.WHITE, 0.58)
 		var name_at: Vector2 = junction.pos + dir * (back + 0.9) + right * (half + 0.9)
 		if _free_spot(name_at, 0.5, taken, layout) and not _on_other_road(name_at, layout, junction.road, 0.0):
 			taken.append(Rect2(name_at, Vector2.ZERO).grow(0.7))
 			Clutter.place(geo, "street_sign", Vector3(name_at.x, 0, name_at.y), angle / (PI * 0.5))
 			var front := name_at + dir * 0.04
 			var rear := name_at - dir * 0.04
-			var board_y := 3.0 * Clutter.PROP_SCALE
-			_letter(root, str(junction.road.name), Vector3(front.x, board_y, front.y), angle, 22, Color.WHITE)
-			_letter(root, str(junction.road.name), Vector3(rear.x, board_y, rear.y), angle + PI, 22, Color.WHITE)
+			var board_y := 2.94 * Clutter.PROP_SCALE
+			_letter(root, str(junction.road.name), Vector3(front.x, board_y, front.y), angle, 22, Color.WHITE, 1.45)
+			_letter(root, str(junction.road.name), Vector3(rear.x, board_y, rear.y), angle + PI, 22, Color.WHITE, 1.45)
 
 
 ## Lamps, parked cars, street trees and everyday street furniture along every road.

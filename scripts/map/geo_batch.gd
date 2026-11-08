@@ -22,10 +22,14 @@ static var tag := ""
 
 var _surfaces := {}  # material key -> {v: PackedVector3Array, n: PackedVector3Array, i: PackedInt32Array}
 var _shapes := {}    # layer -> Array of [size, Transform3D]
+var _mesh_faces := {}  # layer -> PackedVector3Array: every mesh shape's triangles, placed
+var _hulls := {}       # layer -> Array of PackedVector3Array: each convex shape's points, placed
 var box_count := 0
 
 
 ## layer: WALL, FLOOR, BOUNDARY, or 0 for visual only. An empty mat means invisible collision.
+static var _glass: StandardMaterial3D
+
 func box(mat: String, center: Vector3, size: Vector3, layer := WALL, basis := Basis.IDENTITY) -> void:
 	_register(mat, center, size, layer, basis)
 	if mat == "":
@@ -142,7 +146,7 @@ func ball(mat: String, center: Vector3, size: Vector3, layer := 0, basis := Basi
 ## Bakes one part of an imported prop. Its colour goes in the vertices, so a whole city of props
 ## shares one material and stays one draw call per building.
 func add_part(part: Dictionary, xform: Transform3D, color: Color, glow: bool) -> void:
-	var s := _surface("vc_glow" if glow else "vc")
+	var s := _surface("vc_glass" if part.see_through else ("vc_glow" if glow else "vc"))
 	if not s.has("c"):
 		s["c"] = PackedColorArray()
 	var base: int = s.v.size()
@@ -159,6 +163,19 @@ func add_part(part: Dictionary, xform: Transform3D, color: Color, glow: bool) ->
 
 
 ## A collision box from an imported prop.
+## Exact collision from a prop's mesh shape. All of a layer's triangles bake into one shape.
+func add_mesh_shape(faces: PackedVector3Array, xform: Transform3D, layer: int) -> void:
+	if not _mesh_faces.has(layer):
+		_mesh_faces[layer] = PackedVector3Array()
+	_mesh_faces[layer].append_array(xform * faces)
+
+
+func add_hull_shape(points: PackedVector3Array, xform: Transform3D, layer: int) -> void:
+	if not _hulls.has(layer):
+		_hulls[layer] = []
+	_hulls[layer].append(xform * points)
+
+
 func add_shape(center: Vector3, size: Vector3, basis: Basis, layer: int) -> void:
 	_register("", center, size, layer, basis)
 
@@ -202,9 +219,11 @@ func bake(parent: Node3D, node_name: String) -> void:
 			arrays[Mesh.ARRAY_COLOR] = s.c
 		var mesh := ArrayMesh.new()
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		mesh.surface_set_material(0, MapMats.get_mat(key))
+		mesh.surface_set_material(0, _glass_material() if key == "vc_glass" else MapMats.get_mat(key))
 		var mi := MeshInstance3D.new()
 		mi.mesh = mesh
+		if key == "vc_glass":
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(mi)
 	var shared := {}
 	var bodies := {}
@@ -228,8 +247,34 @@ func bake(parent: Node3D, node_name: String) -> void:
 			var own := body.create_shape_owner(body)
 			body.shape_owner_add_shape(own, shared[size])
 			body.shape_owner_set_transform(own, entry[1])
+	for layer in _mesh_faces:
+		var trimesh := ConcavePolygonShape3D.new()
+		trimesh.set_faces(_mesh_faces[layer])
+		trimesh.backface_collision = true
+		var body: StaticBody3D = body_for.call(layer)
+		body.shape_owner_add_shape(body.create_shape_owner(body), trimesh)
+	for layer in _hulls:
+		var body: StaticBody3D = body_for.call(layer)
+		for points: PackedVector3Array in _hulls[layer]:
+			var hull := ConvexPolygonShape3D.new()
+			hull.points = points
+			body.shape_owner_add_shape(body.create_shape_owner(body), hull)
 	_surfaces.clear()
 	_shapes.clear()
+	_mesh_faces.clear()
+	_hulls.clear()
+
+
+## See-through prop parts (glass, water spray) keep their colour and alpha in the vertices.
+static func _glass_material() -> StandardMaterial3D:
+	if _glass == null:
+		_glass = StandardMaterial3D.new()
+		_glass.vertex_color_use_as_albedo = true
+		_glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_glass.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
+		_glass.specular_mode = BaseMaterial3D.SPECULAR_TOON
+		_glass.roughness = 0.2
+	return _glass
 
 
 func _register(mat: String, center: Vector3, size: Vector3, layer: int, basis: Basis) -> void:

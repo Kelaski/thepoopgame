@@ -14,8 +14,8 @@ class_name MapRules extends Resource
 @export var edge_expansion := 0.2
 @export var road_width := 6.0
 @export var road_clearance := 3.0
-@export var block_max := 48.0
-@export var lot_max := 30.6
+@export var block_max := 62.4
+@export var lot_max := 39.8
 @export var lot_min := 12.6
 @export var alley_min := 3.4
 @export var alley_max := 4.9
@@ -24,25 +24,23 @@ class_name MapRules extends Resource
 @export var strip_chance := 0.35
 
 @export_group("Buildings")
-@export var max_floors := 5
+@export var max_floors := 7
 @export var wall_thickness := 0.35
 @export var slab_thickness := 0.3
 ## The doorway. map/door.tscn is built to fit it, a hair smaller each way.
 @export var door_width := 1.7
 @export var door_height := 2.45
-@export var corridor_width := 5.6
-@export var room_length := 6.0
-@export var min_width_for_corridor := 13.0
-@export var stair_width := 2.4
-@export var stair_slope_deg := 27.0
+@export var corridor_width := 5.0
+@export var stair_width := 2.0
+@export var stair_slope_deg := 30.0
 ## Tight buildings get lower storeys rather than a ramp steeper than this.
 @export var stair_max_slope_deg := 36.0
 ## ...but never lower than this.
 @export var min_floor_height := 4.0
 ## Free floor at each end of a flight, enough to walk around the rail and turn onto it.
-@export var stair_landing := 1.8
+@export var stair_landing := 1.5
 ## Depth of the platform where a switchback turns.
-@export var stair_turn := 1.6
+@export var stair_turn := 1.4
 ## Entrances per building, at most.
 @export var max_building_doors := 2
 @export var parapet_height := 0.5

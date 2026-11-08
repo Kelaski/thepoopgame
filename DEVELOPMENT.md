@@ -135,8 +135,8 @@ Every prop and piece of furniture is a template scene in `assets/props/` or `ass
 
 **How they're used:** the map places thousands of these, so they aren't added as nodes. `scripts/map/prop_library.gd` reads each scene once into plain mesh and collision data, and `Clutter` and `GeoBatch` bake them into one mesh per material. `Clutter.IMPORTS` lists the scenes the map uses.
 
-- **Meshes:** the parts' colours and their glow flag are kept. Everything is drawn with `assets/world/toon_world.gdshader`.
-- **Collision:** `CollisionShape3D` boxes, cylinders and spheres (round shapes become boxes). Every shape becomes a wall, or a bounce pad if its body is on layer 32.
+- **Meshes:** any `MeshInstance3D` or `MultiMeshInstance3D` works (primitive, imported or array meshes, with any number of surfaces). Textures and shaders aren't baked: each surface draws in its material's colour. The parts' colours and their glow flag are kept. Everything is drawn with `assets/world/toon_world.gdshader`.
+- **Collision:** give each part a player can touch a `StaticBody3D` child with a `CollisionShape3D`: box, cylinder, sphere, capsule, convex or trimesh. All keep their exact form in the level. Leave out anything sealed inside or too small to matter. Every shape becomes a wall, or a bounce pad if its body is on layer 32.
 
 ## Tuning
 
@@ -154,6 +154,11 @@ The loadout descriptions are built from these values, so they stay correct. If y
 **Collision layers:** floors 1, walls and furniture 2, player 4, doors 8, ground and boundary 16, bounce pads 32, sky cap 64. Phantom passes walls and doors but not floors, and drops through floors but not the ground, so the ground must stay on 16.
 
 **Doors** are this game's `Door` (`assets/models/door.tscn`), hung from the plan's doorway centres. **Lighting** is `assets/world/sky_env.tscn` with presets in `assets/tuning/times/`.
+
+**Rooms:** `scripts/map/room_plans.gd` says what each kind of building needs, floor by floor. Hall buildings (school, office, apartments, motel, tenements) list rooms they must have once per floor, then a room that repeats; each kind has a length range, so rooms differ in size. Other buildings split each floor into bands running back from the main entrance, each band split into areas: walled ones (restrooms, kitchens, offices) get walls and a door, the rest are open areas of the hall. If the stairs or an entrance land in a walled area, the band is reordered; failing that the area is cut short of them (the cut-off strip is a `stair_hall`), or it swaps places with another area. Kinds in `BuildingBuilder.NO_WINDOWS` get no windows. Homes in halls deeper than `DEEP_HOME` put their back parts behind the entered part. Hall buildings are only entered through their hall. After an open-plan floor is laid out, `_connect` makes sure every area can be reached from the entrance (or the stairs, upstairs), adding a door through a neighbouring room where needed. Doors under 1.3 m use `assets/models/door_narrow.tscn`; a door scene's `design_w` says what doorway it was built for. A Tag spot on an inner wall moves to the middle of a nearby room; walls never get gaps. `TALL_GROUND` gives big halls a taller ground floor. `scripts/map/interiors.gd` furnishes each kind of room: rows facing a board, stalls along a wall, pictures on the walls. Rows only go in if the room's head item (screen, board) did. `STAFF_GAP` keeps room behind counters. Add a room kind to both files; the checks test fails if a kind has no plan or a prop is missing from `Clutter.IMPORTS`.
+
+**Prop origins:** a prop's origin is the centre of its footprint, on the floor. Its front faces +Z; the back goes against a wall. Wall decor (pictures, boards, clocks) hangs from its back face.
+
 
 ## Editing the UI
 
@@ -197,7 +202,7 @@ scripts/
   map/level.gd              # a built map, as the game reads it; the map list
   map/map_layout.gd         # the plan of a map; classic_map.gd and proc_gen.gd make one
   map/map_builder.gd        # the 3D level: ground, roads, buildings, parks, props, cranes, fence
-  map/building_builder.gd   # buildings; interiors.gd furnishes them, park_builder.gd builds parks
+  map/building_builder.gd   # buildings: walls, floors, stairs and rooms; room_plans.gd lists the rooms, interiors.gd furnishes them; park_builder.gd builds parks
   map/geo_batch.gd          # batched meshes and collision; prop_library.gd and clutter.gd place props
   map/skyline.gd            # the distant city
   world/world.gd            # players, Tag, FX, heartbeat, respawn search

@@ -1,11 +1,8 @@
-[gd_resource type="Resource" script_class="WarpAddon" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="WarpAddon" format=3 uid="uid://dpqnf2i2m5vn7"]
 
-[ext_resource type="Script" path="res://scripts/addons/warp.gd" id="1"]
+[ext_resource type="Script" uid="uid://eby2wbgcso3i" path="res://scripts/addons/warp.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
+dist = 10.0
 display_name = "Warp"
-dist = 15.0
-cd = 8.0
-afterimage_time = 1.0
-afterimage_color = Color(0.5, 0.85, 1.0, 0.6)
