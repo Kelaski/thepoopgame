@@ -179,7 +179,7 @@ func update_tag() -> void:
 
 func is_free(pos: Vector3) -> bool:
 	# Never spawn outside the fence (the ground extends a little past it).
-	if not builder.bounds.grow(-0.8).has_point(Vector2(pos.x, pos.z)):
+	if not builder.layout.inside(Vector2(pos.x, pos.z), 0.8):
 		return false
 	var q := PhysicsShapeQueryParameters3D.new()
 	var s := CapsuleShape3D.new()
@@ -581,8 +581,20 @@ func uav_pulse(origin: Vector3, last: bool) -> void:
 		return  # faster than a real UAV pulses
 	_uav_pulse_at[p.peer_id] = now
 	_clear_uav_stills()  # outlines last until the next pulse is sent
-	_uav_pulses.append({"origin": origin, "r": 0.0, "last": last, "done": {}})
+	_uav_pulses.append({"origin": origin, "r": 0.0, "max": _uav_reach(origin), "last": last, "done": {}})
 	Sfx.play_at("addon", origin, -2.0, 60.0, 0.7)
+
+
+## How far a pulse from origin grows: to the map's farthest corner, so it sweeps the whole map.
+func _uav_reach(origin: Vector3) -> float:
+	var b: Rect2 = builder.bounds if builder else Rect2()
+	if not b.has_area():
+		return Addons.UAV.max_radius
+	var o := Vector2(origin.x, origin.z)
+	var reach := 0.0
+	for c: Vector2 in [b.position, Vector2(b.end.x, b.position.y), Vector2(b.position.x, b.end.y), b.end]:
+		reach = maxf(reach, o.distance_to(c))
+	return reach
 
 
 func _update_uav(delta: float) -> void:
@@ -599,7 +611,7 @@ func _update_uav(delta: float) -> void:
 			if Vector2(d.x, d.z).length() <= pulse.r:
 				pulse.done[id] = true
 				_uav_reveal(e, pulse.last)
-		if pulse.r >= Addons.UAV.max_radius:
+		if pulse.r >= pulse.max:
 			_uav_pulses.remove_at(i)
 	for id: int in _uav_stills.keys():
 		var until: float = _uav_stills[id].until
@@ -730,7 +742,7 @@ func _ribbon(a: Vector3, b: Vector3, w: float, col: Color, cam_pos: Vector3) -> 
 
 ## A UAV pulse's growing ring, fading as it reaches its full size.
 func _uav_ring(pulse: Dictionary, cam_pos: Vector3) -> void:
-	var col := Color(1.0, 0.25, 0.2, 0.7 * (1.0 - pulse.r / Addons.UAV.max_radius))
+	var col := Color(1.0, 0.25, 0.2, 0.7 * (1.0 - pulse.r / pulse.max))
 	var c: Vector3 = pulse.origin + Vector3(0, 0.3, 0)
 	for i in UAV_RING_SEGMENTS:
 		var a := TAU * i / UAV_RING_SEGMENTS

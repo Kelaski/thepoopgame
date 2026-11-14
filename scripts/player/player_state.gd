@@ -89,7 +89,7 @@ var rocket_armed := false  # Moonwalker: the next jump is a rocket jump
 var _rocket_t := 0.0       # flame showing (local: time left; sent as F_ROCKET)
 var _support_cd := {}       # Support addon -> cooldown left when you swapped away from it
 var _bubble_t := 0.0       # Bubble showing (everyone sees it)
-var _bubble_node: Node3D
+var _bubble_node: Node
 var _streak := 0           # Killstreak: kills since you last died
 var _uav_left := 0         # UAV: pulses still to send
 var _uav_next := 0.0       # ...and how long until the next one

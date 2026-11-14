@@ -5,6 +5,8 @@ extends PlayerNet
 
 const YANK_MIN_GAP := 2.0          # s between grapple yanks from enemies
 const BUBBLE_SCENE := preload("res://assets/models/parry_bubble.tscn")
+## What you see of your own Bubble: a glow round the screen's edges, since you stand inside the sphere.
+const BUBBLE_EDGE_SCENE := preload("res://assets/ui/hud/bubble_edge.tscn")
 const ROCKET_SCENE := preload("res://assets/models/rocket_flame.tscn")
 
 
@@ -164,11 +166,13 @@ func bubble_damaged(health_left: float) -> void:
 			addon_cd[ACTIVE_SLOT] = Addons.BUBBLE.cd
 		return
 	if _bubble_node == null:
-		_bubble_node = BUBBLE_SCENE.instantiate()
+		_bubble_node = (BUBBLE_EDGE_SCENE if is_local else BUBBLE_SCENE).instantiate()
 		add_child(_bubble_node)
 	for c in _bubble_node.get_children():
 		if c is GeometryInstance3D:
 			c.transparency = 0.7 * (1.0 - health_left)
+		elif c is CanvasItem:
+			c.modulate.a = 1.0 - 0.7 * (1.0 - health_left)
 
 
 func _tick_bubble(delta: float) -> void:
@@ -264,9 +268,8 @@ func _apply_grapple(delta: float, hvel: Vector3, wish: Vector3, jump_tap: bool, 
 		velocity.y = v.y
 		_end_grapple()
 		return Vector3(v.x, 0.0, v.z)
-	# The rope snaps if something gets between you and the hook.
-	var q := PhysicsRayQueryParameters3D.create(chest, grapple_point - n * 0.35, MASK_AIM, [get_rid()])
-	if not get_world_3d().direct_space_state.intersect_ray(q).is_empty():
+	# The rope snaps if a building gets between you and the hook; it slides past props.
+	if _rope_blocked(chest, grapple_point - n * 0.35):
 		_end_grapple()
 		return hvel
 	if on_floor and v.y < 2.5:
@@ -287,6 +290,20 @@ func _apply_grapple(delta: float, hvel: Vector3, wish: Vector3, jump_tap: bool, 
 		_end_wallrun()
 	_on_moved()
 	return Vector3(v.x, 0.0, v.z)
+
+
+## True if something other than a prop (furniture, cars, trees) lies on the rope.
+func _rope_blocked(from: Vector3, to: Vector3) -> bool:
+	var skip: Array[RID] = [get_rid()]
+	for i in 8:
+		var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, MASK_AIM, skip))
+		if hit.is_empty():
+			return false
+		var body := hit.collider as CollisionObject3D
+		if body == null or not (body.collision_layer & GeoMask.PROP):
+			return true
+		skip.append(hit.rid)
+	return false
 
 
 func _end_grapple() -> void:

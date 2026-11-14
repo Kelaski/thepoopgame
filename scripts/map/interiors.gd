@@ -260,7 +260,7 @@ static func _on_any_wall(ctx: Dictionary, prefab: String) -> void:
 	var walls := [0, 1, 2, 3].filter(func(w): return ctx.solid[w])
 	if walls.is_empty():
 		walls = [0, 1, 2, 3]
-	for attempt in 12:
+	for attempt in 24:
 		if _along_wall(ctx, prefab, walls[rng.randi_range(0, walls.size() - 1)], rng.randf_range(0.12, 0.88)):
 			return
 

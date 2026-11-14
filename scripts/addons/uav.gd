@@ -6,7 +6,7 @@ extends Addon
 @export var pulse_speed := 9.0
 ## Time between pulses.
 @export var pulse_interval := 1.5
-## A pulse stops growing at this radius.
+## Fallback reach when the map has no bounds; pulses normally grow to the far edge of the map.
 @export var max_radius := 60.0
 ## How long the last pulse's outlines stay.
 @export var last_linger := 1.5

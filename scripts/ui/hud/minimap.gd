@@ -168,7 +168,12 @@ func _draw() -> void:
 	_origin = area.position
 	_pad = inner.position + (inner.size - area.size * _scale) * 0.5
 	_area_px = _r(area)
-	draw_rect(_area_px, Color(0.17, 0.18, 0.2))
+	var layout: MapLayout = w.builder.layout
+	if layout.radius > 0.0:
+		var c := area.get_center()
+		draw_circle(_p(Vector3(c.x, 0, c.y)), layout.radius * _scale, Color(0.17, 0.18, 0.2))
+	else:
+		draw_rect(_area_px, Color(0.17, 0.18, 0.2))
 	_draw_ground(w.builder)
 	_draw_buildings(w.builder)
 	if Settings.g("minimap_labels"):

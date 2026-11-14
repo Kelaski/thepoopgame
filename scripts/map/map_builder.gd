@@ -16,6 +16,12 @@ const MASK_WORLD := L_FLOOR | L_WALL | L_DOOR | L_SOLID
 const SKY_HEIGHT := 90.0
 const CRANE_JIB := 11.0  # how far the crane top scene's jib reaches (m)
 const DOOR_WIDTH := 1.7
+## Share of trees that died.
+const DEAD_TREES := 0.3
+## Share of street lamps still working.
+const LIT_LAMPS := 0.55
+## Length of one straight panel of the round fence (m).
+const FENCE_PANEL := 4.0
 const DOOR_HEIGHT := 2.45
 
 static var doors: Array = []   # this game's Door nodes, in build order (the same on every peer)
@@ -80,8 +86,12 @@ static func build(layout: MapLayout, rules: MapRules, parent: Node3D) -> Node3D:
 
 static func _ground(geo: GeoBatch, layout: MapLayout, rules: MapRules) -> void:
 	var outer := layout.bounds.grow(rules.fence_margin)
-	# The ground is on the boundary layer: Phantom's floor drop stops on it.
-	geo.box("pavement", Vector3(outer.get_center().x, -0.5, outer.get_center().y), Vector3(outer.size.x, 1.0, outer.size.y), GeoBatch.BOUNDARY)
+	var c := layout.bounds.get_center()
+	var reach := _fence_radius(layout, rules) + 2.0
+	outer = outer.merge(Rect2(c, Vector2.ZERO).grow(reach))
+	# The ground is on the boundary layer: Phantom's floor drop stops on it. It's seen as a round disc.
+	geo.box("", Vector3(outer.get_center().x, -0.5, outer.get_center().y), Vector3(outer.size.x, 1.0, outer.size.y), GeoBatch.BOUNDARY)
+	geo.cylinder("pavement", Vector3(c.x, -0.5, c.y), reach, reach, 1.0, 0, Basis.IDENTITY, 96)
 	geo.box("", Vector3(outer.get_center().x, SKY_HEIGHT + 0.5, outer.get_center().y), Vector3(outer.size.x + 4.0, 1.0, outer.size.y + 4.0), L_SKY)
 
 
@@ -89,8 +99,7 @@ static func _ground(geo: GeoBatch, layout: MapLayout, rules: MapRules) -> void:
 
 ## The road surface and its kerbs share the same offset lines, so they meet exactly, bends included.
 static func _roads(geo: GeoBatch, layout: MapLayout, rules: MapRules) -> void:
-	var fence := layout.bounds.grow(rules.fence_margin)
-	var fence_outline := PackedVector2Array([fence.position, Vector2(fence.end.x, fence.position.y), fence.end, Vector2(fence.position.x, fence.end.y)])
+	var fence_outline := _fence_outline(layout, rules)
 	for road in layout.roads:
 		var pts: PackedVector2Array = road.points
 		var half: float = road.width * 0.5
@@ -133,11 +142,10 @@ static func _offset_line(pts: PackedVector2Array, offset: float) -> PackedVector
 ## A road's line with any end at the map's edge pushed on outward.
 static func _reach_past_map(pts: PackedVector2Array, layout: MapLayout, reach: float) -> PackedVector2Array:
 	var out := pts.duplicate()
-	var inner := layout.bounds.grow(-4.0)
-	if not inner.has_point(out[0]):
+	if not layout.inside(out[0], 4.0):
 		out[0] += (out[0] - out[1]).normalized() * reach
 	var last := out.size() - 1
-	if not inner.has_point(out[last]):
+	if not layout.inside(out[last], 4.0):
 		out[last] += (out[last] - out[last - 1]).normalized() * reach
 	return out
 
@@ -210,11 +218,71 @@ static func _on_other_road(p: Vector2, layout: MapLayout, road: Dictionary, marg
 
 ## The older game's tree: a trunk and a rounded crown, stretched to a varied height.
 static func tree(geo: GeoBatch, p: Vector2, rng: RandomNumberGenerator) -> void:
+	if rng.randf() < DEAD_TREES:
+		Clutter.place(geo, "dead_tree", Vector3(p.x, 0, p.y), rng.randf_range(0.0, 4.0), "", Vector3.ONE * rng.randf_range(0.9, 1.25))
+		return
 	var height := rng.randf_range(2.8, 3.8)
 	var spread := rng.randf_range(1.9, 2.3)
 	var spin := rng.randf_range(0.0, 4.0)
 	Clutter.place(geo, "tree_trunk", Vector3(p.x, 0, p.y), spin, "", Vector3(1.2, height / Clutter.PROP_SCALE, 1.2))
 	Clutter.place(geo, "tree_crown", Vector3(p.x, height - 0.2, p.y), spin, "", Vector3.ONE * spread)
+
+
+## Cracks across the roads, and weeds pushing up along the kerbs. Paint only.
+static func _cracks_and_weeds(geo: GeoBatch, layout: MapLayout, rng: RandomNumberGenerator) -> void:
+	var tag := GeoBatch.tag
+	GeoBatch.tag = "ground"
+	for road in layout.roads:
+		var pts: PackedVector2Array = road.points
+		var half: float = road.width * 0.5
+		for i in pts.size() - 1:
+			var a := pts[i]
+			var b := pts[i + 1]
+			var dir := (b - a).normalized()
+			var normal := Vector2(-dir.y, dir.x)
+			for n in int(a.distance_to(b) / 7.0):
+				var p := a.lerp(b, rng.randf()) + normal * rng.randf_range(-half * 0.7, half * 0.7)
+				if not layout.inside(p, 2.0) or _on_other_road(p, layout, road, 3.0):
+					continue
+				# A zigzag of three strokes.
+				var heading := rng.randf_range(0.0, TAU)
+				for k in 3:
+					var length := rng.randf_range(0.5, 1.2)
+					var d := Vector2(cos(heading), sin(heading))
+					var mid := p + d * length * 0.5
+					geo.box("crack", Vector3(mid.x, ROAD_TOP + 0.012, mid.y), Vector3(0.06, 0.004, length), 0, Basis(Vector3.UP, atan2(d.x, d.y)))
+					p += d * length
+					heading += rng.randf_range(-1.0, 1.0)
+			for n in int(a.distance_to(b) / 5.0):
+				var side := 1.0 if rng.randf() < 0.5 else -1.0
+				var w := a.lerp(b, rng.randf()) + normal * side * (half + KERB_WIDTH + 0.15)
+				if layout.inside(w, 2.0) and not _on_other_road(w, layout, road, 1.0):
+					for k in 3:
+						var tuft := w + Vector2(rng.randf_range(-0.25, 0.25), rng.randf_range(-0.25, 0.25))
+						geo.box("foliage", Vector3(tuft.x, 0.12, tuft.y), Vector3(0.06, rng.randf_range(0.15, 0.3), 0.06), 0, Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, rng.randf_range(-0.4, 0.4)))
+	GeoBatch.tag = tag
+
+
+## Open ground inside the fence, where nothing was built or the town has been cleared: ruined walls,
+## rubble, wrecks, barrels and dead trees, spread on a loose grid.
+static func _wasteland(geo: GeoBatch, layout: MapLayout, rng: RandomNumberGenerator, taken: Array[Rect2]) -> void:
+	const SPACING := 9.0
+	const RUINS := ["ruin_wall", "ruin_wall", "rubble_pile", "rubble_pile", "debris", "dead_tree", "barrels", "car"]
+	var r := layout.bounds
+	var x := r.position.x + SPACING * 0.5
+	while x < r.end.x:
+		var z := r.position.y + SPACING * 0.5
+		while z < r.end.y:
+			var p := Vector2(x, z) + Vector2(rng.randf_range(-2.5, 2.5), rng.randf_range(-2.5, 2.5))
+			var prefab: String = RUINS[rng.randi_range(0, RUINS.size() - 1)]
+			var size := Clutter.size_of(prefab)
+			var radius := maxf(size.x, size.y) * 0.5 + 0.8
+			if rng.randf() < 0.7 and layout.inside(p, radius + 1.0) and _free_spot(p, radius, taken, layout) and not _on_other_road(p, layout, {}, radius + 1.0):
+				taken.append(Rect2(p, Vector2.ZERO).grow(radius))
+				var paint: String = ["#8a4f2e", "#3b3633", "#7a3e24", "#5d7392"][rng.randi_range(0, 3)] if prefab == "car" else ""
+				Clutter.place(geo, prefab, Vector3(p.x, 0, p.y), rng.randf_range(0.0, 4.0), paint)
+			z += SPACING
+		x += SPACING
 
 
 ## This game's hinged door in a rewrite doorway: the plan gives the doorway's centre, the door hangs from its hinge.
@@ -280,7 +348,7 @@ static func _crane(geo: GeoBatch, layout: MapLayout, from: Vector3, to: Vector3,
 	for offset in [7.0, -7.0, 11.0, -11.0, 15.0, -15.0, 19.0, -19.0]:
 		var p: Vector3 = mid + side * offset
 		var foot := Rect2(Vector2(p.x, p.z), Vector2.ZERO).grow(2.0)
-		var free := layout.bounds.grow(-2.0).encloses(foot)
+		var free := layout.encloses(foot, 2.0)
 		for b in layout.buildings:
 			free = free and not (b.rect as Rect2).intersects(foot)
 		for park in layout.parks:
@@ -414,8 +482,9 @@ static func _street_props(geo: GeoBatch, layout: MapLayout, rules: MapRules, rng
 	for park in layout.parks:
 		taken.append((park.rect as Rect2).grow(0.5))
 	_junction_signs(geo, layout, taken, rng, root)
-	const FURNITURE := ["trash_can", "hydrant_news", "mailbox", "bench", "parking_meter", "bus_stop", "phone_booth", "planter", "cone", "bike_rack", "bollards", "trash_can", "bench", "planter", "hydrant_news", "mailbox", "bollards"]
-	const CAR_COLORS := ["#dc4f46", "#3f76c9", "#ececec", "#2f9a63", "#2aa6a0", "#7d4cb8", "#ee9033", "#3a3d46"]
+	const FURNITURE := ["trash_can", "hydrant_news", "mailbox", "bench", "parking_meter", "bus_stop", "phone_booth", "cone", "bollards", "rubble_pile", "debris", "debris", "rubble_pile", "barrels", "bench", "hydrant_news", "trash_can"]
+	# Faded paint, rust and burnt-out shells.
+	const CAR_COLORS := ["#a5605a", "#5d7392", "#b8b2a6", "#5e7d63", "#5f8c88", "#76618c", "#b47c48", "#3a3d46", "#8a4f2e", "#3b3633", "#7a3e24"]
 	for road in layout.roads:
 		var pts: PackedVector2Array = road.points
 		var half: float = road.width * 0.5
@@ -435,7 +504,8 @@ static func _street_props(geo: GeoBatch, layout: MapLayout, rules: MapRules, rng
 					var out_dir := normal if n % 2 != 0 else -normal
 					var lean := Clutter.reach_sign("lamp_post")
 					Clutter.place(geo, "lamp_post", Vector3(p.x, 0, p.y), atan2(out_dir.x * lean, out_dir.y * lean) / (PI * 0.5))
-					lamp_lights.append(Vector3(p.x + out_dir.x, 6.4, p.y + out_dir.y))
+					if rng.randf() < LIT_LAMPS:
+						lamp_lights.append(Vector3(p.x + out_dir.x, 6.4, p.y + out_dir.y))
 			# Parked cars along the kerb, clear of the crossings.
 			for n in int(length / 13.0):
 				var side := 1.0 if rng.randf() < 0.5 else -1.0
@@ -451,7 +521,8 @@ static func _street_props(geo: GeoBatch, layout: MapLayout, rules: MapRules, rng
 				var radius := Clutter.size_of(prefab).y * 0.5 + 0.2
 				if _free_spot(p, radius, taken, layout) and rng.randf() < 0.8 and not _on_other_road(p, layout, road, radius + 2.5):
 					taken.append(Rect2(p, Vector2.ZERO).grow(radius))
-					var turned := road_turns + (2.0 if side < 0.0 else 0.0)
+					# Abandoned where they stopped, skewed across the kerb.
+					var turned := road_turns + (2.0 if side < 0.0 else 0.0) + rng.randf_range(-0.25, 0.25)
 					Clutter.place(geo, prefab, Vector3(p.x, 0, p.y), turned, CAR_COLORS[rng.randi_range(0, CAR_COLORS.size() - 1)])
 			# Street trees and furniture on the pavement.
 			for n in int(length / 3.5):
@@ -466,14 +537,17 @@ static func _street_props(geo: GeoBatch, layout: MapLayout, rules: MapRules, rng
 					var toward_road := side > 0.0 if prefab != "bench" else side < 0.0
 					Clutter.place(geo, prefab, Vector3(p.x, 0, p.y), road_turns + (3.0 if toward_road else 1.0))
 	_alley_clutter(geo, layout, rng, keep_out)
+	_cracks_and_weeds(geo, layout, rng)
+	_wasteland(geo, layout, rng, taken)
 	# Billboards along the fence, facing in.
-	var edge := layout.bounds.grow(-1.0)
-	var boards := [[Vector2(edge.get_center().x, edge.position.y), 0], [Vector2(edge.get_center().x, edge.end.y), 2], [Vector2(edge.position.x, edge.get_center().y), 1], [Vector2(edge.end.x, edge.get_center().y), 3]]
+	var c := layout.bounds.get_center()
+	var edge := layout.radius - 1.0 if layout.radius > 0.0 else minf(layout.bounds.size.x, layout.bounds.size.y) * 0.5 - 1.0
+	var boards := [[c + Vector2(0, -edge), 0], [c + Vector2(0, edge), 2], [c + Vector2(-edge, 0), 1], [c + Vector2(edge, 0), 3]]
 	for board in boards:
 		var p: Vector2 = board[0] + Vector2(rng.randf_range(-20.0, 20.0), 0) * (1.0 if board[1] % 2 == 0 else 0.0) + Vector2(0, rng.randf_range(-20.0, 20.0)) * (1.0 if board[1] % 2 == 1 else 0.0)
 		var size := Vector2(5.2, 0.5) if board[1] % 2 == 0 else Vector2(0.5, 5.2)
 		var foot := Rect2(p - size * 0.5, size)
-		var free := layout.bounds.encloses(foot)
+		var free := layout.encloses(foot)
 		for other in taken:
 			free = free and not foot.intersects(other)
 		if free and not _on_other_road(p, layout, {}, 1.0):
@@ -548,7 +622,7 @@ static func _free_spot(p: Vector2, radius: float, taken: Array[Rect2], layout: M
 
 
 static func _free_rect(foot: Rect2, taken: Array[Rect2], layout: MapLayout) -> bool:
-	if not layout.bounds.grow(-1.0).encloses(foot):
+	if not layout.encloses(foot, 1.0):
 		return false
 	for other in taken:
 		if foot.intersects(other):
@@ -586,79 +660,80 @@ static func _interior_lights(root: Node3D, positions: Array[Vector3], rules: Map
 
 # ------------------------------------------------------------------ boundary and beyond
 
-## Solid green site hoarding with posts, open where a road leaves through a barrier gate, plus a tall
-## invisible wall no ability can pass.
+## How far the fence stands from the middle of the map.
+static func _fence_radius(layout: MapLayout, rules: MapRules) -> float:
+	if layout.radius > 0.0:
+		return layout.radius + rules.fence_margin
+	return layout.bounds.size.length() * 0.5 + rules.fence_margin
+
+
+## The fence line as a polygon: a circle with corners every few metres.
+static func _fence_outline(layout: MapLayout, rules: MapRules) -> PackedVector2Array:
+	var c := layout.bounds.get_center()
+	var r := _fence_radius(layout, rules)
+	var out := PackedVector2Array()
+	var sides := maxi(int(TAU * r / FENCE_PANEL), 24)
+	for k in sides:
+		var a := TAU * k / sides
+		out.append(c + Vector2(cos(a), sin(a)) * r)
+	return out
+
+
+## Solid green site hoarding round the map with posts, open where a road leaves through a barrier
+## gate, plus a tall invisible wall no ability can pass.
 static func _fence(geo: GeoBatch, layout: MapLayout, rules: MapRules, exits: Array) -> void:
-	var r := layout.bounds.grow(rules.fence_margin)
-	var corners := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
-	for i in 4:
-		var a: Vector2 = corners[i]
-		var b: Vector2 = corners[(i + 1) % 4]
+	var ring := _fence_outline(layout, rules)
+	var c := layout.bounds.get_center()
+	for k in ring.size():
+		var a := ring[k]
+		var b := ring[(k + 1) % ring.size()]
 		var mid := (a + b) * 0.5
-		var along_x := absf(a.x - b.x) > absf(a.y - b.y)
-		var length := a.distance_to(b)
-		# 2 m thick: the sniper pierces up to 1 m of wall.
-		var size := Vector3(length + 2.0, rules.boundary_height, 2.0) if along_x else Vector3(2.0, rules.boundary_height, length + 2.0)
-		var out := Vector2(sign(mid.x - r.get_center().x), 0.0) if not along_x else Vector2(0.0, sign(mid.y - r.get_center().y))
-		geo.box("", Vector3(mid.x + out.x * 0.5, rules.boundary_height * 0.5 - 1.0, mid.y + out.y * 0.5), size, GeoBatch.BOUNDARY)
-		var dir := (b - a) / length
-		# Solid runs between the road openings on this side.
-		var stops: Array = [[0.0, 0.0]]
+		var along := (b - a).normalized()
+		var out := (mid - c).normalized()
+		var basis := Basis(Vector3.UP, atan2(-along.y, along.x))
+		# 2 m thick: the sniper pierces up to 1 m of wall. Overlapping a little, so there's no gap.
+		geo.box("", Vector3(mid.x + out.x, rules.boundary_height * 0.5 - 1.0, mid.y + out.y), Vector3(a.distance_to(b) + 1.0, rules.boundary_height, 2.0), GeoBatch.BOUNDARY, basis)
+		var open := false
 		for e in exits:
-			if absf(dir.dot(e.at - a) - clampf(dir.dot(e.at - a), 0.0, length)) < 0.01 and (a + dir * dir.dot(e.at - a)).distance_to(e.at) < 0.1:
-				var t: float = dir.dot(e.at - a)
-				stops.append([t - e.width * 0.5 - 0.1, t + e.width * 0.5 + 0.1])
-		stops.append([length, length])
-		stops.sort_custom(func(p, q): return p[0] < q[0])
-		for s in stops.size() - 1:
-			var from: float = stops[s][1]
-			var to: float = stops[s + 1][0]
-			if to - from > 0.05:
-				_fence_run(geo, a + dir * from, a + dir * to, along_x, rules)
+			open = open or Geometry2D.get_closest_point_to_segment(e.at, a, b).distance_to(e.at) < e.width * 0.5 + 0.2
+		if not open:
+			_fence_run(geo, a, b, rules)
 	for e in exits:
-		var side_turn := 1.0 if absf(e.fence_dir.x) < absf(e.fence_dir.y) else 0.0
+		var fd: Vector2 = e.fence_dir
 		var stretch := Vector3(e.width / (Clutter.size_of("road_gate").x), 1.0, 1.0)
-		Clutter.place(geo, "road_gate", Vector3(e.at.x, 0, e.at.y), side_turn, "", stretch)
+		Clutter.place(geo, "road_gate", Vector3(e.at.x, 0, e.at.y), atan2(-fd.y, fd.x) / (PI * 0.5), "", stretch)
 
 
-static func _fence_run(geo: GeoBatch, a: Vector2, b: Vector2, along_x: bool, rules: MapRules) -> void:
+static func _fence_run(geo: GeoBatch, a: Vector2, b: Vector2, rules: MapRules) -> void:
 	var mid := (a + b) * 0.5
-	var length := a.distance_to(b)
+	var along := (b - a).normalized()
+	var basis := Basis(Vector3.UP, atan2(-along.y, along.x))
 	var h := rules.fence_height
-	var panel := Vector3(length, h, 0.12) if along_x else Vector3(0.12, h, length)
-	geo.box("fence", Vector3(mid.x, h * 0.5, mid.y), panel, 0)
-	var posts := maxi(int(length / 4.0), 1)
-	for n in posts + 1:
-		var p := a.lerp(b, float(n) / posts)
-		geo.box("fence_post", Vector3(p.x, h * 0.5 + 0.1, p.y), Vector3(0.22, h + 0.2, 0.22), 0)
+	geo.box("fence", Vector3(mid.x, h * 0.5, mid.y), Vector3(a.distance_to(b) + 0.06, h, 0.12), 0, basis)
+	geo.box("fence_post", Vector3(a.x, h * 0.5 + 0.1, a.y), Vector3(0.22, h + 0.2, 0.22), 0, basis)
 
 
 ## Where roads run into the fence: {at: on the fence line, dir: outward along the road, away: straight
 ## out from the fence, fence_dir, width, from: the road's end}
 static func _road_exits(layout: MapLayout, rules: MapRules) -> Array:
 	var out := []
-	var r := layout.bounds.grow(rules.fence_margin)
+	var c := layout.bounds.get_center()
+	var r := _fence_radius(layout, rules)
 	for road in layout.roads:
 		var pts: PackedVector2Array = road.points
 		for pair in [[pts[0], pts[1]], [pts[pts.size() - 1], pts[pts.size() - 2]]]:
 			var end: Vector2 = pair[0]
-			if layout.bounds.grow(-4.0).has_point(end):
+			if layout.inside(end, 4.0):
 				continue
 			var dir: Vector2 = (end - pair[1]).normalized()
-			# Runs on along the road to the fence line, whichever side it meets.
-			var best := INF
-			var at := end
-			var fence_dir := Vector2.RIGHT
-			for edge in [[Vector2(r.position.x, r.position.y), Vector2(r.end.x, r.position.y)], [Vector2(r.position.x, r.end.y), Vector2(r.end.x, r.end.y)], [Vector2(r.position.x, r.position.y), Vector2(r.position.x, r.end.y)], [Vector2(r.end.x, r.position.y), Vector2(r.end.x, r.end.y)]]:
-				var hit: Variant = Geometry2D.segment_intersects_segment(end - dir * 8.0, end + dir * 40.0, edge[0], edge[1])
-				if hit != null and (hit as Vector2).distance_to(end) < best:
-					best = (hit as Vector2).distance_to(end)
-					at = hit
-					fence_dir = (edge[1] - edge[0]).normalized()
-			var away := Vector2(-fence_dir.y, fence_dir.x)
-			if away.dot(at - r.get_center()) < 0.0:
-				away = -away
-			out.append({"at": at, "dir": dir, "away": away, "fence_dir": fence_dir, "width": road.width, "from": end})
+			# Runs on along the road to the fence: where end + t dir meets the circle.
+			var rel := end - c
+			var qb := 2.0 * rel.dot(dir)
+			var disc := qb * qb - 4.0 * (rel.dot(rel) - r * r)
+			var t := (-qb + sqrt(maxf(disc, 0.0))) * 0.5
+			var at := end + dir * maxf(t, 0.0)
+			var away := (at - c).normalized()
+			out.append({"at": at, "dir": dir, "away": away, "fence_dir": Vector2(-away.y, away.x), "width": road.width, "from": end})
 	return out
 
 

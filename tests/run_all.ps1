@@ -17,6 +17,7 @@ function Start-Test($name, $testArgs) {
 $tests = @(
     (Start-Test "checks" @('res://tests/checks.tscn'))
     (Start-Test "city" @('res://tests/city.tscn'))
+    (Start-Test "map_checks" @('res://tests/map_checks.tscn'))
     (Start-Test "movement" @('res://tests/movement.tscn', '--', '--host', '--port=27205', '--autostart=1', '--size=small'))
     (Start-Test "two_player" @('res://tests/two_player.tscn', '--', '--host', '--port=27199', '--name=Same'))
     (Start-Test "three_host" @('res://tests/three_player.tscn', '--', '--host', '--port=27197', '--name=H'))

@@ -31,7 +31,7 @@ static func _walk(node: Node, parent: Transform3D, out: Dictionary) -> void:
 			for k in node.multimesh.instance_count:
 				_add_mesh(node, node.multimesh.mesh, xform * node.multimesh.get_instance_transform(k), out)
 		elif node is CollisionShape3D and node.shape != null and not node.disabled:
-			_add_shape(node.shape, xform, out, GeoMask.BOUNCE if node.get_parent().get("collision_layer") == GeoMask.BOUNCE else GeoMask.WALL)
+			_add_shape(node.shape, xform, out, GeoMask.BOUNCE if node.get_parent().get("collision_layer") == GeoMask.BOUNCE else GeoMask.WALL | GeoMask.PROP)
 	for child in node.get_children():
 		_walk(child, xform, out)
 
