@@ -48,40 +48,5 @@ const BRIDGES := [[4, 10], [15, 16], [15, 17], [13, 14], [1, 2]]
 
 
 static func build(rules: MapRules) -> MapLayout:
-	var s := rules.classic_scale
-	var layout := MapLayout.new()
-	layout.kind = "classic"
-	layout.map_seed = SEED
-	layout.bounds = Rect2(-SKETCH_SIZE * 0.5 * s, SKETCH_SIZE * s)
-	for z in ZONES:
-		layout.buildings.append({"id": z[0], "name": z[1], "theme": z[2], "rect": _rect(z[3], s), "floors": z[4], "floor_h": ProcGen.fit_storey(_rect(z[3], s), z[5] * rules.floor_height_scale, rules)})
-		var b: Dictionary = layout.buildings[-1]
-		b["floor_hs"] = ProcGen.storey_heights(b.theme, b.floors, b.rect, b.floor_h, rules)
-	layout.parks.append({"name": PARK.name, "rect": _rect(PARK.rect, s), "pond": _rect(PARK.pond, s), "playground": _rect(PARK.playground, s)})
-	for road in ROADS:
-		var pts := PackedVector2Array()
-		for p in road:
-			pts.append(_pt(p[0], p[1], s))
-		layout.roads.append({"points": pts, "width": rules.classic_road_width})
-	for p in SPAWNS:
-		layout.spawns.append(_pt(p[0], p[1], s))
-	for o in OBJECTIVES:
-		layout.objectives.append({"pos": _pt(o[0], o[1], s), "name": o[2]})
-	var rng := RandomNumberGenerator.new()
-	rng.seed = SEED
-	for i in BRIDGES.size():
-		if i < rules.crane_min or rng.randf() < rules.crane_chance:
-			layout.bridges.append(BRIDGES[i])
-	layout.connect_roads(rules.classic_road_width * 1.2)
-	layout.raise_objectives(rng)
-	layout.expand_edges(rules.edge_expansion)
-	return layout
-
-
-static func _pt(x: float, y: float, s: float) -> Vector2:
-	return (Vector2(x, y) - SKETCH_SIZE * 0.5) * s
-
-
-static func _rect(r: Array, s: float) -> Rect2:
-	var a := _pt(r[0], r[1], s)
-	return Rect2(a, _pt(r[2], r[3], s) - a)
+	return SketchMap.build({"kind": "classic", "seed": SEED, "size": SKETCH_SIZE, "zones": ZONES, "parks": [PARK], "roads": ROADS,
+		"spawns": SPAWNS, "objectives": OBJECTIVES, "bridges": BRIDGES}, rules)

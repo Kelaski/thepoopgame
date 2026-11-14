@@ -7,6 +7,11 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.28.0
+
+### Added
+- **Swift Current map:** a second hand-made map, loosely based on Swift Current, Saskatchewan. The Trans-Canada Highway runs along the north, Railway St and Cheadle St cross Central Ave downtown, and Riverside Park follows the creek down the east side. 25 buildings, including the Swift Current Mall, Living Sky Casino, the iPlex, the Lyric Theatre and the Comp High School, with 10 Tag spots and 12 spawn zones. Pick it in the lobby, or with `/map swiftcurrent`.
+
 ## 0.27.0
 
 ### Added

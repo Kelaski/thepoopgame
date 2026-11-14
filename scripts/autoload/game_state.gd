@@ -31,7 +31,7 @@ const TEAM_PICKUP_BONUS := 15.0
 const TIMES_OF_DAY := ["Day", "Afternoon", "Evening", "Night"]
 var world = null  # World node while a match is loaded
 var map_size := Level.DEFAULT_SIZE  # chosen by the host; replicated to everyone
-var map_seed := 0  # 0 = classic city, otherwise the random city's seed (new every match)
+var map_seed := 0  # 0 = a hand-made map, otherwise the random city's seed (new every match)
 var time_of_day := 1  # index into TIMES_OF_DAY; the host picks a new one after every round
 var in_match := false
 var ui_open := false

@@ -22,7 +22,7 @@ $tests = @(
     (Start-Test "three_host" @('res://tests/three_player.tscn', '--', '--host', '--port=27197', '--name=H'))
 )
 $port = 27210
-foreach ($size in "classic", "small", "medium", "large") {
+foreach ($size in "classic", "swiftcurrent", "small", "medium", "large") {
     $tests += Start-Test "rounds_$size" @('res://tests/rounds.tscn', '--', '--host', "--port=$port", '--autostart=1', "--size=$size")
     $port += 1
 }

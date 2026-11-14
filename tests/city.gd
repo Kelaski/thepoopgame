@@ -18,7 +18,7 @@ func _ready() -> void:
 	_check(a.buildings.size() == b.buildings.size() and a.spawns == b.spawns, "a seed gives the same map every time")
 	for kind: String in Level.SIZE_ORDER:
 		await _check_map(kind, 42)
-		if kind != "classic":
+		if not Level.handmade(kind):
 			for map_seed in 30:  # planning is quick; the rules are checked on the plan
 				for problem in Level.plan(kind, map_seed + 1).validate():
 					_check(false, "%s %d: %s" % [kind, map_seed + 1, problem])

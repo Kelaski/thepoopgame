@@ -5,7 +5,7 @@ class_name Commands
 const LIST := {
 	"help": {"usage": "/help", "desc": "List the available commands."},
 	"kill": {"usage": "/kill", "desc": "Eliminate yourself (the respawn timer still applies)."},
-	"map": {"usage": "/map <classic|small|medium|large>", "desc": "Host: change the map (restarts a running match)."},
+	"map": {"usage": "/map <classic|swiftcurrent|small|medium|large>", "desc": "Host: change the map (restarts a running match)."},
 	"kick": {"usage": "/kick <name>", "desc": "Host: remove a player."},
 	"ban": {"usage": "/ban <name>", "desc": "Host: remove a player until the lobby closes."},
 	"time": {"usage": "/time <day|afternoon|evening|night|next>", "desc": "Host: change the time of day (blends over 10 s)."},

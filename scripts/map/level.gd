@@ -1,13 +1,15 @@
 class_name Level
-## A built map, as the rest of the game reads it. ClassicMap / ProcGen plan it (the same
+## A built map, as the rest of the game reads it. ClassicMap, SwiftCurrentMap or ProcGen plans it (the same
 ## kind and seed give the same map on every peer) and MapBuilder builds it.
 
-const SIZE_ORDER := ["classic", "small", "medium", "large"]
+const SIZE_ORDER := ["classic", "swiftcurrent", "small", "medium", "large"]
+## The hand-made maps: always the same, whatever the seed.
+const HANDMADE := ["classic", "swiftcurrent"]
 const DEFAULT_SIZE := "medium"
-const SIZE_NAMES := {"classic": "Classic", "small": "Procedural: Small", "medium": "Procedural: Medium", "large": "Procedural: Large"}
+const SIZE_NAMES := {"classic": "Classic", "swiftcurrent": "Swift Current", "small": "Procedural: Small", "medium": "Procedural: Medium", "large": "Procedural: Large"}
 const RULES: MapRules = preload("res://assets/tuning/map_rules.tres")
 # Teams start at least this far apart (m).
-const MIN_SPAWN_DIST := {"classic": 70.0, "small": 30.0, "medium": 50.0, "large": 60.0}
+const MIN_SPAWN_DIST := {"classic": 70.0, "swiftcurrent": 70.0, "small": 30.0, "medium": 50.0, "large": 60.0}
 const SPAWN_GRID := 4.0  # m between respawn candidates
 ## Building colours by theme, for the minimap.
 const THEME_COLORS := {
@@ -35,12 +37,21 @@ static func valid_size(size: String) -> bool:
 	return size in SIZE_ORDER
 
 
+static func handmade(size: String) -> bool:
+	return size in HANDMADE
+
+
 static func size_name(size: String) -> String:
 	return SIZE_NAMES.get(size, size)
 
 
 static func plan(kind: String, map_seed: int) -> MapLayout:
-	return ClassicMap.build(RULES) if kind == "classic" else ProcGen.generate(kind, map_seed, RULES)
+	match kind:
+		"classic":
+			return ClassicMap.build(RULES)
+		"swiftcurrent":
+			return SwiftCurrentMap.build(RULES)
+	return ProcGen.generate(kind, map_seed, RULES)
 
 
 func build(parent: Node3D, kind: String, map_seed: int) -> void:

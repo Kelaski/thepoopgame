@@ -11,7 +11,7 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 - **One objective, constant action.** Every round is a race to the same spot, then a fight over it. The Tag can change hands many times before the clock runs out.
 - **Momentum movement.** Slides that keep your speed, slide-hops, bunny hops, air strafing, wall runs, wall kicks and mantling, all chaining into each other. Easy to pick up, with a lot of room to master.
 - **Five weapons, twenty-one addons.** Pick a weapon, an active addon (like a grappling hook, a blink or a shield) and a passive addon (like a double jump, extra health or faster reloads).
-- **A new city every match.** Random cities with avenues and side streets, lined with offices, malls, casinos, schools, gyms, parks and more, in three sizes, or the hand-made Classic map. Every building can be explored, from the ground floor to the roof.
+- **A new city every match.** Random cities with avenues and side streets, lined with offices, malls, casinos, schools, gyms, parks and more, in three sizes, or one of two hand-made maps: Classic and Swift Current. Every building can be explored, from the ground floor to the roof.
 - **Changing time of day.** Matches start by day, in the afternoon, in the evening or at night, and the sky shifts between rounds.
 - **Make it yours.** Recolour the menus and teams, design your crosshair and holo sight, move your gun on screen, upload a spray and bring your own music.
 - **Play with friends on Steam.** One player hosts a lobby and invites friends, or anyone can join a public lobby. No ports to open.
@@ -107,7 +107,7 @@ Tag Rush plays fast. Moving forward is always a sprint, and every move keeps you
 
 ## The city
 
-- **Four maps:** Classic, or a random city in Small, Medium or Large, chosen by the host in the lobby.
+- **Five maps:** Classic, Swift Current (loosely based on the Saskatchewan town), or a random city in Small, Medium or Large, chosen by the host in the lobby.
 - **Streets that meet properly:** roads with kerbs and dashes, crossings and stop signs where they join, and bends, not just a grid.
 - **Rounds move around:** each round both teams start somewhere new, out of each other's sight where the map allows and about the same distance from the Tag, and the Tag appears in a different spot. Inside a building it can be on any floor, so look up.
 - **Every building can be explored**, up to seven floors high, with stairs up to an open roof. Each has the rooms it would really have, furnished for what they are: classrooms and a cafeteria in schools, homes with their own bedroom and bathroom in apartments, a cinema behind the snack counter, restrooms, offices, kitchens and more.

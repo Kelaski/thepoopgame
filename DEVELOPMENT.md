@@ -33,7 +33,7 @@ When Steam starts the game from an invite, it passes `+connect_lobby <id>`, and 
 
 **Movement test** (`tests/movement.tscn`) checks repeat wall jumps, the arc on landing, and grenades starting inside walls.
 
-**Rounds test** (`tests/rounds.tscn`) plays 10 rounds and checks that no team starts where it did last round, the Tag spot moves, and spawn zones stay apart: `godot --headless --path . res://tests/rounds.tscn -- --host --port=27203 --autostart=1 --size=small` (add `--classic` for the Classic city).
+**Rounds test** (`tests/rounds.tscn`) plays 10 rounds and checks that no team starts where it did last round, the Tag spot moves, and spawn zones stay apart: `godot --headless --path . res://tests/rounds.tscn -- --host --port=27203 --autostart=1 --size=small` (add `--classic` for the Classic city, or use `--size=swiftcurrent`).
 
 **Two-player test** (`tests/two_player.tscn`) checks joining, unique names and movement sync. Start both copies at once; the host exits with code 0 on a pass and 1 on a failure:
 
@@ -149,7 +149,7 @@ The loadout descriptions are built from these values, so they stay correct. If y
 
 ## Editing maps
 
-`ClassicMap` and `ProcGen` plan a map (`MapLayout`), `MapBuilder` builds it, and `Level` is what the rest of the game reads. The same kind and seed give the same map on every peer. Structural numbers (storey heights, doors, windows, how many of everything) are in `assets/tuning/map_rules.tres`. Buildings are generated as boxes by `scripts/map/building_builder.gd`, and level colours and patterns are in the `TABLE` in `scripts/map/map_mats.gd` (`MapMats`).
+`ClassicMap`, `SwiftCurrentMap` and `ProcGen` plan a map (`MapLayout`), `MapBuilder` builds it, and `Level` is what the rest of the game reads. The same kind and seed give the same map on every peer. The two hand-made maps are lists of buildings, parks, roads, spawns and Tag spots in sketch pixels, which `SketchMap` (`scripts/map/sketch_map.gd`) turns into a layout; to add another, write one like `scripts/map/swift_current_map.gd` and add it to `SIZE_ORDER`, `HANDMADE`, `SIZE_NAMES`, `MIN_SPAWN_DIST` and `plan` in `scripts/map/level.gd`. Structural numbers (storey heights, doors, windows, how many of everything) are in `assets/tuning/map_rules.tres`. Buildings are generated as boxes by `scripts/map/building_builder.gd`, and level colours and patterns are in the `TABLE` in `scripts/map/map_mats.gd` (`MapMats`).
 
 **Collision layers:** floors 1, walls and furniture 2, player 4, doors 8, ground and boundary 16, bounce pads 32, sky cap 64. Phantom passes walls and doors but not floors, and drops through floors but not the ground, so the ground must stay on 16.
 
@@ -200,7 +200,7 @@ scripts/
   data/weapon_stats.gd, data/weapons/   # weapon numbers, shown in the Inspector
   data/game_version.gd      # version number (major.minor.patch)
   map/level.gd              # a built map, as the game reads it; the map list
-  map/map_layout.gd         # the plan of a map; classic_map.gd and proc_gen.gd make one
+  map/map_layout.gd         # the plan of a map; classic_map.gd, swift_current_map.gd (both through sketch_map.gd) and proc_gen.gd make one
   map/map_builder.gd        # the 3D level: ground, roads, buildings, parks, props, cranes, fence
   map/building_builder.gd   # buildings: walls, floors, stairs and rooms; room_plans.gd lists the rooms, interiors.gd furnishes them; park_builder.gd builds parks
   map/geo_batch.gd          # batched meshes and collision; prop_library.gd and clutter.gd place props

@@ -37,7 +37,7 @@ func server_start_match() -> void:
 	_used_dots.clear()
 	_used_objs.clear()
 	_last_team_dots.clear()
-	map_seed = 0 if map_size == "classic" else randi_range(1, 2000000000)
+	map_seed = 0 if Level.handmade(map_size) else randi_range(1, 2000000000)
 	time_of_day = randi() % TIMES_OF_DAY.size()
 	_start_match.rpc(map_size, map_seed, time_of_day)
 	get_tree().create_timer(1.0).timeout.connect(_server_begin_round)
