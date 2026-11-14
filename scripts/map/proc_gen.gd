@@ -18,6 +18,9 @@ const PARK_NAMES := ["Sky Hill Park", "Maple Grove Park", "Riverside Park", "Sun
 const PARK_SHARES := [1.0, 1.0, 0.66, 0.5]
 const MAX_ATTEMPTS := 40
 const MAX_REPEATS := 2
+## The round map's built-up radius, as a share of half the size's average side: 1.13 gives about the
+## rectangle's area.
+const ROUND_REACH := 1.13
 const NEIGHBOUR_DISTANCE := 13.0
 ## A park grows to within this of whatever's around it, if there's at least PARK_MIN_GROWTH to take.
 const PARK_MARGIN := 1.0
@@ -46,7 +49,12 @@ static func _attempt(size_name: String, attempt_seed: int, rules: MapRules) -> M
 	var size: Vector2 = {"small": rules.small_size, "medium": rules.medium_size, "large": rules.large_size}.get(size_name, rules.medium_size)
 	var layout := MapLayout.new()
 	layout.kind = size_name
-	layout.bounds = Rect2(-size * 0.5, size)
+	# The map is round, about as big as the size's rectangle: the city is laid out on the square
+	# round the circle, and its corners are trimmed off. The circle reaches the edge of the open
+	# ground added around the buildings.
+	var built_radius := (size.x + size.y) * 0.25 * ROUND_REACH
+	layout.bounds = Rect2(-Vector2.ONE * built_radius, Vector2.ONE * built_radius * 2.0)
+	layout.radius = built_radius * (1.0 + rules.edge_expansion)
 	var blocks: Array[Rect2] = []
 	_split_blocks(layout.bounds, rules, rng, layout, blocks)
 	layout.connect_roads(rules.road_width * 0.5 + rules.road_clearance + 1.0)
@@ -57,12 +65,21 @@ static func _attempt(size_name: String, attempt_seed: int, rules: MapRules) -> M
 	var alley_points: Array[Vector2] = []
 	var lots: Array[Rect2] = []
 	var park_rect := _carve_park(blocks[0], rules, rng, lots, alley_points)
+	park_rect = _trim_to_circle(park_rect, (size.x + size.y) * 0.25 * ROUND_REACH)
 	layout.parks.append(_park_plan(park_rect, names.pop_back(), rng))
 	for i in range(1, blocks.size()):
 		_split_lots(blocks[i], rules, rng, lots, alley_points)
 	var next_id := 1
 	var used := {}
 	_shuffle(lots, rng)
+	# Lots must stand inside the circle, with the open ground still to come around them.
+	var trimmed: Array[Rect2] = []
+	for lot in lots:
+		var fit := _trim_to_circle(lot, built_radius)
+		if minf(fit.size.x, fit.size.y) >= rules.lot_min * 0.6:
+			trimmed.append(fit)
+	lots = trimmed
+	alley_points.assign(alley_points.filter(func(p: Vector2): return p.length() <= built_radius))
 	for lot in lots:
 		var building := _building_for(lot, next_id, rng, rules, used, _themes_near(lot, layout))
 		if building.is_empty():
@@ -79,7 +96,25 @@ static func _attempt(size_name: String, attempt_seed: int, rules: MapRules) -> M
 	layout.raise_objectives(rng)
 	layout.expand_edges(rules.edge_expansion)
 	_grow_parks(layout, rng)
+	layout.make_round(rules.fence_margin + 1.0)
 	return layout
+
+
+## A lot cut back from its far sides, half a metre at a time, until it stands inside the circle.
+static func _trim_to_circle(lot: Rect2, r: float) -> Rect2:
+	var fit := lot
+	while fit.has_area():
+		var out := [fit.position, Vector2(fit.end.x, fit.position.y), fit.end, Vector2(fit.position.x, fit.end.y)].filter(func(p): return p.length() > r)
+		if out.is_empty():
+			return fit
+		var far: Vector2 = out.reduce(func(a, b): return a if a.length() > b.length() else b)
+		# Cut the side the far corner pokes out of most.
+		var cut_x := absf(far.x) >= absf(far.y)
+		if cut_x:
+			fit = fit.grow_individual(-0.5 if far.x < 0.0 else 0.0, 0.0, -0.5 if far.x > 0.0 else 0.0, 0.0)
+		else:
+			fit = fit.grow_individual(0.0, -0.5 if far.y < 0.0 else 0.0, 0.0, -0.5 if far.y > 0.0 else 0.0)
+	return fit
 
 
 ## A park takes up the empty ground around it, then gets its features laid out for the new size.
@@ -129,7 +164,7 @@ static func _fill_around(start: Rect2, layout: MapLayout, own_index: int) -> Rec
 		r = r.expand(Vector2(r.position.x, up))
 	if down - r.end.y >= PARK_MIN_GROWTH:
 		r = r.expand(Vector2(r.position.x, down))
-	return r
+	return r if layout.encloses(r, PARK_MARGIN) else start
 
 
 ## Takes a varied share of a block for the park and passes the rest on to be built on.
@@ -333,7 +368,7 @@ static func _place_spawns(layout: MapLayout, alleys: Array[Vector2], rules: MapR
 			candidates.append(a.lerp(b, t))
 	_shuffle(candidates, rng)
 	for c in candidates:
-		if not layout.bounds.grow(-4.0).has_point(c) or _in_building(layout, c):
+		if not layout.inside(c, 4.0) or _in_building(layout, c):
 			continue
 		var clear := true
 		for s in layout.spawns:

@@ -7,5 +7,8 @@ const DOOR := 8
 const BOUNDARY := 16
 ## Awning and umbrella tops. No movement mask includes it: PlayerMovement checks for them itself.
 const BOUNCE := 32
+## Marks a prop's collision (furniture, cars, trees) on top of WALL; no mask needs it, but a hit
+## can tell a prop from a building by it.
+const PROP := 128
 ## Permanent world geometry: same on every peer at all times, so safe for movement and spawn checks.
 const SOLID := WALL | FLOOR | BOUNDARY

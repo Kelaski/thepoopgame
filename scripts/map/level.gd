@@ -56,6 +56,9 @@ func build(parent: Node3D, kind: String, map_seed: int) -> void:
 	while x < bounds.end.x - 1.0:
 		var z := bounds.position.y + 2.0
 		while z < bounds.end.y - 1.0:
+			if not layout.inside(Vector2(x, z), 2.0):
+				z += SPAWN_GRID
+				continue
 			spawn_points.append(Vector3(x, 0.05, z))
 			z += SPAWN_GRID
 		x += SPAWN_GRID

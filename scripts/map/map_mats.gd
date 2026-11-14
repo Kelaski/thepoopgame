@@ -1,6 +1,6 @@
 class_name MapMats
 ## Shared level materials, one per key, so a whole building batches into a few draw calls.
-## Clean saturated colours: the style comes from flat paint, toon light and ink lines.
+## Flat cartoon paint, toon light and ink lines; the town is long abandoned, so outer walls are faded.
 
 const SHADER: Shader = preload("res://assets/world/toon_world.gdshader")
 
@@ -37,6 +37,10 @@ const TABLE := {
 	"road_white": [Color(0.95, 0.94, 0.9), Color(0.95, 0.94, 0.9), 0, 1.0],
 	"kerb": [Color(0.72, 0.69, 0.62), Color(0.72, 0.69, 0.62), 0, 1.0],
 	"grass": [Color(0.42, 0.72, 0.3), Color(0.36, 0.65, 0.27), 5, 0.5],
+	# Decay.
+	"grime": [Color(0.29, 0.25, 0.21), Color(0.25, 0.22, 0.18), 7, 0.6],
+	"moss": [Color(0.36, 0.55, 0.24), Color(0.3, 0.48, 0.2), 7, 0.5],
+	"crack": [Color(0.16, 0.15, 0.17), Color(0.16, 0.15, 0.17), 0, 1.0],
 	"foliage": [Color(0.26, 0.62, 0.24), Color(0.26, 0.62, 0.24), 0, 1.0],
 	"foliage_light": [Color(0.46, 0.72, 0.26), Color(0.46, 0.72, 0.26), 0, 1.0],
 	"hedge": [Color(0.2, 0.48, 0.24), Color(0.2, 0.48, 0.24), 0, 1.0],
@@ -101,10 +105,21 @@ const GLOW := {"vc_glow": 1.0, "lamp": 1.2, "screen": 1.0, "neon": 1.6, "traffic
 static var _cache := {}
 
 
+## Outer wall paint, faded towards dust by sun and years of neglect.
+const FADED := ["paint_red", "paint_tan", "paint_dark", "plaster", "plaster_teal", "plaster_blue", "plaster_rose", "plaster_purple", "concrete", "corrugated", "corrugated_red", "trim_cream"]
+const DUST := Color(0.6, 0.55, 0.47)
+const FADE := 0.28
+
+
 static func get_mat(key: String) -> Material:
 	if not _cache.has(key):
 		var row: Array = TABLE.get(key, TABLE["concrete"])
-		_cache[key] = make(row[0], row[1], row[2], row[3], float(GLOW.get(key, 0.0)))
+		var c: Color = row[0]
+		var c2: Color = row[1]
+		if key in FADED:
+			c = c.lerp(DUST, FADE)
+			c2 = c2.lerp(DUST, FADE)
+		_cache[key] = make(c, c2, row[2], row[3], float(GLOW.get(key, 0.0)))
 	return _cache[key]
 
 

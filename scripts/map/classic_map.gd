@@ -75,6 +75,14 @@ static func build(rules: MapRules) -> MapLayout:
 	layout.connect_roads(rules.classic_road_width * 1.2)
 	layout.raise_objectives(rng)
 	layout.expand_edges(rules.edge_expansion)
+	# Round, and wide enough to keep every building and the park, with open ground around them.
+	var c := layout.bounds.get_center()
+	var reach := 0.0
+	for r: Rect2 in layout.buildings.map(func(b): return b.rect) + layout.parks.map(func(p): return p.rect):
+		for p: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
+			reach = maxf(reach, p.distance_to(c))
+	layout.radius = reach + 8.0
+	layout.make_round(rules.fence_margin + 1.0)
 	return layout
 
 

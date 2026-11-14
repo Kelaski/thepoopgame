@@ -11,7 +11,7 @@ Tag Rush is a fast, team-based first-person shooter for up to 16 players. Two te
 - **One objective, constant action.** Every round is a race to the same spot, then a fight over it. The Tag can change hands many times before the clock runs out.
 - **Momentum movement.** Slides that keep your speed, slide-hops, bunny hops, air strafing, wall runs, wall kicks and mantling, all chaining into each other. Easy to pick up, with a lot of room to master.
 - **Five weapons, twenty-one addons.** Pick a weapon, an active addon (like a grappling hook, a blink or a shield) and a passive addon (like a double jump, extra health or faster reloads).
-- **A new city every match.** Random cities with avenues and side streets, lined with offices, malls, casinos, schools, gyms, parks and more, in three sizes, or the hand-made Classic map. Every building can be explored, from the ground floor to the roof.
+- **A new ruined town every match.** A round, long-abandoned city with avenues and side streets, lined with crumbling offices, malls, casinos, schools, gyms, parks and more, in three sizes, or the hand-made Classic map. Every building can be explored, from the ground floor to the roof, and holes knocked through the walls give you extra ways in.
 - **Changing time of day.** Matches start by day, in the afternoon, in the evening or at night, and the sky shifts between rounds.
 - **Make it yours.** Recolour the menus and teams, design your crosshair and holo sight, move your gun on screen, upload a spray and bring your own music.
 - **Play with friends on Steam.** One player hosts a lobby and invites friends, or anyone can join a public lobby. No ports to open.
@@ -48,7 +48,7 @@ You pick one **Active** addon, used with **E**, and one **Passive** addon, which
 
 | Addon | What it does |
 |---|---|
-| **Grapple** | Hold to throw a grappling hook (27 m), reel in and swing. Hooking an enemy pulls them to you. 6.5 s cooldown. |
+| **Grapple** | Hold to throw a grappling hook (27 m), reel in and swing. The rope only snaps if a building gets in the way; it slides past props. Hooking an enemy pulls them to you. 6.5 s cooldown. |
 | **Warp** | Blink 15 m the way you're looking. It stops at walls, and all your speed carries on in the direction you warped. A light-blue afterimage stays where you left for 1 s. 8 s cooldown. |
 | **Rocket Jump** | Your next jump fires your rocket boots and launches you 8 m up. 10 s cooldown. |
 
@@ -114,7 +114,8 @@ Tag Rush plays fast. Moving forward is always a sprint, and every move keeps you
 - **Parks** with tree-lined paths, ponds with a dock, playgrounds, basketball courts, benches and hedges.
 - **Busy streets and rooftops:** parked cars, lamps that light up at night, water towers, air conditioning units and antennas.
 - **Rooftop routes:** tower cranes hold beams between rooftops.
-- **Beyond the fence:** roads run off across open grass, towards a lit-up city skyline all around the map.
+- **Ruins:** broken walls, rubble, rusted wrecks and dead trees fill the streets and open ground, top floors have fallen in, and many street lights are out.
+- **Beyond the round fence:** roads run off across open grass, towards a city skyline all around the map.
 - **Warm, cartoony light** that shifts between day, afternoon, evening and night.
 - **Windows** are open gaps you can shoot, jump and grapple through.
 

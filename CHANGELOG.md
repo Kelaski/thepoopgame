@@ -7,6 +7,26 @@ Versions use **major.minor.patch**:
 
 The current version is set in `scripts/data/game_version.gd` and shown on the main menu. Players must be on the same version to play together.
 
+## 0.29.0
+
+### Changed
+- **A ruined town:** the city has been abandoned for years, in the same cartoony style:
+  - Holes are knocked through outer walls, often enough to make good ways in and out.
+  - Most buildings have a top-floor corner fallen in, open to the sky.
+  - Parapets are crumbling, walls are cracked, grimy, sooty and hung with ivy, and the paint is faded.
+  - Roads are cracked with weeds along the kerbs, cars are rusted wrecks left at odd angles, and many street lights are out.
+  - Rubble, debris, barrels, dead trees and broken walls lie about the streets and open ground.
+- **Round maps:** every map is now a circle inside a round fence, Classic included. Classic keeps all its buildings, with open ground around them.
+- **Grapple:** the rope only snaps when a building gets between you and the hook. It slides past furniture, cars, trees and other props.
+- **Bubble:** your own Bubble shows as a pink glow around the edges of your screen instead of filling it.
+- **Walk-through clutter:** bushes, junk piles, debris and rubble piles no longer block players or shots.
+- **Grenade Launcher:** fires 1.67 shots a second (was 0.5), and holds 4 grenades (was 6).
+- **UAV:** each pulse now grows at 18 m/s (was 12) and sweeps the whole map instead of stopping at 100 m.
+- **Shotgun:** spread is 10% wider (13.2° cone, was 12°).
+
+### Added
+- **New props:** rubble piles, debris, a dead tree and a broken wall.
+
 ## 0.27.0
 
 ### Added

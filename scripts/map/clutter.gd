@@ -50,13 +50,16 @@ const IMPORTS := {
 	"ac_unit": ["props/roof/ac_unit", 0, 1.0], "vent": ["props/roof/vent", 0, 1.0], "hvac": ["props/roof/hvac_condenser", 0, 1.0], "dish": ["props/roof/satellite_dish", 0, 1.0],
 	"water_tower": ["props/roof/water_tower", 0, 1.0], "antenna": ["props/roof/antenna", 0, 1.0],
 	"picnic_table": ["props/park/picnic_table", 0, 1.0], "picnic_umbrella": ["props/park/picnic_umbrella", 0, 1.0], "fountain": ["props/park/fountain", 0, 1.0],
-	"gazebo": ["props/park/gazebo", 0, 1.0], "dock": ["props/park/dock", 0, 1.0], "pond_lilies": ["props/park/pond_lilies", 0, 1.0],
+	"gazebo": ["props/park/gazebo", 0, 1.0], "rubble_pile": ["props/ruins/rubble_pile", 0, 1.0], "debris": ["props/ruins/debris", 0, 1.0],
+	"dead_tree": ["props/ruins/dead_tree", 0, 1.0], "ruin_wall": ["props/ruins/ruin_wall", 0, 1.0], "dock": ["props/park/dock", 0, 1.0], "pond_lilies": ["props/park/pond_lilies", 0, 1.0],
 	"drinking_fountain": ["props/park/drinking_fountain", 0, 1.0], "info_board": ["props/park/info_board", 0, 1.0], "statue": ["props/park/statue", 0, 1.0], "flower_bed": ["props/park/flower_bed", 0, 1.0], "bush": ["props/nature/bush", 0, 1.0],
 	"crane_footing": ["props/crane/footing", 0, 1.0], "crane_mast": ["props/crane/mast", 0, 1.0], "crane_braces": ["props/crane/mast_braces", 0, 1.0],
 	"crane_top": ["props/crane/top", 0, 1.0], "crane_trolley": ["props/crane/trolley", 0, 1.0], "crane_hook": ["props/crane/hook", 0, 1.0],
 	"crane_load_metal": ["props/crane/load_metal", 0, 1.0], "crane_load_planks": ["props/crane/load_planks", 0, 1.0],
 	"tree_trunk": ["props/nature/tree_trunk", 0, 1.0], "tree_crown": ["props/nature/tree_crown", 0, 1.0],
 }
+## Walk-through props: bushes and small ground debris are baked as looks only, with no collision.
+const NO_COLLISION := {"bush": true, "junk": true, "debris": true, "rubble_pile": true}
 ## Scales every prop together. Props are built at real size.
 const PROP_SCALE := 1.0
 
@@ -111,6 +114,8 @@ static func _bake(geo: GeoBatch, prefab: String, pos: Vector3, turns: float, pai
 		if paint != "" and part.slot == "body":
 			color = Color(paint).lightened(part.lighten)
 		geo.add_part(part, xform, color, part.glow)
+	if NO_COLLISION.has(prefab):
+		return
 	for shape in prop.shapes:
 		var t: Transform3D = xform * shape[1]
 		geo.add_shape(t.origin, shape[0] * scale, t.basis.orthonormalized(), shape[2])

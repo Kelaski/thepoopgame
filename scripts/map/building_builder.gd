@@ -62,6 +62,12 @@ const STAIR_SIDE := 1.4
 const SMALL_ROOM := 25.0
 ## The narrowest strip left beside a room cut short: a comfortable hallway (m).
 const MIN_STRIP := 2.6
+## Chance an outer wall side, on each floor, has a hole knocked through it.
+const BREACH_CHANCE := 0.6
+## Chance the top floor has a corner fallen in: its walls broken off part way up, its roof gone.
+const COLLAPSE_CHANCE := 0.85
+## Rooms whose shelves line every wall: no holes knocked into them, no ceiling down on them.
+const KEEP_WHOLE := ["stacks", "school_library", "reading_area"]
 const NO_WINDOWS := ["public_restroom", "restroom", "bathroom", "bath_rundown", "locker_m", "locker_f", "auditorium", "projection", "vault_room"]
 
 var rules: MapRules
@@ -78,7 +84,7 @@ var _rng: RandomNumberGenerator
 var _rect: Rect2
 var _keep_clear: Array[Rect2]
 var _others: Array  # other buildings' rects
-var _bounds: Rect2
+var _layout: MapLayout
 var _theme: Array
 var _stair: Dictionary
 var _corridor := false
@@ -92,6 +98,8 @@ var _hall := {}          # the hall's frame, for hall layouts
 var _runs: Array = []    # hall layouts: per level, per side, the rooms in order [{kind, from, to}]
 var _plans: Array = []   # per level: {rooms, lines, doors, fits}
 var _windows: Array = []  # per level: Rect2 around each window, kept clear of pictures
+var _breaches: Array = []  # per level: Rect2 around each hole knocked through an outer wall, kept clear
+var _collapse := Rect2()    # the top floor's fallen-in corner, or empty
 
 
 func _init(p_rules: MapRules) -> void:
@@ -109,7 +117,7 @@ func build(spec: Dictionary, layout: MapLayout, keep_clear: Array[Rect2]) -> voi
 	_rng = RandomNumberGenerator.new()
 	_rng.seed = hash([layout.map_seed, spec.id, spec.theme])
 	_keep_clear = keep_clear
-	_bounds = layout.bounds
+	_layout = layout
 	_theme = THEMES.get(spec.theme, THEMES["warehouse"])
 	_others = []
 	for other in layout.buildings:
@@ -143,14 +151,17 @@ func build(spec: Dictionary, layout: MapLayout, keep_clear: Array[Rect2]) -> voi
 		_runs = []
 		entrances = _plan_floors(n, tallest)
 	_objectives_off_walls(layout)
+	_collapse = _plan_collapse(entrances)
 	# A narrow hall has nowhere else for stairs, so its Tag spot gives way. Parks and alleys always remain.
 	var stair_space := (_stair.hole as Rect2).grow(0.5)
 	layout.objectives = layout.objectives.filter(func(o: Dictionary): return not stair_space.has_point(o.pos))
 	_windows = []
+	_breaches = []
 	var y := 0.0
 	for level in n:
 		var h: float = _hs[level]
 		_windows.append([] as Array[Rect2])
+		_breaches.append([] as Array[Rect2])
 		# The top storey's walls stop a hair under the roof, so they can't fight with its surface.
 		_outer_walls(level, y, h - (0.02 if level == n - 1 else 0.0), entrances if level == 0 else [])
 		if level == 0:
@@ -158,9 +169,19 @@ func build(spec: Dictionary, layout: MapLayout, keep_clear: Array[Rect2]) -> voi
 		_floor_slab(y, level == 0, _stair_hole() if level > 0 else Rect2())
 		if _has_flight_from(level):
 			_ramps(y, h)
-		_build_level(level, y, h, _floor_blocked(entrances if level == 0 else []))
+		var blocked := _floor_blocked(entrances if level == 0 else [])
+		blocked.append_array(_breaches[level])
+		if level == n - 1 and _collapse.has_area():
+			blocked.append(_collapse.grow(0.5))
+			var heap := _collapse.get_center()
+			if (_plans[level].doors as Array).all(func(d): return d.p.distance_to(heap) > 3.0):
+				Clutter.place(geo, "rubble_pile", Vector3(heap.x, y, heap.y), _rng.randi_range(0, 3))
+		_build_level(level, y, h, blocked)
 		y += h
-	_floor_slab(y, false, _roof_hole() if _roof_access else Rect2(), "roof")
+	var roof_holes: Array[Rect2] = [_collapse]
+	if _roof_access:
+		roof_holes.append(_roof_hole())
+	_floor_slab(y, false, Rect2(), "roof", roof_holes)
 	_roof(y)
 
 
@@ -179,6 +200,32 @@ func _plan_floors(n: int, tallest: float) -> Array:
 		if _doors_swing_clear(entrances) and fits:
 			break
 	return entrances
+
+
+## A corner of the top floor, 3 to 5.5 m each way, clear of the stairs, cranes, entrances and Tag
+## and spawn spots. Empty if this building stands whole.
+func _plan_collapse(entrances: Array) -> Rect2:
+	if _rng.randf() > COLLAPSE_CHANCE or minf(_rect.size.x, _rect.size.y) < 9.0:
+		return Rect2()
+	var size := Vector2(minf(_rng.randf_range(3.5, 6.5), _rect.size.x * 0.5), minf(_rng.randf_range(3.5, 6.5), _rect.size.y * 0.5))
+	var corners := [_rect.position, Vector2(_rect.end.x - size.x, _rect.position.y), _rect.end - size, Vector2(_rect.position.x, _rect.end.y - size.y)]
+	ProcGen._shuffle(corners, _rng)
+	for at: Vector2 in corners:
+		var r := Rect2(at, size)
+		var clear := not r.intersects((_stair.zone as Rect2).grow(1.5)) and not (_roof_access and r.intersects(_roof_hole().grow(1.5)))
+		for spot in _keep_clear:
+			clear = clear and not r.intersects(spot)
+		for end in _bridge_ends:
+			clear = clear and not r.grow(rules.bridge_width + 1.0).has_point(Vector2(end.x, end.z))
+		# Not over a room kept private, or a library's shelves.
+		for room in _plans[_floors - 1].rooms:
+			clear = clear and not (room.kind in NO_WINDOWS + KEEP_WHOLE and r.intersects(room.rect))
+		if _floors == 1:
+			for e in entrances:
+				clear = clear and not r.grow(rules.door_width + 1.0).has_point(_entrance_point(e))
+		if clear:
+			return r
+	return Rect2()
 
 
 ## Tight buildings may need a different stair layout before their one door can open.
@@ -221,7 +268,7 @@ func _wall(a: Vector2, b: Vector2, y: float, h: float, thick: float, mat: String
 		var from: float = maxf(o.at - o.w * 0.5, 0.0)
 		var to: float = minf(o.at + o.w * 0.5, length)
 		if o.top >= 99.0 and to > from:
-			clamped.append({"at": (from + to) * 0.5, "w": to - from, "bottom": 0.0, "top": 99.0})
+			clamped.append({"at": (from + to) * 0.5, "w": to - from, "bottom": o.bottom, "top": 99.0})
 		elif o.at - o.w * 0.5 > 0.2 and o.at + o.w * 0.5 < length - 0.2:
 			clamped.append(o)
 	openings = clamped
@@ -431,7 +478,7 @@ func _side_is_open(side: int) -> bool:
 		1: probe = Rect2(Vector2(_rect.position.x, _rect.end.y), Vector2(_rect.size.x, 2.5))
 		2: probe = Rect2(_rect.position - Vector2(2.5, 0), Vector2(2.5, _rect.size.y))
 		3: probe = Rect2(Vector2(_rect.end.x, _rect.position.y), Vector2(2.5, _rect.size.y))
-	if not _bounds.grow(2.0).encloses(probe):
+	if not _layout.encloses(probe, -2.0):
 		return false
 	for other in _others:
 		if other.intersects(probe):
@@ -484,27 +531,184 @@ func _outer_walls(level: int, y: float, h: float, entrances: Array) -> void:
 				var p: Vector2 = line[0].lerp(line[1], e.at / length)
 				doors.append({"pos": Vector3(p.x, y, p.y), "along_x": side < 2, "paint": _door_paint})
 		var offsets := _inner_wall_offsets(side, level)
+		var broken := []
+		if level == _floors - 1 and _collapse.has_area():
+			broken = _collapse_opening(side, line, length, h)
+			openings.append_array(broken)
 		# Few windows, kept to one end of the side: the rest stays a clean wall-running surface.
 		for w in windows:
 			var at := length * (0.15 + 0.7 * (float(w) + _rng.randf()) / maxf(windows, 1))
 			var clash := false
 			for o in openings:
-				clash = clash or absf(o.at - at) < 2.6
+				clash = clash or absf(o.at - at) < maxf(2.6, o.w * 0.5 + 1.6)
 			for off in offsets:
 				clash = clash or absf(off - at) < 1.2
 			var spot: Vector2 = line[0].lerp(line[1], at / length)
 			for room in _plans[level].rooms:
 				clash = clash or (room.kind in NO_WINDOWS and (room.rect as Rect2).grow(rules.wall_thickness + 0.9).has_point(spot))
 			if length > 7.0 and not clash and h > 3.0 and not _in_contact(side, at):
-				openings.append({"at": at, "w": 1.6, "bottom": rules.window_bottom, "top": minf(rules.window_bottom + rules.window_height, h - 0.3)})
+				var top := minf(rules.window_bottom + rules.window_height, h - 0.3)
+				openings.append({"at": at, "w": 1.6, "bottom": rules.window_bottom, "top": top})
 				var p: Vector2 = line[0].lerp(line[1], at / length)
+				# Soot licked up from an old fire.
+				if _rng.randf() < 0.3 and h - top > 0.6:
+					var face := p + _outward(side) * (rules.wall_thickness * 0.5 + 0.012)
+					geo.box("grime", Vector3(face.x, y + top + 0.3, face.y), Vector3(1.3, 0.6, 0.01) if side < 2 else Vector3(0.01, 0.6, 1.3), 0)
 				_windows[level].append(Rect2(p, Vector2.ZERO).grow(1.1))
+		var holes := _breach(side, level, line, length, h, openings)
 		_wall(line[0], line[1], y, h, rules.wall_thickness, _theme[0], openings)
-	_trim_bands(y + h - 0.1)
+		for o in holes:
+			_jagged_edges(line[0], (line[1] - line[0]) / length, o, y)
+		for o in broken:
+			_broken_top(line[0], (line[1] - line[0]) / length, o, y)
+		_grime(line, length, y, level, openings, side)
+	_trim_bands(y + h - 0.1, level == _floors - 1)
+
+
+## The town is falling apart: now and then a hole is knocked through an outer wall, floor to head
+## height. They make good ways in and out. Never through a door, a window, a corner, the end of an
+## inner wall, a room kept private, or a wall pressed against a neighbour. Returns the new openings.
+func _breach(side: int, level: int, line: Array, length: float, h: float, openings: Array) -> Array:
+	var out := []
+	if length < 7.0 or h < 3.0 or _rng.randf() > BREACH_CHANCE:
+		return out
+	var w := _rng.randf_range(1.8, 3.2)
+	var at := _rng.randf_range(w * 0.5 + 1.6, length - w * 0.5 - 1.6)
+	for o in openings:
+		if absf(o.at - at) < (o.w + w) * 0.5 + 0.8:
+			return out
+	for off in _inner_wall_offsets(side, level):
+		if absf(off - at) < w * 0.5 + 0.6:
+			return out
+	var p: Vector2 = line[0].lerp(line[1], at / length)
+	for room in _plans[level].rooms:
+		if room.kind in NO_WINDOWS + KEEP_WHOLE and (room.rect as Rect2).grow(rules.wall_thickness + w * 0.5 + 0.3).has_point(p):
+			return out
+	if _in_contact(side, at):
+		return out
+	var o := {"at": at, "w": w, "bottom": 0.0, "top": minf(_rng.randf_range(2.1, 2.7), h - 0.5)}
+	openings.append(o)
+	out.append(o)
+	_breaches[level].append(Rect2(p, Vector2.ZERO).grow(w * 0.5 + 0.4))
+	if level == 0:
+		# What fell out lies at its foot, outside.
+		var spill := p + _outward(side) * (rules.wall_thickness * 0.5 + 0.9)
+		Clutter.place(geo, "rubble_pile" if _rng.randf() < 0.6 else "debris", Vector3(spill.x, 0, spill.y), _rng.randi_range(0, 3))
+	return out
+
+
+## Broken brickwork round a breach: chunks sticking in from its sides and hanging from its top.
+func _jagged_edges(a: Vector2, dir: Vector2, o: Dictionary, y: float) -> void:
+	var t := rules.wall_thickness
+	var along_x := absf(dir.x) > 0.5
+	for k in 6:
+		var size := Vector3(_rng.randf_range(0.2, 0.4), _rng.randf_range(0.25, 0.6), t * 0.9)
+		var off: float
+		var cy: float
+		if k < 4:
+			# Two chunks on each side.
+			off = (o.w * 0.5 - size.x * 0.5 + 0.02) * (1.0 if k % 2 == 0 else -1.0)
+			cy = y + _rng.randf_range(0.6, o.top - 0.2) if k >= 2 else y + _rng.randf_range(o.top * 0.5, o.top - 0.3)
+		else:
+			off = _rng.randf_range(-o.w * 0.3, o.w * 0.3)
+			size.y = _rng.randf_range(0.15, 0.35)
+			cy = y + o.top - size.y * 0.5 + 0.02
+		var c: Vector2 = a + dir * (o.at + off)
+		geo.box(_theme[0], Vector3(c.x, cy, c.y), Vector3(size.x, size.y, size.z) if along_x else Vector3(size.z, size.y, size.x))
+
+
+## Dirt splashed up the foot of the walls, and moss in patches higher up. Paint only.
+func _grime(line: Array, length: float, y: float, level: int, openings: Array, side: int) -> void:
+	var dir: Vector2 = (line[1] - line[0]) / length
+	var out := _outward(side) * (rules.wall_thickness * 0.5 + 0.012)
+	var along_x := absf(dir.x) > 0.5
+	if level == 0 and not _side_touches(side):
+		# Between the doors and holes, which it mustn't cross.
+		var gaps: Array = openings.filter(func(o): return o.bottom <= 0.01).map(func(o): return [o.at - o.w * 0.5, o.at + o.w * 0.5])
+		gaps.sort_custom(func(p, q): return p[0] < q[0])
+		var from := 0.0
+		for g: Array in gaps + [[length, length]]:
+			var to: float = g[0]
+			if to - from > 0.3:
+				var c: Vector2 = line[0] + dir * (from + to) * 0.5 + out
+				geo.box("grime", Vector3(c.x, y + 0.3, c.y), Vector3(to - from, 0.6, 0.01) if along_x else Vector3(0.01, 0.6, to - from), 0)
+			from = maxf(from, g[1])
+	_cracks(line, length, y, level, openings, side)
+	var top := level == _floors - 1
+	if not (top or level == 0) or _rng.randf() < 0.4:
+		return
+	var at := _rng.randf_range(1.0, length - 1.0)
+	if not openings.all(func(o): return absf(o.at - at) > o.w * 0.5 + 1.0):
+		return
+	var h: float = _hs[level]
+	for k in _rng.randi_range(4, 8):
+		var strand := _rng.randf_range(0.8, 2.6) if top else _rng.randf_range(0.6, 1.8)
+		var c: Vector2 = line[0] + dir * (at + _rng.randf_range(-0.6, 0.6)) + out * (1.0 + k * 0.05)
+		var cy := y + h - strand * 0.5 if top else y + strand * 0.5
+		geo.box("moss", Vector3(c.x, cy, c.y), Vector3(0.14, strand, 0.012) if along_x else Vector3(0.012, strand, 0.14), 0)
+
+
+## Where a side runs along the fallen-in corner: the wall there broken off 1 to 1.8 m up.
+func _collapse_opening(side: int, line: Array, length: float, h: float) -> Array:
+	var dir: Vector2 = (line[1] - line[0]) / length
+	var base := _rect.position.x if side < 2 else _rect.position.y
+	var on_side := false
+	match side:
+		0: on_side = is_equal_approx(_collapse.position.y, _rect.position.y)
+		1: on_side = is_equal_approx(_collapse.end.y, _rect.end.y)
+		2: on_side = is_equal_approx(_collapse.position.x, _rect.position.x)
+		3: on_side = is_equal_approx(_collapse.end.x, _rect.end.x)
+	if not on_side:
+		return []
+	var from := (_collapse.position.x if side < 2 else _collapse.position.y) - base
+	var to := (_collapse.end.x if side < 2 else _collapse.end.y) - base
+	# Runs off the wall's end, so the gap reaches the corner.
+	from = 0.0 if from < 0.5 else from
+	to = length if to > length - 0.5 else to
+	return [{"at": (from + to) * 0.5, "w": to - from, "bottom": _rng.randf_range(1.0, 1.8), "top": 99.0}]
+
+
+## Broken brick along the top of what's left of a wall: chunks of varied height.
+func _broken_top(a: Vector2, dir: Vector2, o: Dictionary, y: float) -> void:
+	var t := rules.wall_thickness
+	var along_x := absf(dir.x) > 0.5
+	var x: float = o.at - o.w * 0.5
+	while x < o.at + o.w * 0.5 - 0.2:
+		var w := _rng.randf_range(0.3, 0.7)
+		var hgt := _rng.randf_range(0.1, 0.55)
+		var c: Vector2 = a + dir * (x + w * 0.5)
+		geo.box(_theme[0], Vector3(c.x, y + o.bottom + hgt * 0.5, c.y), Vector3(w, hgt, t) if along_x else Vector3(t, hgt, w))
+		x += w + _rng.randf_range(0.0, 0.4)
+
+
+## A few cracks zigzagging across a wall's outside, clear of its openings. Paint only.
+func _cracks(line: Array, length: float, y: float, level: int, openings: Array, side: int) -> void:
+	var dir: Vector2 = (line[1] - line[0]) / length
+	var out := _outward(side) * (rules.wall_thickness * 0.5 + 0.013)
+	var h: float = _hs[level]
+	for k in _rng.randi_range(0, 2):
+		# p: (distance along the wall, height up it)
+		var p := Vector2(_rng.randf_range(0.8, length - 0.8), _rng.randf_range(0.6, h - 0.8))
+		if not openings.all(func(o): return absf(o.at - p.x) > o.w * 0.5 + 1.2):
+			continue
+		var heading := _rng.randf_range(-0.7, 0.7) + (PI if _rng.randf() < 0.5 else 0.0) + PI * 0.5 * signf(_rng.randf() - 0.5) * 0.6
+		for n in 4:
+			var stroke := _rng.randf_range(0.3, 0.7)
+			var d := Vector2(cos(heading), sin(heading))
+			var mid := p + d * stroke * 0.5
+			if mid.x < 0.1 or mid.x > length - 0.1 or mid.y < 0.2 or mid.y > h - 0.2:
+				break
+			var c: Vector2 = line[0] + dir * mid.x + out
+			# Lying flat on the wall, turned in its plane by the stroke's angle.
+			var along := Vector3(dir.x, 0, dir.y)
+			var basis := Basis(along, Vector3.UP, along.cross(Vector3.UP)) * Basis(Vector3.BACK, atan2(d.y, d.x))
+			geo.box("crack", Vector3(c.x, y + mid.y, c.y), Vector3(stroke, 0.05, 0.008), 0, basis)
+			p += d * stroke
+			heading += _rng.randf_range(-0.9, 0.9)
 
 
 ## A band hiding each floor line, on every side not pressed against a neighbour.
-func _trim_bands(y: float) -> void:
+func _trim_bands(y: float, top := false) -> void:
 	var c := _rect.get_center()
 	var long_x := Vector3(_rect.size.x + 0.1, 0.2, 0.08)
 	var long_z := Vector3(0.08, 0.2, _rect.size.y + 0.1)
@@ -513,15 +717,24 @@ func _trim_bands(y: float) -> void:
 		[Vector3(_rect.position.x - 0.04, y, c.y), long_z], [Vector3(_rect.end.x + 0.04, y, c.y), long_z],
 	]
 	for side in 4:
-		if not _side_touches(side):
+		# Not along a fallen-in corner: there's no wall left up there to hide.
+		var broken := top and _collapse.has_area() and _collapse.grow(0.2).intersects(Rect2(Vector2(bands[side][0].x, bands[side][0].z), Vector2.ZERO).grow_individual(bands[side][1].x * 0.5, bands[side][1].z * 0.5, bands[side][1].x * 0.5, bands[side][1].z * 0.5))
+		if not _side_touches(side) and not broken:
 			geo.box(_theme[1], bands[side][0], bands[side][1], 0)
 
 
 # ------------------------------------------------------------------ floors
 
 ## Slab with its top at y, split around the stair hole. The ground floor is a thin finish.
-func _floor_slab(y: float, ground: bool, hole: Rect2, surface := "") -> void:
+func _floor_slab(y: float, ground: bool, hole: Rect2, surface := "", holes: Array[Rect2] = []) -> void:
 	var r := _rect.grow(-0.02)
+	if not holes.is_empty():
+		var t := rules.slab_thickness
+		var mat: String = surface if surface != "" else _theme[2]
+		for part in _slab_parts(r, holes.filter(func(h): return h.has_area())):
+			geo.box(mat, Vector3(part.get_center().x, y - t * 0.5, part.get_center().y), Vector3(part.size.x, t, part.size.y), GeoBatch.FLOOR)
+			geo.box("plaster", Vector3(part.get_center().x, y - t - 0.005, part.get_center().y), Vector3(part.size.x, 0.01, part.size.y), 0)
+		return
 	var mat: String = surface if surface != "" else _theme[2]
 	if ground:
 		geo.box(mat, Vector3(r.get_center().x, GROUND_FINISH * 0.5, r.get_center().y), Vector3(r.size.x, GROUND_FINISH, r.size.y), 0)
@@ -543,6 +756,25 @@ func _floor_slab(y: float, ground: bool, hole: Rect2, surface := "") -> void:
 			geo.box("plaster", Vector3(part.get_center().x, y - t - 0.005, part.get_center().y), Vector3(part.size.x, 0.01, part.size.y), 0)
 
 
+## A slab's area split into rectangles around every hole.
+static func _slab_parts(r: Rect2, holes: Array) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for k in holes.size():
+		var hole: Rect2 = (holes[k] as Rect2).intersection(r)
+		if not hole.has_area():
+			continue
+		var rest := holes.slice(k + 1)
+		for part: Rect2 in [Rect2(r.position, Vector2(r.size.x, hole.position.y - r.position.y)),
+				Rect2(Vector2(r.position.x, hole.end.y), Vector2(r.size.x, r.end.y - hole.end.y)),
+				Rect2(Vector2(r.position.x, hole.position.y), Vector2(hole.position.x - r.position.x, hole.size.y)),
+				Rect2(Vector2(hole.end.x, hole.position.y), Vector2(r.end.x - hole.end.x, hole.size.y))]:
+			if part.size.x > 0.02 and part.size.y > 0.02:
+				out.append_array(_slab_parts(part, rest))
+		return out
+	out.append(r)
+	return out
+
+
 func _floor_blocked(entrances: Array) -> Array[Rect2]:
 	var blocked := _keep_clear.duplicate()
 	blocked.append((_stair.zone as Rect2).grow(1.0))
@@ -558,12 +790,22 @@ func _roof(y: float) -> void:
 	var ph := rules.parapet_height
 	var t := 0.3
 	# Starts just below the roof line, so it closes the small gap above the top storey's walls.
-	var cy := y + (ph - 0.03) * 0.5
 	var tall := ph + 0.03
-	geo.box(_theme[1], Vector3(r.get_center().x, cy, r.position.y + t * 0.5), Vector3(r.size.x, tall, t))
-	geo.box(_theme[1], Vector3(r.get_center().x, cy, r.end.y - t * 0.5), Vector3(r.size.x, tall, t))
-	geo.box(_theme[1], Vector3(r.position.x + t * 0.5, cy, r.get_center().y), Vector3(t, tall, r.size.y))
-	geo.box(_theme[1], Vector3(r.end.x - t * 0.5, cy, r.get_center().y), Vector3(t, tall, r.size.y))
+	# Crumbling: the parapet runs in chunks, some knocked lower and some gone.
+	for edge: Array in [[Vector2(r.position.x, r.position.y + t * 0.5), Vector2(1, 0), r.size.x], [Vector2(r.position.x, r.end.y - t * 0.5), Vector2(1, 0), r.size.x],
+			[Vector2(r.position.x + t * 0.5, r.position.y), Vector2(0, 1), r.size.y], [Vector2(r.end.x - t * 0.5, r.position.y), Vector2(0, 1), r.size.y]]:
+		var chunks := maxi(int(edge[2] / 1.6), 1)
+		var piece: float = edge[2] / chunks
+		for k in chunks:
+			var roll := _rng.randf()
+			if roll < 0.18 and k > 0 and k < chunks - 1:
+				continue
+			var ch := tall * (_rng.randf_range(0.35, 0.7) if roll < 0.4 else 1.0)
+			var c: Vector2 = edge[0] + edge[1] * piece * (k + 0.5)
+			if _collapse.grow(0.3).has_point(c):
+				continue
+			var size := Vector3(piece + 0.01, ch, t) if edge[1].x > 0.5 else Vector3(t, ch, piece + 0.01)
+			geo.box(_theme[1], Vector3(c.x, y - 0.03 + ch * 0.5, c.y), size)
 	var blocked: Array[Rect2] = []
 	if _roof_access:
 		blocked.append(_roof_hole().grow(1.5))
@@ -1477,7 +1719,7 @@ func _ceiling_lamps(ceiling_y: float, area: Rect2) -> void:
 			var t := (i + 0.5) / count
 			var u := (row + 0.5) / rows
 			var p := area.position + area.size * (Vector2(t, u) if along_x else Vector2(u, t))
-			if not _stair.hole.grow(0.5).has_point(p):
+			if not _stair.hole.grow(0.5).has_point(p) and not _collapse.grow(0.8).has_point(p):
 				Clutter.place(geo, "ceiling_lamp", Vector3(p.x, lamp_y, p.y), 0)
 				lights.append(Vector3(p.x, lamp_y - 0.4, p.y))
 

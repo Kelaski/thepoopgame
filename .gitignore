@@ -4,3 +4,4 @@ export/
 builds/
 *.tmp
 _tmp/
+graphify-out/

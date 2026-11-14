@@ -19,6 +19,8 @@ var objectives: Array = []
 var bridges: Array = []
 ## Where a road ends on another road: {pos, dir (along the arm, away from the junction), road, through}
 var junctions: Array = []
+## The map is the circle this far from the middle of bounds (the fence stands just outside it).
+var radius := 0.0
 
 const ROAD_NAMES := ["Main St", "Oak Ave", "Maple St", "Harbor Rd", "Elm St", "Union Ave", "Park Ln", "Mill Rd", "Pine St", "Station Rd", "Lake Ave", "King St", "Bay Rd", "Hill St", "Cedar Ave", "Dock St"]
 
@@ -78,6 +80,80 @@ func expand_edges(share: float) -> void:
 			pts[end] += dir * minf(to_edge, to_side)
 		road.points = pts
 	bounds = grown
+
+
+## True if p is on the map, at least margin in from its edge.
+func inside(p: Vector2, margin := 0.0) -> bool:
+	if radius <= 0.0:
+		return bounds.grow(-margin).has_point(p)
+	return p.distance_to(bounds.get_center()) <= radius - margin
+
+
+## True if all of r is on the map, at least margin in from its edge.
+func encloses(r: Rect2, margin := 0.0) -> bool:
+	for p: Vector2 in [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]:
+		if not inside(p, margin):
+			return false
+	return true
+
+
+## Makes the map round: whatever stands outside the circle goes, and roads stop reach past its edge,
+## at the fence.
+func make_round(reach: float) -> void:
+	buildings = buildings.filter(func(b): return encloses(b.rect, 1.0))
+	var ids := buildings.map(func(b): return b.id)
+	bridges = bridges.filter(func(pair): return pair[0] in ids and pair[1] in ids)
+	parks = parks.filter(func(p): return encloses(p.rect, 0.5))
+	var kept_spawns: Array[Vector2] = []
+	kept_spawns.assign(spawns.filter(func(s): return inside(s, 4.0)))
+	spawns = kept_spawns
+	objectives = objectives.filter(func(o): return inside(o.pos, 4.0))
+	var c := bounds.get_center()
+	var edge := bounds.grow(-4.0)
+	var kept_roads := []
+	for road in roads:
+		# A road that ran to the old square edge carries on to the fence.
+		var pts: PackedVector2Array = road.points
+		for end: int in [0, pts.size() - 1]:
+			if not edge.has_point(pts[end]):
+				pts[end] += (pts[end] - pts[1 if end == 0 else pts.size() - 2]).normalized() * radius * 2.0
+		pts = _clip_line(pts, c, radius + reach)
+		if pts.size() >= 2:
+			road.points = pts
+			kept_roads.append(road)
+	roads = kept_roads
+	bounds = Rect2(c, Vector2.ZERO).grow(radius)
+	junctions = junctions.filter(func(j): return inside(j.pos) and roads.any(func(r): return is_same(r, j.road)) and roads.any(func(r): return is_same(r, j.through)))
+
+
+## The longest stretch of a line that lies inside a circle.
+static func _clip_line(pts: PackedVector2Array, c: Vector2, r: float) -> PackedVector2Array:
+	var best := PackedVector2Array()
+	var piece := PackedVector2Array()
+	for i in pts.size() - 1:
+		var a := pts[i] - c
+		var d := pts[i + 1] - pts[i]
+		# Where a + t d meets the circle: |a + t d|^2 = r^2.
+		var qa := d.dot(d)
+		var qb := 2.0 * a.dot(d)
+		var disc := qb * qb - 4.0 * qa * (a.dot(a) - r * r)
+		var t0 := 1.0
+		var t1 := 0.0
+		if qa > 0.0 and disc > 0.0:
+			t0 = maxf((-qb - sqrt(disc)) / (2.0 * qa), 0.0)
+			t1 = minf((-qb + sqrt(disc)) / (2.0 * qa), 1.0)
+		if t1 <= t0:
+			if piece.size() > best.size():
+				best = piece
+			piece = PackedVector2Array()
+			continue
+		var from := pts[i] + d * t0
+		if piece.is_empty() or piece[piece.size() - 1].distance_to(from) > 0.01:
+			if piece.size() > best.size():
+				best = piece
+			piece = PackedVector2Array([from])
+		piece.append(pts[i] + d * t1)
+	return piece if piece.size() > best.size() else best
 
 
 ## A building's name without the number procedural maps add.
